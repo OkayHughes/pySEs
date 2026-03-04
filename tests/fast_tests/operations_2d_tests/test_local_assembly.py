@@ -119,7 +119,7 @@ def test_extraction_map():
     for npt in test_npts:
       for nx in [1, 4]:
         face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
-        vert_redundancy = init_element_corner_vert_redundancy(nx, face_connectivity, face_position)
+        vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
         grid_nowrap, dims_nowrap = init_grid_from_topo(face_connectivity,
                                                        face_mask,
                                                        face_position_2d,
@@ -163,7 +163,7 @@ def test_extraction_map_rand():
   for npt in test_npts:
     for nx in [4, 8]:
       face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
-      vert_redundancy = init_element_corner_vert_redundancy(nx, face_connectivity, face_position)
+      vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
       grid_nowrap, dims_nowrap = init_grid_from_topo(face_connectivity,
                                                      face_mask,
                                                      face_position_2d,
@@ -187,7 +187,7 @@ def test_projection():
   for npt in test_npts:
     for nx in [3, 4]:
       face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
-      vert_redundancy = init_element_corner_vert_redundancy(nx, face_connectivity, face_position)
+      vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
       raw_grid, dims = init_grid_from_topo(face_connectivity,
                                            face_mask,
                                            face_position_2d,
@@ -223,11 +223,12 @@ def test_projection():
             cont_fn = project_scalar(fn, grid, dims)
             assert np.allclose(get_global_array(cont_fn, dims), get_global_array(fn, dims))
 
+
 def test_minmax():
   for npt in test_npts:
     for nx in [3, 4]:
       face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
-      vert_redundancy = init_element_corner_vert_redundancy(nx, face_connectivity, face_position)
+      vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
       raw_grid, dims = init_grid_from_topo(face_connectivity,
                                            face_mask,
                                            face_position_2d,
@@ -275,7 +276,7 @@ def test_projection_equiv():
   for npt in test_npts:
     for nx in [7, 8]:
       face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
-      vert_redundancy = init_element_corner_vert_redundancy(nx, face_connectivity, face_position)
+      vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
       raw_grid, dims = init_grid_from_topo(face_connectivity,
                                            face_mask,
                                            face_position_2d,
@@ -302,7 +303,7 @@ def test_projection_equiv_rand():
   for npt in test_npts:
     for nx in [7, 8]:
       face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
-      vert_redundancy = init_element_corner_vert_redundancy(nx, face_connectivity, face_position)
+      vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
       raw_grid, dims = init_grid_from_topo(face_connectivity,
                                            face_mask,
                                            face_position_2d,

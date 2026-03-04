@@ -281,9 +281,7 @@ def vert_red_hierarchy_to_flat(vert_redundancy_gll):
   return vert_redundancy
 
 
-def init_element_corner_vert_redundancy(nx,
-                                        face_connectivity,
-                                        face_position):
+def init_element_corner_vert_redundancy(face_connectivity):
   """
   Enumerate redundant DOFs on the elemental
   representation of an arbitrary mesh
@@ -343,7 +341,6 @@ def init_element_corner_vert_redundancy(nx,
     for vert_idx in vert_redundancy[elem_idx].keys():
        if (elem_idx, vert_idx) in vert_redundancy[elem_idx][vert_idx]:
         vert_redundancy[elem_idx][vert_idx].remove((elem_idx, vert_idx))
-
   return vert_redundancy
 
 

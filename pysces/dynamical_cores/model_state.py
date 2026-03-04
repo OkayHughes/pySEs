@@ -145,8 +145,8 @@ def wrap_tracer_consist_hypervis(d_mass_val,
   KeyError
       when a key error
   """
-  return {"d_mass_tendency": d_mass_tend,
-          "d_mass_val": d_mass_val}
+  return {"d_mass_hypervis_tend": d_mass_tend,
+          "d_mass_hypervis_avg": d_mass_val}
 
 
 @jit
@@ -158,38 +158,46 @@ def sum_consistency_struct(struct_1, struct_2, coeff_1, coeff_2):
 
 
 @partial(jit, static_argnames=["num_lev", "model"])
-def remap_tracers(tracers,
-                   static_forcing,
-                   v_grid,
-                   physics_config,
-                   num_lev,
-                   model):
-  tracers = []
+def remap_tracers(dynamics,
+                  tracers,
+                  v_grid,
+                  num_lev,
+                  model):
+  tracer_list = []
+  ct = 0
   if model in cam_se_models:
     dry_air_species = {}
     for species_name in tracers["dry_air_species"].keys():
-      dry_air_species[species_name] = jnp.copy(tracers["dry_air_species"][species_name])
+      dry_air_species[species_name] = ct
+      tracer_list.append(tracers["dry_air_species"][species_name])
+      ct += 1
   else:
     dry_air_species = None
   moisture_species = {}
   for species_name in tracers["moisture_species"].keys():
-    moisture_species[species_name] = jnp.copy(tracers["moisture_species"][species_name])
+    moisture_species[species_name] = ct
+    tracer_list.append(tracers["moisture_species"][species_name])
+    ct += 1
   tracers_new = {}
   for species_name in tracers["tracers"].keys():
-    tracers_new[species_name] = jnp.copy(tracers["tracers"][species_name])
-  
+    tracers_new[species_name] = ct
+    tracer_list.append(tracers["tracers"][species_name])
+    ct += 1
+  pi_surf = dynamics_to_surface_mass(dynamics, v_grid)
+  d_mass_ref = surface_mass_to_d_mass(pi_surf,
+                                      v_grid)
+  tracer_mass = jnp.stack(tracer_list, axis=-1) * dynamics["d_mass"][:, :, :, :, jnp.newaxis]
+  tracers_out = zerroukat_remap(tracer_mass, dynamics["d_mass"], d_mass_ref, num_lev, filter=True) / d_mass_ref[:, :, :, :, jnp.newaxis]
+  ct = 0
   if model in cam_se_models:
-    dry_air_species = {}
-    for species_name in tracers["dry_air_species"].keys():
-      dry_air_species[species_name] = jnp.copy(tracers["dry_air_species"][species_name])
+    for species_name in dry_air_species.keys():
+      dry_air_species[species_name] = tracers_out[:, :, :, :, dry_air_species[species_name]]
   else:
     dry_air_species = None
-  moisture_species = {}
-  for species_name in tracers["moisture_species"].keys():
-    moisture_species[species_name] = jnp.copy(tracers["moisture_species"][species_name])
-  tracers_new = {}
-  for species_name in tracers["tracers"].keys():
-    tracers_new[species_name] = jnp.copy(tracers["tracers"][species_name])
+  for species_name in moisture_species.keys():
+    moisture_species[species_name] = tracers_out[:, :, :, :, moisture_species[species_name]]
+  for species_name in tracers_new.keys():
+    tracers_new[species_name] = tracers[:, :, :, :, tracers_new[species_name]]
   return wrap_tracers(moisture_species,
                       tracers_new,
                       model,

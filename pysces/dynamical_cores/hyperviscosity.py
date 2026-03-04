@@ -309,6 +309,7 @@ def init_hypervis_config_const(ne,
                       "nu": device_wrapper(nu),
                       "nu_phi": device_wrapper(nu_phi),
                       "nu_d_mass": device_wrapper(nu_d_mass),
+                      "nu_tracer": device_wrapper(nu_d_mass),
                       "nu_div_factor": device_wrapper(nu_div_factor),
                       "reference_profiles": {"T_ref": device_wrapper(T_ref),
                                              "T_ref_lapse": device_wrapper(T_ref_lapse)}}
@@ -344,12 +345,19 @@ def init_hypervis_config_tensor(h_grid,
                       "nu": nu,
                       "nu_phi": nu,
                       "nu_d_mass": nu,
+                      "nu_tracers": nu,
                       "reference_profiles": {"T_ref": device_wrapper(T_ref),
                                              "T_ref_lapse": device_wrapper(T_ref_lapse)}}
   if n_sponge > 0:
     diffusion_config["do_sponge_layer"] = 1.0
     diffusion_config["nu_top"] = device_wrapper(nu_top)
     diffusion_config["nu_ramp"] = device_wrapper(nu_ramp)
+  return diffusion_config
+
+
+def diffusion_config_for_tracer_consist(diffusion_config,
+                                        v_grid):
+  diffusion_config["d_mass_tracer"] = (v_grid["hybrid_a_m"] + v_grid["hybrid_b_m"]) * v_grid["reference_surface_mass"]
   return diffusion_config
 
 

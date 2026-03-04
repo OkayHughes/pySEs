@@ -52,7 +52,7 @@ def init_quasi_uniform_grid_elem_local(nx,
                                        calc_smooth_tensor=False,
                                        rotate=True):
   face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
-  vert_redundancy = init_element_corner_vert_redundancy(nx, face_connectivity, face_position)
+  vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
   gll_position_equi, gll_jacobian = mesh_to_cart_bilinear(face_position_2d, npt)
   cube_redundancy = init_spectral_grid_redundancy(vert_redundancy, npt)
   gll_latlon_equi, _ = eval_metric_terms_equiangular(face_mask, gll_position_equi, npt)
@@ -94,7 +94,7 @@ def init_stretched_grid_elem_local(nx,
   if offset is None:
      offset = np.zeros((3,))
   face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
-  vert_redundancy = init_element_corner_vert_redundancy(nx, face_connectivity, face_position)
+  vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
   gll_position_equi, gll_jacobian = mesh_to_cart_bilinear(face_position_2d, npt)
   cube_redundancy = init_spectral_grid_redundancy(vert_redundancy, npt)
   # generate base equiangular grid and extract corners
@@ -129,3 +129,35 @@ def init_stretched_grid_elem_local(nx,
                               npt,
                               wrapped=wrapped,
                               calc_smooth_tensor=calc_smooth_tensor)
+
+
+def init_unstructured_grid(face_connectivity,
+                           corner_cart_positions,
+                           npt,
+                           wrapped=use_wrapper,
+                           calc_smooth_tensor=False,
+                           rotate=False):
+  vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
+  print("vert redundancy finished")
+  cube_redundancy = init_spectral_grid_redundancy(vert_redundancy, npt)
+  print("spectral redundancy finished")
+
+  # too_close_to_top = np.abs(latlon_corners[:, :, 0] - np.pi / 2) < 1e-8
+  # too_close_to_bottom = np.abs(latlon_corners[:, :, 0] + np.pi / 2) < 1e-8
+  # mask = np.logical_or(too_close_to_top,
+  #                      too_close_to_bottom)
+  # latlon_corners[:, :, 1] = np.where(mask, 0.0, latlon_corners[:, :, 1])
+  latlon_corners = cart_to_unit_sphere_coords(corner_cart_positions[:, :, np.newaxis, :])[:, :, 0, :]
+
+  gll_latlon, gll_to_cart_jacobian, cart_to_sphere_jacobian = eval_metric_terms_elem_local(latlon_corners,
+                                                                                           npt,
+                                                                                           rotate=rotate)
+
+  return metric_terms_to_grid(gll_latlon,
+                              gll_to_cart_jacobian,
+                              cart_to_sphere_jacobian,
+                              cube_redundancy,
+                              npt,
+                              calc_smooth_tensor=calc_smooth_tensor,
+                              wrapped=wrapped)
+

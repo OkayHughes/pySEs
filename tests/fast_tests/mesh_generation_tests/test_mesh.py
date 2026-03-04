@@ -12,7 +12,7 @@ def test_gen_bilinear_grid_cs():
   # note: test is only valid on quasi-uniform grid
   for npt in test_npts:
     face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
-    vert_redundancy = init_element_corner_vert_redundancy(nx, face_connectivity, face_position)
+    vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
     gll_pos, gll_jacobian = mesh_to_cart_bilinear(face_position_2d, npt)
     vert_redundancy_gll = init_spectral_grid_redundancy(vert_redundancy, npt)
     for face_idx in [TOP_FACE, BOTTOM_FACE, FRONT_FACE, BACK_FACE, LEFT_FACE, RIGHT_FACE]:

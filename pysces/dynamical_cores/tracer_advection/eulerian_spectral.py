@@ -32,16 +32,15 @@ def flatten_tracers(tracers, model):
 @partial(jit, static_argnames=["model"])
 def ravel_tracers(tracers_flat, tracer_map, model):
   tracers = {"moisture_species": {},
-                "tracers": {}}
+             "tracers": {}}
   if model in cam_se_models:
     tracers["dry_air_species"] = {}
-  ct = 0
   for species_name in tracer_map["moisture_species"].keys():
     tracers["moisture_species"][species_name] = tracers_flat[tracer_map["moisture_species"][species_name]]
   for species_name in tracer_map["tracers"].keys():
     tracers["tracers"][species_name] = tracers[tracer_map["tracers"][species_name]]
   if model in cam_se_models:
-    for species_name in tracers["dry_air_species"].keys():
+    for species_name in tracer_map["dry_air_species"].keys():
       tracers["dry_air_species"][species_name] = tracers_flat[tracer_map["dry_air_species"][species_name]]
   return tracers
 
@@ -57,9 +56,10 @@ def advance_tracers(tracers,
                     timestep_config,
                     model,
                     tracer_consist_hypervis=None):
+
+  u_d_mass_avg = tracer_consist_dyn["u_d_mass_avg"]
   d_mass_init = tracer_init_struct["d_mass_init"]
   d_mass_end = tracer_init_struct["d_mass_end"]
-  u_d_mass_avg = tracer_consist_dyn["u_d_mass_avg"]
   d_mass_dyn_tend = -horizontal_divergence_3d(u_d_mass_avg, grid, physics_config)
   if tracer_consist_hypervis is not None:
     d_mass_hypervis_tend = tracer_consist_hypervis["d_mass_hypervis_tend"]

@@ -55,7 +55,7 @@ def test_gen_cube_topo():
 def test_vert_conn():
   nx = 15
   face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
-  vert_redundancy = init_element_corner_vert_redundancy(nx, face_connectivity, face_position)
+  vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
   # test if all identified vertex pairings are correct
   for elem_idx in vert_redundancy.keys():
     for vert_idx in vert_redundancy[elem_idx].keys():

@@ -8,7 +8,7 @@ from pysces.mesh_generation.equiangular_metric import init_quasi_uniform_grid
 from pysces.dynamical_cores.physics_config import init_physics_config
 from pysces.initialization import init_baroclinic_wave_state
 from pysces.analytic_initialization.moist_baroclinic_wave import init_baroclinic_wave_config
-from pysces.dynamical_cores.mass_coordinate import init_vertical_grid
+from pysces.dynamical_cores.mass_coordinate import init_vertical_grid, d_mass_to_surface_mass, surface_mass_to_d_mass
 from pysces.dynamical_cores.model_state import (sum_tracers,
                                                 advance_tracers,
                                                 wrap_dynamics,
@@ -21,7 +21,8 @@ from pysces.dynamical_cores.model_state import (sum_tracers,
                                                 sum_dynamics,
                                                 check_dynamics_nan,
                                                 check_tracers_nan,
-                                                copy_model_state)
+                                                copy_model_state,
+                                                remap_tracers)
 from .test_assembly_3d import is_3d_field_c0
 from ...test_data.mass_coordinate_grids import cam30
 from ...context import allclose_global

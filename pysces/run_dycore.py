@@ -11,6 +11,7 @@ from .dynamical_cores.model_state import (sum_dynamics_series,
                                           check_tracers_nan,
                                           sum_consistency_struct)
 from .dynamical_cores.physics_dynamics_coupling import coupling_types
+from .dynamical_cores.tracer_advection.eulerian_spectral import advance_tracers
 from .model_info import cam_se_models
 
 
@@ -51,6 +52,7 @@ def advance_coupling_step(state_in,
                                     physics_config,
                                     len(v_grid["hybrid_b_m"]),
                                     model)
+    tracer_consist_init = {"d_mass_init": 1.0 * dynamics_state["d_mass"]}
     if dribble_dynamics and physics_forcing is not None:
       dynamics_state = sum_dynamics_series([dynamics_state, physics_forcing["dynamics"]],
                                            [1.0, timestep_config["tracer_advection"]["dt"]],
@@ -102,6 +104,16 @@ def advance_coupling_step(state_in,
                                                                       timestep_config,
                                                                       dims,
                                                                       model)
+          if n_split > 0:
+            tracer_consist_visc_total = sum_consistency_struct(tracer_consist_visc_total,
+                                                              tracer_consist_visc,
+                                                              1.0,
+                                                              1.0 / timestep_config["dynamics_subcycle"])
+          else:
+            tracer_consist_visc_total = sum_consistency_struct(tracer_consist_visc,
+                                                              tracer_consist_visc,
+                                                              1.0 / timestep_config["dynamics_subcycle"],
+                                                              0.0)
         if "enable_sponge_layer" in diffusion_config.keys():
           dynamics_next = advance_sponge_euler(dynamics_next,
                                                h_grid,
@@ -110,42 +122,34 @@ def advance_coupling_step(state_in,
                                                timestep_config,
                                                dims,
                                                model)
+      else:
+        tracer_consist_visc_total = None
 
       if n_split > 0:
         tracer_consist_dyn_total = sum_consistency_struct(tracer_consist_dyn_total,
                                                           tracer_consist_dyn,
                                                           1.0,
-                                                          1.0)
-        tracer_consist_visc_total = sum_consistency_struct(tracer_consist_visc_total,
-                                                           tracer_consist_visc,
-                                                           1.0,
-                                                           1.0)
+                                                          1.0 / timestep_config["dynamics_subcycle"])
       else:
         tracer_consist_dyn_total = sum_consistency_struct(tracer_consist_dyn,
                                                           tracer_consist_dyn,
-                                                          1.0,
+                                                          1.0 / timestep_config["dynamics_subcycle"],
                                                           0.0)
-        tracer_consist_visc_total = sum_consistency_struct(tracer_consist_visc,
-                                                           tracer_consist_visc,
-                                                           1.0,
-                                                           0.0)
       assert not check_dynamics_nan(dynamics_next, h_grid, model)
       assert not check_tracers_nan(tracer_state, h_grid, model)
 
       dynamics_state, dynamics_next = dynamics_next, dynamics_state
-    tracer_state = advect_tracers(tracer_state,
-                                  h_grid,
-                                  physics_config,
-                                  diffusion_config,
-                                  timestep_config,
-                                  dims,
-                                  model)
-    dynamics_state = remap_dynamics(dynamics_state,
-                                    static_forcing,
-                                    v_grid,
-                                    physics_config,
-                                    len(v_grid["hybrid_b_m"]),
-                                    model)
+    tracer_consist_init["d_mass_end"] = 1.0 * dynamics_state["d_mass"]
+    tracer_state = advance_tracers(tracer_state,
+                                   tracer_consist_dyn_total,
+                                   tracer_consist_init,
+                                   h_grid,
+                                   dims,
+                                   physics_config,
+                                   diffusion_config,
+                                   timestep_config,
+                                   model,
+                                   tracer_consist_hypervis=tracer_consist_visc_total)
   return wrap_model_state(dynamics_state,
                           static_forcing,
                           tracer_state)

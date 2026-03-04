@@ -17,7 +17,7 @@ def test_shallow():
     return
   nx = 31
   face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
-  vert_redundancy = init_element_corner_vert_redundancy(nx, face_connectivity, face_position)
+  vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
   grid, dims = init_grid_from_topo(face_connectivity, face_mask, face_position_2d, vert_redundancy, npt)
   config_shallow = init_baroclinic_wave_config(pertu0=0.0,
                                                pertup=0.0)
@@ -45,7 +45,7 @@ def test_moist_shallow():
     return
   nx = 31
   face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
-  vert_redundancy = init_element_corner_vert_redundancy(nx, face_connectivity, face_position)
+  vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
   grid, dims = init_grid_from_topo(face_connectivity, face_mask, face_position_2d, vert_redundancy, npt)
   config_moist = init_baroclinic_wave_config(pertu0=0.0,
                                              pertup=0.0)
@@ -77,7 +77,7 @@ def test_deep():
     return
   nx = 31
   face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
-  vert_redundancy = init_element_corner_vert_redundancy(nx, face_connectivity, face_position)
+  vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
   grid, dims = init_grid_from_topo(face_connectivity, face_mask, face_position_2d, vert_redundancy, npt)
   lat = grid["physical_coords"][:, :, :, 0]
   lon = grid["physical_coords"][:, :, :, 1]

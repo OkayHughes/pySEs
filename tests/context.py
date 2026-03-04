@@ -62,3 +62,6 @@ def pretty_print_scalar(array, digits=5):
   lines.append("=" * num_pad)
   print("\n".join(lines))
 
+def get_data_dir():
+  figdir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_data")
+  return figdir

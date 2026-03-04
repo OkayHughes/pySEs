@@ -40,7 +40,7 @@ def eval_surface_pressure(d_mass,
 def eval_interface_pressure(d_pressure,
                             p_top):
   p_int_lower = p_top + jnp.cumsum(d_pressure, axis=3)
-  p_int = jnp.concatenate((p_top * jnp.ones((*d_pressure.shape[:-1], 1)),
+  p_int = jnp.concatenate((p_top * jnp.ones_like(d_pressure[:, :, :, 0, jnp.newaxis]),
                            p_int_lower), axis=-1)
   return p_int
 
