@@ -358,6 +358,7 @@ def init_hypervis_config_tensor(h_grid,
 def diffusion_config_for_tracer_consist(diffusion_config,
                                         v_grid):
   diffusion_config["d_mass_tracer"] = (v_grid["hybrid_a_m"] + v_grid["hybrid_b_m"]) * v_grid["reference_surface_mass"]
+  diffusion_config["nu_d_mass"] = 0.0
   return diffusion_config
 
 
@@ -441,8 +442,12 @@ def eval_hypervis_terms(dynamics,
                                 model,
                                 phi_i=phi_i,
                                 w_i=w_i)
+  # slightly silly way of handling tracer consistency
+  hypervisc_tend_for_tracer = jnp.where(diffusion_config["nu_d_mass"] > 0.0,
+                                        hypervis_state["d_mass"] / diffusion_config["nu_d_mass"],
+                                        jnp.zeros_like(hypervis_state["d_mass"]))
   tracer_consistency = wrap_tracer_consist_hypervis(1.0 * dynamics["d_mass"],
-                                                    hypervis_state["d_mass"] / diffusion_config["nu_d_mass"])
+                                                    hypervisc_tend_for_tracer)
   return dynamics_tend, tracer_consistency
 
 

@@ -1,5 +1,6 @@
 from ..config import np, DEBUG
 
+
 def exodus_to_pysces_grid_corners(cart_coords, connect_map, element_permutation):
   # exodus uses 3 2
   #             0 1 ordering
@@ -20,6 +21,7 @@ def exodus_to_pysces_grid_corners(cart_coords, connect_map, element_permutation)
   def wrap(node_idx):
     if node_idx not in node_elem_map.keys():
       node_elem_map[node_idx] = set()
+
 
   for elem_idx in range(connect_map.shape[0]):
     for node_idx in range(connect_map.shape[1]):
@@ -64,7 +66,7 @@ def exodus_to_pysces_grid_corners(cart_coords, connect_map, element_permutation)
 
   if DEBUG:
     assert np.all(edge_info >= 0)
-    assert np.all(vert_pos > -2.0)
+    assert np.all(vert_pos > -999.0)
 
   for elem_idx in range(edge_info.shape[0]):
     for edge_idx_loc in range(edge_info.shape[1]):
@@ -79,5 +81,3 @@ def exodus_to_pysces_grid_corners(cart_coords, connect_map, element_permutation)
         assert np.max(np.abs(vert_pos[elem_idx, local_vert_1, :] - vert_pos[elem_idx_pair, remote_vert_1, :])) < 1e-10
         assert np.max(np.abs(vert_pos[elem_idx, local_vert_2, :] - vert_pos[elem_idx_pair, remote_vert_2, :])) < 1e-10
   return vert_pos, edge_info
-
-

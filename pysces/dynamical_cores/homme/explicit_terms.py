@@ -687,8 +687,8 @@ def eval_explicit_tendency(dynamics,
                            model,
                            phi_i=phi_tend,
                            w_i=w_tend)
-  #tracer_consistency = wrap_tracer_consist_dynamics(eval_tracer_velocity_term(common_variables))
-  return dynamics, {} #tracer_consistency
+  tracer_consistency = wrap_tracer_consist_dynamics(eval_tracer_velocity_term(common_variables))
+  return dynamics, tracer_consistency
 
 
 @partial(jit, static_argnames=["dims", "model"])

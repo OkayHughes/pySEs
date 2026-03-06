@@ -38,7 +38,7 @@ def ravel_tracers(tracers_flat, tracer_map, model):
   for species_name in tracer_map["moisture_species"].keys():
     tracers["moisture_species"][species_name] = tracers_flat[tracer_map["moisture_species"][species_name]]
   for species_name in tracer_map["tracers"].keys():
-    tracers["tracers"][species_name] = tracers[tracer_map["tracers"][species_name]]
+    tracers["tracers"][species_name] = tracers_flat[tracer_map["tracers"][species_name]]
   if model in cam_se_models:
     for species_name in tracer_map["dry_air_species"].keys():
       tracers["dry_air_species"][species_name] = tracers_flat[tracer_map["dry_air_species"][species_name]]

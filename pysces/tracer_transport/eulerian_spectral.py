@@ -123,6 +123,7 @@ def calc_hypervis_tend_tracer(tracer_mass, d_mass_scale, grid, dims, dt, physics
 def intermediate_d_mass_dynamics(d_mass_init, d_mass_tend_avg_cont, dt_total, step):
   return d_mass_init + step * dt_total / 2.0 * d_mass_tend_avg_cont
 
+
 @jit
 def limiter_d_mass(d_mass_init, d_mass_tend_avg, d_mass_tend_avg_cont, dt_total, step):
   return d_mass_init + dt_total / 2.0 * (step * d_mass_tend_avg_cont + d_mass_tend_avg) 
@@ -160,6 +161,7 @@ def advance_tracers_rk2(tracer_mass_in,
                                       dims)
   intermediate_d_mass = intermediate_d_mass_dynamics(d_mass_init, d_mass_tend_dyn_cont, dt, 1)
   d_mass_limiter = limiter_d_mass(d_mass_init, d_mass_tend_dyn, d_mass_tend_dyn_cont, dt, 1)
+
   tracer_mass_out = tracer_euler_step(tracer_mass_out,
                                       dt / 2.0,
                                       u_d_mass_avg,
@@ -171,6 +173,7 @@ def advance_tracers_rk2(tracer_mass_in,
                                       dims)
   intermediate_d_mass = intermediate_d_mass_dynamics(d_mass_init, d_mass_tend_dyn_cont, dt, 2)
   d_mass_limiter = limiter_d_mass(d_mass_init, d_mass_tend_dyn, d_mass_tend_dyn_cont, dt, 2)
+
   if d_mass_hypervis_tend is not None and "disable_diffusion" not in diffusion_config.keys():
     nu_tracer = diffusion_config["nu_tracer"]
     d_mass_limiter += 3.0 * dt / 2.0 * nu_tracer * d_mass_hypervis_tend

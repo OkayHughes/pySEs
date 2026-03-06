@@ -122,7 +122,7 @@ def advance_coupling_step(state_in,
                                                timestep_config,
                                                dims,
                                                model)
-      else:
+      if "d_mass_tracer" in diffusion_config.keys():
         tracer_consist_visc_total = None
 
       if n_split > 0:
