@@ -71,7 +71,7 @@ def project_tracer_3d(scalar,
 @partial(jit, static_argnames=["dims"])
 def calc_minmax(tracers, grid, dims):
   minvals = jnp.min(tracers, axis=(2, 3))
-  maxvals = jnp.min(tracers, axis=(2, 3))
+  maxvals = jnp.max(tracers, axis=(2, 3))
   tracer_elem_lev_mins = []
   tracer_elem_lev_maxs = []
   for tracer_idx in range(tracers.shape[0]):

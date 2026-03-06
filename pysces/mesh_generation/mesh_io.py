@@ -61,7 +61,7 @@ def exodus_to_pysces_grid_corners(cart_coords, connect_map, element_permutation)
             local_is_backwards = pysces_edge in edges_backward
             edge_info[elem_idx_loc-1, local_edge_idx, 0] = edge_pair_elem_idx - 1
             edge_info[elem_idx_loc-1, local_edge_idx, 1] = remote_edge_idx
-            edge_info[elem_idx_loc-1, local_edge_idx, 2] = remote_is_backwards ^ local_is_backwards
+            edge_info[elem_idx_loc-1, local_edge_idx, 2] = 1 - (remote_is_backwards ^ local_is_backwards)
             break
 
   if DEBUG:
@@ -73,7 +73,7 @@ def exodus_to_pysces_grid_corners(cart_coords, connect_map, element_permutation)
       elem_idx_pair, edge_idx_pair, paired_edge_is_reversed = edge_info[elem_idx, edge_idx_loc, :]
       assert elem_idx_pair != elem_idx
       local_vert_1, local_vert_2 = edges_forward[edge_idx_loc]
-      if paired_edge_is_reversed:
+      if not paired_edge_is_reversed:
         remote_vert_1, remote_vert_2 = edges_backward[edge_idx_pair]
       else:
         remote_vert_1, remote_vert_2 = edges_forward[edge_idx_pair]

@@ -15,8 +15,5 @@ def test_grid():
   print("redundancy generated")
   print(face_connectivity.dtype)
   grid, dims = init_unstructured_grid(face_connectivity, vert_pos, npt)
-  print("grid created")
-  import matplotlib.pyplot as plt
-  plt.figure()
-  plot_grid(grid, plt.gca())
-  plt.savefig(f"{get_figdir()}/conus.pdf")
+  assert np.allclose(np.sum(grid["mass_matrix"]), 4*np.pi)
+  
