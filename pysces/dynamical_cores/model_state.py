@@ -23,26 +23,25 @@ def sum_tracers(state1,
                 fold_coeff2,
                 is_dry_air_species=False):
   """
-  [Description]
+  Compute a weighted sum of two tracer species dicts field-by-field.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  state1 : dict[str, Array]
+      First tracer species dict (e.g. ``tracers["moisture_species"]``).
+  state2 : dict[str, Array]
+      Second tracer species dict with the same keys as ``state1``.
+  fold_coeff1 : float
+      Scalar weight for ``state1``.
+  fold_coeff2 : float
+      Scalar weight for ``state2``.
+  is_dry_air_species : bool, optional
+      Currently unused; reserved for dry-air species handling (default: False).
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  state_out : dict[str, Array]
+      Field-wise weighted sum ``fold_coeff1 * state1 + fold_coeff2 * state2``.
   """
   state_out = {}
   for tracer_name in state1.keys():
@@ -54,6 +53,27 @@ def sum_tracers(state1,
 def advance_tracers(tracer_states,
                     coeffs,
                     model):
+  """
+  Compute a weighted linear combination of a list of tracer states.
+
+  Parameters
+  ----------
+  tracer_states : list[dict]
+      List of tracer state dicts, each containing ``"moisture_species"``,
+      ``"tracers"``, and (for CAM-SE models) ``"dry_air_species"`` sub-dicts.
+  coeffs : sequence[float]
+      Scalar weights, one per element of ``tracer_states``.  The first two
+      states are combined with ``coeffs[0]`` and ``coeffs[1]``; subsequent
+      states are folded in with their corresponding coefficient.
+  model : str
+      Model identifier; determines whether ``"dry_air_species"`` is handled.
+
+  Returns
+  -------
+  tracers : dict
+      Assembled tracer state dict produced by :func:`wrap_tracers` containing
+      the field-wise weighted sum across all input states.
+  """
   moisture_species = sum_tracers(tracer_states[0]["moisture_species"],
                                  tracer_states[1]["moisture_species"],
                                  coeffs[0],
@@ -96,26 +116,20 @@ def advance_tracers(tracer_states,
 @jit
 def wrap_tracer_consist_dynamics(u_d_mass):
   """
-  [Description]
+  Pack the tracer-consistency flux array into its named struct.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  u_d_mass : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, 2], Float]
+      Mass-weighted horizontal wind ``u * d_mass`` accumulated during the
+      dynamics sub-steps; used to transport tracers in a manner consistent
+      with the dynamical-core mass update.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  consist_dynamics : dict[str, Array]
+      Dict ``{"u_d_mass_avg": u_d_mass}`` consumed by
+      :func:`advance_tracers_rk2` and related tracer-transport routines.
   """
   return {"u_d_mass_avg": u_d_mass}
 
@@ -124,26 +138,23 @@ def wrap_tracer_consist_dynamics(u_d_mass):
 def wrap_tracer_consist_hypervis(d_mass_val,
                                  d_mass_tend):
   """
-  [Description]
+  Pack hyperviscosity consistency quantities into their named struct.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  d_mass_val : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]
+      Layer-mass field used as the reference state for the hyperviscosity
+      tracer-consistency correction (typically the time-averaged ``d_mass``).
+  d_mass_tend : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]
+      Hyperviscosity tendency applied to ``d_mass``; communicated to the
+      tracer solver so that tracers experience the same mass diffusion as
+      the dynamics.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  consist_hypervis : dict[str, Array]
+      Dict with keys ``"d_mass_hypervis_tend"`` and ``"d_mass_hypervis_avg"``
+      consumed by the tracer hyperviscosity routines.
   """
   return {"d_mass_hypervis_tend": d_mass_tend,
           "d_mass_hypervis_avg": d_mass_val}
@@ -151,6 +162,26 @@ def wrap_tracer_consist_hypervis(d_mass_val,
 
 @jit
 def sum_consistency_struct(struct_1, struct_2, coeff_1, coeff_2):
+  """
+  Compute a weighted field-wise sum of two tracer-consistency structs.
+
+  Parameters
+  ----------
+  struct_1 : dict[str, Array]
+      First consistency struct (e.g. from :func:`wrap_tracer_consist_dynamics`
+      or :func:`wrap_tracer_consist_hypervis`).
+  struct_2 : dict[str, Array]
+      Second consistency struct with the same keys as ``struct_1``.
+  coeff_1 : float
+      Scalar weight applied to ``struct_1``.
+  coeff_2 : float
+      Scalar weight applied to ``struct_2``.
+
+  Returns
+  -------
+  result : dict[str, Array]
+      Field-wise ``coeff_1 * struct_1 + coeff_2 * struct_2``.
+  """
   res = {}
   for field in struct_1.keys():
     res[field] = struct_1[field] * coeff_1 + struct_2[field] * coeff_2
@@ -163,6 +194,33 @@ def remap_tracers(dynamics,
                   v_grid,
                   num_lev,
                   model):
+  """
+  Vertically remap all tracer species to the reference hybrid-coordinate levels.
+
+  Each tracer mixing ratio is converted to a mass quantity (``q * d_mass``),
+  remapped conservatively via :func:`zerroukat_remap`, and then divided by
+  the reference layer mass to recover the remapped mixing ratio.
+
+  Parameters
+  ----------
+  dynamics : dict
+      Dynamics state dict containing ``"d_mass"`` for the current model levels.
+  tracers : dict
+      Tracer state dict with sub-dicts ``"moisture_species"``, ``"tracers"``,
+      and (for CAM-SE models) ``"dry_air_species"``.
+  v_grid : dict[str, Array]
+      Vertical grid struct from :func:`init_vertical_grid`.
+  num_lev : int
+      Number of vertical levels; used as a static argument for JIT tracing.
+  model : str
+      Model identifier; determines whether ``"dry_air_species"`` is remapped.
+
+  Returns
+  -------
+  tracers_remapped : dict
+      Tracer state dict assembled by :func:`wrap_tracers` with all species
+      remapped onto the reference ``d_mass_ref`` levels.
+  """
   tracer_list = []
   ct = 0
   if model in cam_se_models:
@@ -212,26 +270,35 @@ def wrap_dynamics(horizontal_wind,
                   phi_i=None,
                   w_i=None):
   """
-  [Description]
+  Assemble the dynamics state dict from its prognostic fields.
+
+  The thermodynamic variable is stored under the model-specific key given by
+  ``thermodynamic_variable_names[model]`` (e.g. ``"T"`` for CAM-SE,
+  ``"theta_v_d_mass"`` for HOMME).  The optional non-hydrostatic fields
+  ``phi_i`` and ``w_i`` are included only when provided.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  horizontal_wind : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, 2], Float]
+      Contra-variant horizontal wind components ``(u, v)``.
+  thermodynamic_variable : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]
+      Model thermodynamic variable (temperature or virtual potential temperature
+      times layer mass, depending on ``model``).
+  d_mass : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]
+      Dry-air layer mass (pressure thickness in Pa).
+  model : str
+      Model identifier; selects the thermodynamic variable name and whether
+      non-hydrostatic fields are expected.
+  phi_i : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx+1], Float], optional
+      Interface geopotential; included only for non-hydrostatic models.
+  w_i : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx+1], Float], optional
+      Interface vertical velocity; included only for non-hydrostatic models.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  dynamics : dict[str, Array]
+      State dict with keys ``"horizontal_wind"``, the model thermodynamic key,
+      ``"d_mass"``, and optionally ``"phi_i"`` and ``"w_i"``.
   """
   state = {"horizontal_wind": horizontal_wind,
            thermodynamic_variable_names[model]: thermodynamic_variable,
@@ -248,6 +315,24 @@ def wrap_dynamics(horizontal_wind,
 def wrap_model_state(dynamics,
                      static_forcing,
                      tracers):
+  """
+  Assemble the top-level model state dict.
+
+  Parameters
+  ----------
+  dynamics : dict[str, Array]
+      Prognostic dynamics state from :func:`wrap_dynamics`.
+  static_forcing : dict[str, Array]
+      Time-invariant forcing from :func:`init_static_forcing` (surface
+      geopotential, its gradient, and Coriolis parameters).
+  tracers : dict
+      Tracer state from :func:`wrap_tracers`.
+
+  Returns
+  -------
+  state : dict
+      Dict with keys ``"dynamics"``, ``"static_forcing"``, and ``"tracers"``.
+  """
   return {"dynamics": dynamics,
           "static_forcing": static_forcing,
           "tracers": tracers}
@@ -256,6 +341,21 @@ def wrap_model_state(dynamics,
 @partial(jit, static_argnames=["model"])
 def copy_dynamics(dynamics,
                   model):
+  """
+  Deep-copy a dynamics state dict, allocating new arrays for each field.
+
+  Parameters
+  ----------
+  dynamics : dict[str, Array]
+      Dynamics state from :func:`wrap_dynamics`.
+  model : str
+      Model identifier; determines whether ``"phi_i"`` and ``"w_i"`` are copied.
+
+  Returns
+  -------
+  dynamics_copy : dict[str, Array]
+      New dynamics dict with independent copies of all arrays.
+  """
   if model not in hydrostatic_models:
     phi_i = dynamics["phi_i"]
     w_i = dynamics["w_i"]
@@ -273,6 +373,23 @@ def copy_dynamics(dynamics,
 @partial(jit, static_argnames=["model"])
 def copy_tracers(tracers,
                  model):
+  """
+  Deep-copy a tracer state dict, allocating new arrays for each species.
+
+  Parameters
+  ----------
+  tracers : dict
+      Tracer state from :func:`wrap_tracers` with sub-dicts
+      ``"moisture_species"``, ``"tracers"``, and optionally
+      ``"dry_air_species"`` (CAM-SE models).
+  model : str
+      Model identifier; determines whether ``"dry_air_species"`` is copied.
+
+  Returns
+  -------
+  tracers_copy : dict
+      New tracer state dict with independent copies of all species arrays.
+  """
   if model in cam_se_models:
     dry_air_species = {}
     for species_name in tracers["dry_air_species"].keys():
@@ -294,6 +411,24 @@ def copy_tracers(tracers,
 @partial(jit, static_argnames=["model"])
 def copy_model_state(state,
                      model):
+  """
+  Deep-copy the full model state (dynamics + static forcing + tracers).
+
+  Parameters
+  ----------
+  state : dict
+      Top-level model state from :func:`wrap_model_state`.
+  model : str
+      Model identifier forwarded to :func:`copy_dynamics` and
+      :func:`copy_tracers`.
+
+  Returns
+  -------
+  state_copy : dict
+      New model state dict with independent copies of dynamics and tracers.
+      The ``"static_forcing"`` sub-dict is shared (not copied) since it is
+      time-invariant.
+  """
   return wrap_model_state(copy_dynamics(state["dynamics"], model),
                           state["static_forcing"],
                           copy_tracers(state["tracers"], model))
@@ -304,6 +439,31 @@ def _wrap_tracer_like(moisture_species,
                  tracers,
                  model,
                  dry_air_species=None):
+  """
+  Build a tracer-like dict and attach the mixing-ratio convention flag.
+
+  This is the shared implementation used by both :func:`wrap_tracers` and
+  :func:`wrap_tracer_mass`.  It sets either ``"moist_mixing_ratio"`` or
+  ``"dry_mixing_ratio"`` to ``1.0`` to indicate the convention used by
+  ``model``.
+
+  Parameters
+  ----------
+  moisture_species : dict[str, Array]
+      Moisture mixing-ratio (or mass) fields keyed by species name.
+  tracers : dict[str, Array]
+      Passive tracer fields keyed by tracer name.
+  model : str
+      Model identifier; selects the mixing-ratio convention.
+  dry_air_species : dict[str, Array] or None, optional
+      Dry-air species fields (CAM-SE models only).
+
+  Returns
+  -------
+  tracer_struct : dict
+      Dict with ``"moisture_species"``, ``"tracers"``, optionally
+      ``"dry_air_species"``, and a mixing-ratio convention key.
+  """
   tracer_struct = {"moisture_species": moisture_species,
                    "tracers": tracers}
   if dry_air_species is not None:
@@ -320,6 +480,26 @@ def wrap_tracers(moisture_species,
                  tracers,
                  model,
                  dry_air_species=None):
+  """
+  Assemble the tracer state dict from mixing-ratio species dicts.
+
+  Parameters
+  ----------
+  moisture_species : dict[str, Array]
+      Moisture mixing-ratio fields keyed by species name.
+  tracers : dict[str, Array]
+      Passive tracer fields keyed by tracer name.
+  model : str
+      Model identifier; selects the mixing-ratio convention and whether
+      ``"dry_air_species"`` is included.
+  dry_air_species : dict[str, Array] or None, optional
+      Dry-air species mixing-ratio fields (CAM-SE models only).
+
+  Returns
+  -------
+  tracer_struct : dict
+      Tracer state dict suitable for use in the full model state.
+  """
   tracer_struct = _wrap_tracer_like(moisture_species,
                                     tracers,
                                     model,
@@ -336,6 +516,29 @@ def wrap_tracer_mass(moisture_species_mass,
                      tracers_mass,
                      model,
                      dry_air_species_mass=None):
+  """
+  Assemble the tracer *mass* dict (``q * d_mass``) from per-species arrays.
+
+  Identical in structure to :func:`wrap_tracers` but marks the result with
+  ``"mass_quantity": 1.0`` instead of a mixing-ratio flag, so downstream code
+  can distinguish the two representations.
+
+  Parameters
+  ----------
+  moisture_species_mass : dict[str, Array]
+      Mass-weighted moisture fields (``q * d_mass``) keyed by species name.
+  tracers_mass : dict[str, Array]
+      Mass-weighted passive tracer fields keyed by tracer name.
+  model : str
+      Model identifier forwarded to :func:`_wrap_tracer_like`.
+  dry_air_species_mass : dict[str, Array] or None, optional
+      Mass-weighted dry-air species fields (CAM-SE models only).
+
+  Returns
+  -------
+  tracer_mass : dict
+      Tracer mass dict with key ``"mass_quantity": 1.0``.
+  """
   tracer_mass = _wrap_tracer_like(moisture_species_mass,
                                     tracers_mass,
                                     model,
@@ -349,6 +552,28 @@ def wrap_static_forcing(phi_surf,
                         grad_phi_surf,
                         coriolis_param,
                         nontrad_coriolis_param=None):
+  """
+  Assemble the static forcing dict from its precomputed fields.
+
+  Parameters
+  ----------
+  phi_surf : Array[tuple[elem_idx, gll_idx, gll_idx], Float]
+      Surface geopotential (m^2 s^-2).
+  grad_phi_surf : Array[tuple[elem_idx, gll_idx, gll_idx, 2], Float]
+      DSS-projected gradient of the surface geopotential.
+  coriolis_param : Array[tuple[elem_idx, gll_idx, gll_idx], Float]
+      Coriolis parameter ``f = 2 Omega sin(lat)`` (or constant for f-plane
+      models).
+  nontrad_coriolis_param : Array[tuple[elem_idx, gll_idx, gll_idx], Float] or None, optional
+      Non-traditional Coriolis parameter ``2 Omega cos(lat)``; included only
+      for deep-atmosphere models.
+
+  Returns
+  -------
+  static_forcing : dict[str, Array]
+      Dict with keys ``"phi_surf"``, ``"grad_phi_surf"``, ``"coriolis_param"``,
+      and optionally ``"nontrad_coriolis_param"``.
+  """
   static_forcing = {"phi_surf": phi_surf,
                     "grad_phi_surf": grad_phi_surf,
                     "coriolis_param": coriolis_param}
@@ -363,6 +588,35 @@ def init_static_forcing(phi_surf,
                         dims,
                         model,
                         f_plane_center=jnp.pi / 4.0):
+  """
+  Compute and assemble the time-invariant static forcing fields.
+
+  Computes the DSS-projected gradient of the surface geopotential and the
+  Coriolis parameter (using a constant latitude for f-plane models, or the
+  true latitude for spherical models).  Deep-atmosphere models also receive
+  the non-traditional Coriolis parameter.
+
+  Parameters
+  ----------
+  phi_surf : Array[tuple[elem_idx, gll_idx, gll_idx], Float]
+      Surface geopotential (m^2 s^-2).
+  h_grid : SpectralElementGrid
+      Horizontal grid struct containing physical coordinates and DSS operators.
+  physics_config : dict
+      Physics configuration with keys ``"radius_earth"`` and
+      ``"angular_freq_earth"``.
+  dims : tuple[int, ...]
+      Grid dimension tuple used for DSS projection.
+  model : str
+      Model identifier; selects f-plane vs spherical and shallow vs deep.
+  f_plane_center : float, optional
+      Latitude (radians) for f-plane Coriolis constant (default: pi/4).
+
+  Returns
+  -------
+  static_forcing : dict[str, Array]
+      Dict assembled by :func:`wrap_static_forcing`.
+  """
   grad_phi_surf_discont = horizontal_gradient(phi_surf, h_grid, a=physics_config["radius_earth"])
   if do_mpi_communication:
     grad_phi_surf = jnp.stack([project_scalar_global([grad_phi_surf_discont[:, :, :, 0]], h_grid, dims)[0],
@@ -388,26 +642,27 @@ def project_dynamics(dynamics_in,
                      dims,
                      model):
   """
-  [Description]
+  Apply DSS (Direct Stiffness Summation) projection to all dynamics fields.
+
+  Each dynamics field is projected level-by-level via :func:`project_scalar_3d`
+  to enforce C0 continuity across element boundaries.  Non-hydrostatic fields
+  ``"phi_i"`` and ``"w_i"`` are projected only when present.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  dynamics_in : dict[str, Array]
+      Input dynamics state from :func:`wrap_dynamics`.
+  h_grid : SpectralElementGrid
+      Horizontal grid struct containing DSS operators.
+  dims : tuple[int, ...]
+      Grid dimension tuple used for DSS projection.
+  model : str
+      Model identifier; determines whether non-hydrostatic fields are projected.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  dynamics_proj : dict[str, Array]
+      Dynamics state with all fields replaced by their DSS projections.
   """
   u_cont = project_scalar_3d(dynamics_in["horizontal_wind"][:, :, :, :, 0], h_grid, dims)
   v_cont = project_scalar_3d(dynamics_in["horizontal_wind"][:, :, :, :, 1], h_grid, dims)
@@ -431,6 +686,28 @@ def project_dynamics(dynamics_in,
 def project_scalar_3d(variable,
                       h_grid,
                       dims):
+  """
+  Apply DSS projection to a 3-D scalar field, with optional MPI communication.
+
+  When MPI communication is enabled the global DSS assembly is performed via
+  :func:`project_scalar_global`; otherwise the purely local 2-D
+  :func:`project_scalar` is mapped over the vertical axis via
+  ``vmap_1d_apply``.
+
+  Parameters
+  ----------
+  variable : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]
+      Discontinuous 3-D scalar field (one value per GLL node per level).
+  h_grid : SpectralElementGrid
+      Horizontal grid struct containing DSS operators.
+  dims : tuple[int, ...]
+      Grid dimension tuple used for DSS projection.
+
+  Returns
+  -------
+  variable_cont : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]
+      DSS-projected (C0-continuous) scalar field.
+  """
   if do_mpi_communication:
     variable_cont = project_scalar_global([variable],
                                           h_grid,
@@ -446,26 +723,24 @@ def project_scalar_3d(variable,
 def dynamics_to_surface_mass(state_in,
                              v_grid):
   """
-  [Description]
+  Recover the surface pressure from the dynamics ``d_mass`` field.
+
+  Sums the layer masses over all vertical levels and adds the model-top
+  pressure ``p_top = hybrid_a_i[0] * reference_surface_mass``.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  state_in : dict[str, Array]
+      Dynamics state dict containing ``"d_mass"`` with shape
+      ``(elem, gll, gll, lev)``.
+  v_grid : dict[str, Array]
+      Vertical grid struct from :func:`init_vertical_grid` containing
+      ``"hybrid_a_i"`` and ``"reference_surface_mass"``.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  ps : Array[tuple[elem_idx, gll_idx, gll_idx], Float]
+      Surface pressure (Pa).
   """
   return jnp.sum(state_in["d_mass"], axis=-1) + v_grid["hybrid_a_i"][0] * v_grid["reference_surface_mass"]
 
@@ -478,26 +753,35 @@ def remap_dynamics(dynamics_in,
                    num_lev,
                    model):
   """
-  [Description]
+  Vertically remap all dynamics fields to the reference hybrid-coordinate levels.
+
+  Converts mass-weighted prognostic fields to layer-integrated form
+  (``q * d_mass``), remaps them conservatively via :func:`zerroukat_remap`,
+  then recovers mixing-ratio form on the reference levels.  Non-hydrostatic
+  models additionally remap the geopotential perturbation and vertical
+  velocity.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  dynamics_in : dict[str, Array]
+      Current dynamics state from :func:`wrap_dynamics`.
+  static_forcing : dict[str, Array]
+      Static forcing from :func:`init_static_forcing`; ``"phi_surf"`` and
+      ``"grad_phi_surf"`` are used for the non-hydrostatic geopotential remap.
+  v_grid : dict[str, Array]
+      Vertical grid struct from :func:`init_vertical_grid`.
+  physics_config : dict
+      Physics configuration forwarded to thermodynamic helpers.
+  num_lev : int
+      Number of vertical levels; static JIT argument.
+  model : str
+      Model identifier; selects thermodynamic variable and non-hydrostatic
+      handling.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  dynamics_remapped : dict[str, Array]
+      Dynamics state on the reference ``d_mass_ref`` levels.
   """
   pi_surf = dynamics_to_surface_mass(dynamics_in, v_grid)
   d_mass_ref = surface_mass_to_d_mass(pi_surf,
@@ -560,26 +844,26 @@ def sum_dynamics(state1,
                  fold_coeff2,
                  model):
   """
-  [Description]
+  Compute a weighted sum of two dynamics states field-by-field.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  state1 : dict[str, Array]
+      First dynamics state from :func:`wrap_dynamics`.
+  state2 : dict[str, Array]
+      Second dynamics state with the same model fields as ``state1``.
+  fold_coeff1 : float
+      Scalar weight for ``state1``.
+  fold_coeff2 : float
+      Scalar weight for ``state2``.
+  model : str
+      Model identifier; selects the thermodynamic variable name and whether
+      non-hydrostatic fields are combined.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  dynamics_out : dict[str, Array]
+      Field-wise ``fold_coeff1 * state1 + fold_coeff2 * state2``.
   """
   if model not in hydrostatic_models:
     phi_i = state1["phi_i"] * fold_coeff1 + state2["phi_i"] * fold_coeff2
@@ -601,26 +885,25 @@ def sum_dynamics_series(states,
                         coeffs,
                         model):
   """
-  [Description]
+  Compute a weighted linear combination of a list of dynamics states.
+
+  Applies :func:`sum_dynamics` iteratively: the first two states are combined
+  with ``coeffs[0]`` and ``coeffs[1]``; each subsequent state is folded in
+  with coefficient ``coeffs[i]`` (accumulated result weight is ``1.0``).
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  states : list[dict[str, Array]]
+      List of dynamics state dicts from :func:`wrap_dynamics`.
+  coeffs : sequence[float]
+      Scalar weights, one per element of ``states``.
+  model : str
+      Model identifier forwarded to :func:`sum_dynamics`.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  dynamics_out : dict[str, Array]
+      Field-wise weighted sum over all input states.
   """
   state_out = sum_dynamics(states[0],
                            states[1],
@@ -635,6 +918,25 @@ def sum_dynamics_series(states,
 
 
 def apply_mask(field, h_grid):
+  """
+  Zero out ghost/halo GLL nodes using the grid mask.
+
+  Broadcasts ``h_grid["ghost_mask"]`` to match ``field``'s rank and sets
+  nodes where the mask is ``<= 0.5`` (ghost nodes) to zero.
+
+  Parameters
+  ----------
+  field : Array
+      Field array whose leading dimensions match ``(elem_idx, gll_idx, gll_idx)``.
+  h_grid : SpectralElementGrid
+      Horizontal grid struct containing ``"ghost_mask"`` of shape
+      ``(elem_idx, gll_idx, gll_idx)``.
+
+  Returns
+  -------
+  masked_field : Array
+      Field with ghost-node values replaced by zero.
+  """
   mask = h_grid["ghost_mask"]
   shape = list(h_grid["ghost_mask"].shape) + (field.ndim - mask.ndim) * [1]
   return jnp.where(mask.reshape(shape) > 0.5, field, 0.0)
@@ -644,26 +946,25 @@ def check_dynamics_nan(dynamics,
                        h_grid,
                        model):
   """
-  [Description]
+  Check whether any dynamics field contains a NaN on any MPI rank.
+
+  Ghost nodes are excluded via :func:`apply_mask` before the NaN check.
+  The per-rank boolean is reduced across all ranks via :func:`global_sum`.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  dynamics : dict[str, Array]
+      Dynamics state dict from :func:`wrap_dynamics`.
+  h_grid : SpectralElementGrid
+      Horizontal grid struct containing ``"ghost_mask"``.
+  model : str
+      Model identifier; determines which fields (including non-hydrostatic
+      ones) are checked.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  has_nan : bool
+      ``True`` if any NaN is found in any dynamics field on any MPI rank.
   """
   is_nan = False
   fields = ["horizontal_wind", thermodynamic_variable_names[model], "d_mass"]
@@ -678,6 +979,28 @@ def check_dynamics_nan(dynamics,
 def check_tracers_nan(tracers,
                       h_grid,
                       model):
+  """
+  Check whether any tracer field contains a NaN on any MPI rank.
+
+  Ghost nodes are excluded via :func:`apply_mask` before the NaN check.
+  The per-rank boolean is reduced across all ranks via :func:`global_sum`.
+
+  Parameters
+  ----------
+  tracers : dict
+      Tracer state dict from :func:`wrap_tracers` with sub-dicts
+      ``"moisture_species"``, ``"tracers"``, and optionally
+      ``"dry_air_species"`` (CAM-SE models).
+  h_grid : SpectralElementGrid
+      Horizontal grid struct containing ``"ghost_mask"``.
+  model : str
+      Model identifier; determines whether ``"dry_air_species"`` is checked.
+
+  Returns
+  -------
+  has_nan : bool
+      ``True`` if any NaN is found in any tracer field on any MPI rank.
+  """
   is_nan = False
   for field_name in tracers["moisture_species"].keys():
     is_nan = is_nan or jnp.any(jnp.isnan(apply_mask(tracers["moisture_species"][field_name], h_grid)))

@@ -7,6 +7,18 @@ from mpi4py import MPI
 
 
 def get_config_filepath():
+  """
+  Return the path to the pysces configuration JSON file.
+
+  The configuration file is located in the current working directory
+  so that each run directory can have its own computational settings.
+
+  Returns
+  -------
+  `str`
+      Absolute path to ``pysces_config.json`` in the current
+      working directory.
+  """
   # return os.path.join(os.path.dirname(os.path.abspath(__file__)), "pysces_config.json")
   return os.path.join(os.getcwd(), "pysces_config.json")
 
@@ -18,6 +30,36 @@ def write_config(debug=True,
                  use_cpu=True,
                  use_double=True,
                  shard_cpu_count=1):
+  """
+  Write a pysces computational configuration to ``pysces_config.json``
+  in the current working directory.
+
+  Parameters
+  ----------
+  debug : `bool`, default=True
+      Enable debug mode (extra runtime checks and verbose output).
+  use_mpi : `bool`, default=False
+      Enable MPI distributed-memory parallelism.
+  use_wrapper : `bool`, default=False
+      Wrap arrays in the device library specified by ``wrapper_type``.
+  wrapper_type : `str`, default="none"
+      Device wrapper library to use.  Must be one of
+      ``"none"``, ``"jax"``, or ``"torch"``.
+  use_cpu : `bool`, default=True
+      Force computation on CPU even when a GPU is available.
+  use_double : `bool`, default=True
+      Use double-precision (64-bit) floating point.
+  shard_cpu_count : `int`, default=1
+      Number of virtual CPU devices to shard across when using
+      JAX CPU sharding.
+
+  Notes
+  -----
+  The configuration is written as a JSON file and read back at
+  import time by ``parse_config_file``.  Re-import (or restart)
+  the Python process after calling this function for the new
+  settings to take effect.
+  """
   config_struct = {"debug": debug,
                    "use_mpi": use_mpi,
                    "use_wrapper": use_wrapper,
@@ -30,6 +72,19 @@ def write_config(debug=True,
 
 
 def parse_config_file():
+  """
+  Read the pysces configuration JSON file and return it as a dict.
+
+  If no configuration file exists, a default serial NumPy configuration
+  is written and the process is asked to restart.
+
+  Returns
+  -------
+  config_vars : `dict`
+      Configuration dictionary with keys ``"debug"``, ``"use_mpi"``,
+      ``"use_wrapper"``, ``"wrapper_type"``, ``"use_cpu"``,
+      ``"use_double"``, and ``"shard_cpu_count"``.
+  """
   config_filename = get_config_filepath()
   try:
     assert os.path.isfile(config_filename)

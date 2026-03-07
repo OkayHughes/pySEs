@@ -44,8 +44,8 @@ def test_sw_model():
                                        physics_config, diffusion_config, timestep_config,
                                        dims, diffusion=False)
 
-  diff_u = u_init - final_state["horizontal_wind"]
-  diff_h = h_init - final_state["h"]
+  diff_u = u_init - final_state["dynamics"]["horizontal_wind"]
+  diff_h = h_init - final_state["dynamics"]["h"]
   assert (inner_product(diff_u[:, :, :, 0], diff_u[:, :, :, 0], grid) < 1e-5)
   assert (inner_product(diff_u[:, :, :, 1], diff_u[:, :, :, 1], grid) < 1e-5)
   assert (inner_product(diff_h, diff_h, grid) / jnp.max(h_init) < 1e-5)
@@ -82,7 +82,7 @@ def test_galewsky():
                                          physics_config, diffusion_config, timestep_config,
                                          dims, diffusion=True)
     mass_init = inner_product(h_init, h_init, grid)
-    mass_final = inner_product(final_state["h"], final_state["h"], grid)
+    mass_final = inner_product(final_state["dynamics"]["h"], final_state["dynamics"]["h"], grid)
 
     assert (jnp.abs(mass_init - mass_final) / mass_final < 1e-6)
-    assert (not jnp.any(jnp.isnan(final_state["horizontal_wind"])))
+    assert (not jnp.any(jnp.isnan(final_state["dynamics"]["horizontal_wind"])))

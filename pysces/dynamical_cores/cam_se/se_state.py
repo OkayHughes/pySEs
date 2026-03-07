@@ -17,26 +17,44 @@ def init_model_struct(u,
                       model,
                       dry_air_species=None):
   """
-  [Description]
+  Initialise the full CAM-SE model state from raw prognostic arrays.
+
+  Assembles the dynamics, static forcing, and tracer sub-structs and wraps
+  them into the top-level model state dict.  For models that do not use
+  variable-kappa dry-air species the ``dry_air_species`` argument is ignored
+  and replaced with a uniform ``{"dry_air": ones}`` array.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  u : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, 2], Float]
+      Horizontal wind components ``(u, v)``.
+  T : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]
+      Temperature (K); the CAM-SE thermodynamic prognostic variable.
+  d_mass : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]
+      Dry-air layer mass (Pa).
+  phi_surf : Array[tuple[elem_idx, gll_idx, gll_idx], Float]
+      Surface geopotential (m^2 s^-2).
+  moisture_species : dict[str, Array]
+      Moisture mixing-ratio fields (kg moisture / kg dry air) keyed by
+      species name.
+  tracers : dict[str, Array]
+      Passive tracer fields keyed by tracer name.
+  h_grid : SpectralElementGrid
+      Horizontal grid struct.
+  dims : tuple[int, ...]
+      Grid dimension tuple; static JIT argument.
+  physics_config : dict
+      Physics configuration dict.
+  model : str
+      Model identifier; static JIT argument.
+  dry_air_species : dict[str, Array] or None, optional
+      Dry-air species mass-fraction fields keyed by species name; only used
+      for variable-kappa models.  Defaults to ``None``.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  state : dict
+      Top-level model state dict from :func:`wrap_model_state`.
   """
   if model not in variable_kappa_models:
     dry_air_species = {"dry_air": jnp.ones_like(T)}

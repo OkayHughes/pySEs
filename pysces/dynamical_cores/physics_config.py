@@ -26,7 +26,24 @@ gas_properties = {"N2": {"num_atoms": 2,
 
 
 def cp_base(dof):
-   return universal_R * (1.0 + degrees_of_freedom_igl[dof] / 2.0)
+  """
+  Compute the molar heat capacity at constant pressure for an ideal gas.
+
+  Uses the equipartition theorem: ``cp = R * (1 + f/2)`` where ``f`` is the
+  number of active degrees of freedom for a molecule with ``dof`` atoms.
+
+  Parameters
+  ----------
+  dof : int
+      Number of atoms in the molecule (1, 2, or 3); used to look up the
+      degrees of freedom from ``degrees_of_freedom_igl``.
+
+  Returns
+  -------
+  cp_mol : float
+      Molar heat capacity at constant pressure (J mol^-1 K^-1).
+  """
+  return universal_R * (1.0 + degrees_of_freedom_igl[dof] / 2.0)
 
 
 def init_physics_config(model,
@@ -41,26 +58,49 @@ def init_physics_config(model,
                         epsilon=molec_weight_water_vapor / molec_weight_dry_air,
                         dry_air_species=["N2", "O2"]):
   """
-  [Description]
+  Build the physics configuration dict for a 3-D atmospheric model.
+
+  For CAM-SE models the dict is extended with per-species gas constants and
+  heat capacities for the dry-air mixture and for water vapour.  For
+  variable-kappa models the dry-air species are treated individually using
+  ideal-gas theory; otherwise a single bulk dry-air entry is used.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  model : str
+      Model identifier; selects which sub-dicts are populated.
+  Rgas : float, optional
+      Specific gas constant for dry air (J kg^-1 K^-1); default derived from
+      universal gas constant and the molecular weight of dry air (~287 J kg^-1 K^-1).
+  radius_earth : float, optional
+      Mean Earth radius in metres (default: 6371e3).
+  angular_freq_earth : float, optional
+      Earth's rotation rate in rad s^-1 (default: 7.292e-5).
+  gravity : float, optional
+      Surface gravitational acceleration in m s^-2 (default: 9.81).
+  p0 : float, optional
+      Reference pressure in Pa (default: 1e5).
+  cp : float, optional
+      Specific heat capacity of dry air at constant pressure in J kg^-1 K^-1
+      (default: 1004.64).
+  cp_water_vapor : float, optional
+      Specific heat capacity of water vapour at constant pressure in
+      J kg^-1 K^-1 (default: 1810).
+  R_water_vapor : float, optional
+      Specific gas constant for water vapour (J kg^-1 K^-1).
+  epsilon : float, optional
+      Ratio of molecular weight of water vapour to dry air (~0.622).
+  dry_air_species : list[str], optional
+      Species names for the dry-air mixture (default: ``["N2", "O2"]``);
+      used only for variable-kappa CAM-SE models.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  physics_config : dict
+      Dict containing ``"gravity"``, ``"radius_earth"``,
+      ``"angular_freq_earth"``, ``"p0"``, ``"epsilon"``, ``"Rgas"``,
+      ``"cp"``, ``"moisture_species_Rgas"``, ``"moisture_species_cp"``,
+      and (for CAM-SE) ``"dry_air_species_Rgas"`` and ``"dry_air_species_cp"``.
   """
 
   physics_config = {"gravity": device_wrapper(gravity),

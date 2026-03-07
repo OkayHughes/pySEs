@@ -116,6 +116,30 @@ def segment_max(field,
 
 @shard_map_extract
 def do_sum_manual_sharding(scaled_f, elem_idx, i_idx, j_idx, relevant_data):
+  """
+  Sum redundant DOF values into a sharded field (JAX multi-device helper).
+
+  Applied via ``shard_map`` so that each device accumulates only its own
+  portion of the redundant values.
+
+  Parameters
+  ----------
+  scaled_f : Array[tuple[1, local_elem_idx, gll_idx, gll_idx], Float]
+      Mass-scaled field shard to accumulate into.
+  elem_idx : Array[tuple[point_idx], Int]
+      Element indices of target DOFs.
+  i_idx : Array[tuple[point_idx], Int]
+      First GLL indices of target DOFs.
+  j_idx : Array[tuple[point_idx], Int]
+      Second GLL indices of target DOFs.
+  relevant_data : Array[tuple[point_idx], Float]
+      Values to add at the target DOFs.
+
+  Returns
+  -------
+  scaled_f : Array[tuple[1, local_elem_idx, gll_idx, gll_idx], Float]
+      Updated field with redundant values accumulated.
+  """
   scaled_f = scaled_f.at[0, elem_idx, i_idx, j_idx].add(relevant_data)
   return scaled_f
 
@@ -185,6 +209,30 @@ def project_scalar_wrapper(f,
 
 @shard_map_extract
 def do_max_manual_sharding(scaled_f, elem_idx, i_idx, j_idx, relevant_data):
+  """
+  Accumulate the element-wise maximum into a sharded field (JAX multi-device helper).
+
+  Applied via ``shard_map`` so that each device computes the local maximum
+  of its redundant DOF values.
+
+  Parameters
+  ----------
+  scaled_f : Array[tuple[1, local_elem_idx, gll_idx, gll_idx], Float]
+      Field shard to accumulate into.
+  elem_idx : Array[tuple[point_idx], Int]
+      Element indices of target DOFs.
+  i_idx : Array[tuple[point_idx], Int]
+      First GLL indices of target DOFs.
+  j_idx : Array[tuple[point_idx], Int]
+      Second GLL indices of target DOFs.
+  relevant_data : Array[tuple[point_idx], Float]
+      Values to take the maximum against at the target DOFs.
+
+  Returns
+  -------
+  scaled_f : Array[tuple[1, local_elem_idx, gll_idx, gll_idx], Float]
+      Updated field with element-wise maximums accumulated.
+  """
   scaled_f = scaled_f.at[0, elem_idx, i_idx, j_idx].max(relevant_data)
   return scaled_f
 
@@ -255,12 +303,52 @@ project_scalar = project_scalar_wrapper
 def init_assembly_matrix(NELEM,
                          npt,
                          assembly_triple):
+  """
+  Build a sparse DSS assembly matrix from an assembly triple.
+
+  Constructs a COO-format sparse matrix whose application is equivalent to
+  the Direct Stiffness Summation (DSS) projection over the global GLL DOFs.
+
+  Parameters
+  ----------
+  NELEM : int
+      Total number of elements in the grid.
+  npt : int
+      Number of GLL points per element edge.
+  assembly_triple : tuple[Array, list[Array], list[Array]]
+      Assembly triple ``(data, rows, cols)`` from :func:`init_assembly_local`.
+
+  Returns
+  -------
+  assembly_matrix : scipy.sparse.coo_array
+      Sparse assembly matrix of shape ``(NELEM*npt^2, NELEM*npt^2)``.
+  """
   data, rows, cols = assembly_triple
   assembly_matrix = coo_array((data, (rows, cols)), shape=(NELEM * npt * npt, NELEM * npt * npt))
   return assembly_matrix
 
 
 def init_assembly_local(vert_redundancy_local):
+  """
+  Build the processor-local DSS assembly triple from a flat redundancy list.
+
+  Converts a flat list of ``(target, source)`` GLL DOF pairs into the
+  ``(data, rows, cols)`` triple used by :func:`project_scalar_wrapper` and
+  related assembly routines.  All DOF indices are processor-local.
+
+  Parameters
+  ----------
+  vert_redundancy_local : list[tuple[tuple[int,int,int], tuple[int,int,int]]]
+      Flat list of ``((target_elem, target_i, target_j), (source_elem, source_i, source_j))``
+      pairs describing coincident GLL DOFs on the local processor.
+
+  Returns
+  -------
+  assembly_triple : tuple[np.ndarray, list[np.ndarray], list[np.ndarray]]
+      ``(data, rows, cols)`` where ``data`` contains the assembly weights
+      (all 1.0) and ``rows``/``cols`` are lists of three index arrays each
+      ``[elem_idx, i_idx, j_idx]``.
+  """
   # From this moment forward, we assume that
   # vert_redundancy_gll contains only the information
   # for processor-local GLL things,
@@ -289,6 +377,31 @@ def init_assembly_local(vert_redundancy_local):
 
 def init_assembly_global(vert_redundancy_send,
                          vert_redundancy_receive):
+  """
+  Build per-processor send/receive assembly triples for MPI DSS communication.
+
+  Converts the send and receive vertex-redundancy lists (containing
+  processor-local DOF indices) into ``(data, rows, cols)`` triples keyed
+  by remote processor index, ready for use in :func:`extract_fields` and
+  :func:`accumulate_fields`.
+
+  Parameters
+  ----------
+  vert_redundancy_send : dict[int, list[tuple[int,int,int]]]
+      Mapping from remote processor index to a list of local
+      ``(elem_idx, i_idx, j_idx)`` DOFs to send to that processor.
+  vert_redundancy_receive : dict[int, list[tuple[int,int,int]]]
+      Mapping from remote processor index to a list of local
+      ``(elem_idx, i_idx, j_idx)`` DOFs into which received values are
+      summed.
+
+  Returns
+  -------
+  triples_send : dict[int, tuple[np.ndarray, list[np.ndarray], list[np.ndarray]]]
+      Per-processor send triples ``(data, rows, cols)`` for extraction.
+  triples_receive : dict[int, tuple[np.ndarray, list[np.ndarray], list[np.ndarray]]]
+      Per-processor receive triples ``(data, rows, cols)`` for accumulation.
+  """
   # From this moment forward, we assume that
   # vert_redundancy_gll contains only the information
   # for processor-local GLL things,
@@ -334,6 +447,37 @@ def init_assembly_global(vert_redundancy_send,
 def triage_vert_redundancy_flat(assembly_triple,
                                 proc_idx,
                                 decomp):
+  """
+  Partition a global flat redundancy list into local, send, and receive components.
+
+  Classifies each ``(target, source)`` GLL DOF pair in the global assembly
+  triple according to whether both DOFs are local to ``proc_idx``, the target
+  is local but the source is remote (receive), or the source is local but the
+  target is remote (send).
+
+  Parameters
+  ----------
+  assembly_triple : tuple[np.ndarray, list[np.ndarray], list[np.ndarray]]
+      Global assembly triple ``(data, rows, cols)`` from
+      :func:`init_assembly_local` on the full grid.
+  proc_idx : int
+      MPI rank of the calling processor.
+  decomp : sequence of tuple[int, int]
+      Element-range decomposition returned by :func:`init_decomp`.
+      ``decomp[proc_idx]`` gives the ``(start, end)`` global element indices
+      owned by processor ``proc_idx``.
+
+  Returns
+  -------
+  vert_redundancy_local : list[tuple[tuple[int,int,int], tuple[int,int,int]]]
+      Flat redundancy pairs where both DOFs are on ``proc_idx``
+      (using local element indices).
+  vert_redundancy_send : dict[int, list[tuple[int,int,int]]]
+      Mapping from remote processor index to local DOFs that must be sent.
+  vert_redundancy_receive : dict[int, list[tuple[int,int,int]]]
+      Mapping from remote processor index to local DOFs into which received
+      values will be summed.
+  """
   # current understanding: this works because the outer
   # three for loops will iterate in exactly the same order for
   # the sending and recieving processor
@@ -372,6 +516,41 @@ def triage_vert_redundancy_flat(assembly_triple,
 
 
 def init_shard_extraction_map(assembly_triple, num_devices, nelem_padded, dims, wrapped=True):
+  """
+  Build the padded index arrays used for manual DSS sharding across JAX devices.
+
+  For each entry in the global assembly triple, determines which device
+  (shard) holds the source and target DOFs and assembles padded index
+  tensors of shape ``(num_devices, max_dof)`` that can be passed to
+  :func:`do_sum_manual_sharding` and :func:`do_max_manual_sharding` via
+  ``shard_map``.
+
+  Parameters
+  ----------
+  assembly_triple : tuple[np.ndarray, list[np.ndarray], list[np.ndarray]]
+      Global assembly triple ``(data, rows, cols)`` for the (possibly padded)
+      element array.
+  num_devices : int
+      Number of JAX devices to shard across.
+  nelem_padded : int
+      Total number of elements after zero-padding; must be divisible by
+      ``num_devices``.
+  dims : frozendict
+      Grid dimension metadata (currently unused; reserved for future use).
+  wrapped : bool, optional
+      If ``True``, index arrays are wrapped with :func:`device_wrapper`
+      before being stored.  Defaults to ``True``.
+
+  Returns
+  -------
+  extraction_map : dict
+      Dict with ``"sum_into"`` and ``"extract_from"`` sub-dicts, each
+      containing padded ``shard_idx``, ``elem_idx``, ``i_idx``, ``j_idx``
+      arrays of shape ``(num_devices, max_dof)``, plus a ``"mask"``
+      coefficient array of the same shape.
+  max_dof : int
+      Maximum number of redundant DOFs on any single device.
+  """
   # this will maybe eventually be rewritten to work for bigger grids?
   assert np.abs(np.round(nelem_padded / num_devices) - nelem_padded / num_devices) < 1e-6, "Did you pad your array?"
 

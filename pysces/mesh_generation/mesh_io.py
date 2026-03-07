@@ -2,6 +2,34 @@ from ..config import np, DEBUG
 
 
 def exodus_to_pysces_grid_corners(cart_coords, connect_map, element_permutation):
+  """
+  Convert an Exodus-format mesh to pysces element corner and edge connectivity.
+
+  Translates Exodus vertex/element connectivity (which uses a different vertex
+  ordering convention) to pysces conventions, builds the face-connectivity
+  array describing element-edge adjacency, and extracts Cartesian element
+  corner positions.
+
+  Parameters
+  ----------
+  cart_coords : Array[tuple[3, node_idx], Float]
+      Cartesian coordinates of all mesh nodes, shape ``(3, num_nodes)``.
+  connect_map : Array[tuple[elem_idx, local_node_idx], Int]
+      Exodus element-node connectivity array (1-indexed), shape
+      ``(num_elem, 4)``.
+  element_permutation : Array[tuple[elem_idx], Int]
+      Permutation mapping Exodus element indices to pysces element indices
+      (1-indexed on input).
+
+  Returns
+  -------
+  vert_pos : Array[tuple[elem_idx, vert_idx, 3], Float]
+      Cartesian positions of the four element corners in pysces vertex
+      ordering, shape ``(num_elem, 4, 3)``.
+  edge_info : Array[tuple[elem_idx, edge_idx, 3], Int]
+      Face-connectivity array ``(remote_elem_idx, remote_edge_idx,
+      same_direction)`` for each element edge, shape ``(num_elem, 4, 3)``.
+  """
   # exodus uses 3 2
   #             0 1 ordering
   # we translate

@@ -7,6 +7,27 @@ from ...model_info import cam_se_models, homme_models
 
 @partial(jit, static_argnames=["model"])
 def flatten_tracers(tracers, model):
+  """
+  Stack all tracer species from the nested tracer dict into a single array.
+
+  Iterates over ``"moisture_species"``, ``"tracers"``, and (for CAM-SE)
+  ``"dry_air_species"`` in order, building a flat list of arrays and a
+  mapping from species names to their index positions.
+
+  Parameters
+  ----------
+  tracers : dict
+      Tracer state dict from :func:`wrap_tracers`.
+  model : str
+      Model identifier; determines whether ``"dry_air_species"`` is included.
+
+  Returns
+  -------
+  tracers_flat : Array[tuple[n_species, elem_idx, gll_idx, gll_idx, lev_idx], Float]
+      All species arrays stacked along axis 0.
+  tracer_map : dict[str, dict[str, int]]
+      Nested dict mapping each species name to its index in ``tracers_flat``.
+  """
   tracers_flat = []
   tracer_map = {"moisture_species": {},
                 "tracers": {}}
@@ -31,6 +52,28 @@ def flatten_tracers(tracers, model):
 
 @partial(jit, static_argnames=["model"])
 def ravel_tracers(tracers_flat, tracer_map, model):
+  """
+  Unstack a flat species array back into the nested tracer dict structure.
+
+  Reverses :func:`flatten_tracers`: uses ``tracer_map`` to extract each
+  species slice from ``tracers_flat`` and place it back in the appropriate
+  sub-dict.
+
+  Parameters
+  ----------
+  tracers_flat : Array[tuple[n_species, elem_idx, gll_idx, gll_idx, lev_idx], Float]
+      Stacked species array from :func:`flatten_tracers` (or after advection).
+  tracer_map : dict[str, dict[str, int]]
+      Nested index map returned by :func:`flatten_tracers`.
+  model : str
+      Model identifier; determines whether ``"dry_air_species"`` is populated.
+
+  Returns
+  -------
+  tracers : dict
+      Tracer state dict with sub-dicts ``"moisture_species"``, ``"tracers"``,
+      and optionally ``"dry_air_species"``.
+  """
   tracers = {"moisture_species": {},
              "tracers": {}}
   if model in cam_se_models:
@@ -56,7 +99,45 @@ def advance_tracers(tracers,
                     timestep_config,
                     model,
                     tracer_consist_hypervis=None):
+  """
+  Advance all tracer species by one tracer time step using RK2 advection.
 
+  Stacks tracers into a single array via :func:`flatten_tracers`, converts to
+  mass form (``q * d_mass_init``), calls :func:`advance_tracers_rk2`, then
+  divides by ``d_mass_end`` and unstacks via :func:`ravel_tracers`.
+  Optionally applies a hyperviscosity consistency correction.
+
+  Parameters
+  ----------
+  tracers : dict
+      Tracer state dict from :func:`wrap_tracers`.
+  tracer_consist_dyn : dict[str, Array]
+      Dynamics tracer-consistency struct from
+      :func:`wrap_tracer_consist_dynamics`; must contain ``"u_d_mass_avg"``.
+  tracer_init_struct : dict[str, Array]
+      Dict with ``"d_mass_init"`` and ``"d_mass_end"`` (layer mass at the
+      beginning and end of the tracer interval).
+  grid : SpectralElementGrid
+      Horizontal grid struct.
+  dims : tuple[int, ...]
+      Grid dimension tuple; static JIT argument.
+  physics_config : dict
+      Physics configuration dict.
+  diffusion_config : dict
+      Hyperviscosity configuration dict.
+  timestep_config : frozendict
+      Time-stepping configuration; static JIT argument.
+  model : str
+      Model identifier; static JIT argument.
+  tracer_consist_hypervis : dict[str, Array] or None, optional
+      Hyperviscosity consistency struct from
+      :func:`wrap_tracer_consist_hypervis`; ``None`` disables the correction.
+
+  Returns
+  -------
+  tracers_out : dict
+      Updated tracer state dict with the same structure as ``tracers``.
+  """
   u_d_mass_avg = tracer_consist_dyn["u_d_mass_avg"]
   d_mass_init = tracer_init_struct["d_mass_init"]
   d_mass_end = tracer_init_struct["d_mass_end"]

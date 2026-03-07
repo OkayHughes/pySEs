@@ -5,6 +5,21 @@ from functools import partial
 
 @jit
 def stack_tracers_shallow_water(tracer_like):
+  """
+  Stack a dict of 2-D tracer arrays into a single 5-D array.
+
+  Parameters
+  ----------
+  tracer_like : dict[str, Array[tuple[elem_idx, gll_idx, gll_idx], Float]]
+      Named tracer fields on the shallow-water grid.
+
+  Returns
+  -------
+  stacked : Array[tuple[n_tracers, elem_idx, gll_idx, gll_idx, 1], Float]
+      All tracers concatenated along a leading tracer axis.
+  tracer_names : dict[str, int]
+      Mapping from tracer name to its index in ``stacked``.
+  """
   tracer_names = {}
   tracer_mass_flat = []
   ct = 0
@@ -17,6 +32,21 @@ def stack_tracers_shallow_water(tracer_like):
 
 @jit
 def unstack_tracers_shallow_water(tracer_like, tracer_names):
+  """
+  Unstack a 5-D tracer array back into a named dict of 2-D arrays.
+
+  Parameters
+  ----------
+  tracer_like : Array[tuple[n_tracers, elem_idx, gll_idx, gll_idx, 1], Float]
+      Stacked tracer array as returned by ``stack_tracers_shallow_water``.
+  tracer_names : dict[str, int]
+      Mapping from tracer name to index in ``tracer_like``.
+
+  Returns
+  -------
+  tracers : dict[str, Array[tuple[elem_idx, gll_idx, gll_idx], Float]]
+      Named tracer mixing-ratio fields.
+  """
   tracers = {}
   for tracer_name, tracer_idx in tracer_names.items():
     tracers[tracer_name] = tracer_like[tracer_idx, :, :, :, 0]
@@ -33,6 +63,38 @@ def advance_tracers_shallow_water(tracers,
                                   diffusion_config,
                                   timestep_config,
                                   tracer_consist_hypervis=None):
+  """
+  Advance all passive tracers by one physics timestep on the shallow-water grid.
+
+  Parameters
+  ----------
+  tracers : dict[str, Array[tuple[elem_idx, gll_idx, gll_idx], Float]]
+      Named tracer mixing-ratio fields at the beginning of the timestep.
+  tracer_consist_dyn : dict[str, Array]
+      Tracer-consistency struct from the dynamics step, containing
+      ``"u_d_mass_avg"``.
+  tracer_init_struct : dict[str, Array]
+      Struct with keys ``"d_mass_init"`` and ``"d_mass_end"``, holding the
+      layer thickness at the start and end of the dynamics step.
+  grid : SpectralElementGrid
+      Horizontal spectral element grid.
+  dims : dict[str, int]
+      Grid dimension parameters.
+  physics_config : dict[str, Any]
+      Physical constants (e.g. ``radius_earth``).
+  diffusion_config : dict[str, Any]
+      Hyperviscosity configuration.
+  timestep_config : frozendict
+      Time-step configuration from ``init_timestep_config``.
+  tracer_consist_hypervis : dict[str, Array] or None, optional
+      Tracer-consistency struct from the hyperviscosity step, or ``None``
+      if hyperviscosity was not applied.
+
+  Returns
+  -------
+  tracers_out : dict[str, Array[tuple[elem_idx, gll_idx, gll_idx], Float]]
+      Updated tracer mixing-ratio fields after one physics timestep.
+  """
   d_mass_init = tracer_init_struct["d_mass_init"]
   d_mass_end = tracer_init_struct["d_mass_end"]
   u_d_mass_avg = tracer_consist_dyn["u_d_mass_avg"]

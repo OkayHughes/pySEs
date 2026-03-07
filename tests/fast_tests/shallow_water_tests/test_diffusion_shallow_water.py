@@ -69,7 +69,7 @@ def test_galewsky():
       final_state = simulate_shallow_water(T, init_state, grid,
                                            physics_config, diff_config, timestep_config,
                                            dims, diffusion=True)
-      h = get_global_array(final_state["h"], dims)
-      u = get_global_array(final_state["horizontal_wind"], dims)
+      h = get_global_array(final_state["dynamics"]["h"], dims)
+      u = get_global_array(final_state["dynamics"]["horizontal_wind"], dims)
       assert not jnp.any(jnp.isnan(h))
       assert not jnp.any(jnp.isnan(u))

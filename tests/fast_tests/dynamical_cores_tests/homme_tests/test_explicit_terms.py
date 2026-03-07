@@ -32,7 +32,7 @@ def test_notopo():
     w_i_shape = model_state["dynamics"]["w_i"].shape
     model_state["dynamics"]["w_i"] += device_wrapper(np.random.normal(scale=0.1, size=w_i_shape))
     phi_i_shape = model_state["dynamics"]["phi_i"][:, :, :, :-1].shape
-    phi_pert_upper_lev = device_wrapper(np.random.normal(scale=1.0, size=phi_i_shape))
+    phi_pert_upper_lev = device_wrapper(np.random.normal(scale=1.0, size=phi_i_shape), elem_sharding_axis=0)
     phi_pert_surf = jnp.zeros_like(model_state["static_forcing"]["phi_surf"])[:, :, :, np.newaxis]
     phi_pert = jnp.concatenate((phi_pert_upper_lev, phi_pert_surf), axis=-1)
     model_state["dynamics"]["phi_i"] += phi_pert

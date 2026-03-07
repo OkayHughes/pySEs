@@ -8,26 +8,22 @@ def wrap_model_state(horizontal_wind,
                      h,
                      hs):
   """
-  [Description]
+  Assemble the shallow-water model state dict from its prognostic fields.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  horizontal_wind : Array[tuple[elem_idx, gll_idx, gll_idx, 2], Float]
+      Covariant horizontal wind ``(u, v)`` in m s^-1.
+  h : Array[tuple[elem_idx, gll_idx, gll_idx], Float]
+      Free-surface height (m).
+  hs : Array[tuple[elem_idx, gll_idx, gll_idx], Float]
+      Surface topography (m).
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  state : dict[str, Array]
+      Shallow-water model state with keys ``"horizontal_wind"``, ``"h"``,
+      and ``"hs"``.
   """
   return {"horizontal_wind": horizontal_wind,
           "h": h,
@@ -39,26 +35,22 @@ def project_model_state(state,
                         grid,
                         dims):
   """
-  [Description]
+  Project the shallow-water model state onto the continuous spectral element space (DSS).
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  state : dict[str, Array]
+      Shallow-water model state, as returned by ``wrap_model_state``.
+  grid : SpectralElementGrid
+      Horizontal spectral element grid.
+  dims : dict[str, int]
+      Grid dimension parameters.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  state_cont : dict[str, Array]
+      Shallow-water model state with all fields projected to be
+      globally continuous (C0).
   """
   if "half_h" in state.keys():
     h_name = "half_h"
@@ -76,6 +68,25 @@ def project_model_state(state,
 
 @jit
 def sum_avg_struct(struct_1, struct_2, coeff_1, coeff_2):
+  """
+  Compute a weighted sum of two tracer-consistency structs field-by-field.
+
+  Parameters
+  ----------
+  struct_1 : dict[str, Array]
+      First struct (e.g. a tracer-consistency accumulator).
+  struct_2 : dict[str, Array]
+      Second struct with the same keys as ``struct_1``.
+  coeff_1 : float
+      Scalar weight applied to each field of ``struct_1``.
+  coeff_2 : float
+      Scalar weight applied to each field of ``struct_2``.
+
+  Returns
+  -------
+  struct_out : dict[str, Array]
+      Field-wise weighted sum ``coeff_1 * struct_1 + coeff_2 * struct_2``.
+  """
   struct_out = {}
   for field in struct_1.keys():
     struct_out[field] = struct_1[field] * coeff_1 + struct_2[field] * coeff_2
@@ -84,6 +95,20 @@ def sum_avg_struct(struct_1, struct_2, coeff_1, coeff_2):
 
 @jit
 def extract_average_dyn(state_in):
+  """
+  Compute the tracer-consistency flux ``u * h`` from a shallow-water state.
+
+  Parameters
+  ----------
+  state_in : dict[str, Array]
+      Shallow-water model state with keys ``"horizontal_wind"`` and ``"h"``.
+
+  Returns
+  -------
+  tracer_consist : dict[str, Array]
+      Dict with key ``"u_d_mass_avg"`` containing the layer-thickness-weighted
+      wind ``h * u``.
+  """
   out = {}
   out["u_d_mass_avg"] = state_in["h"][:, :, :, jnp.newaxis] * state_in["horizontal_wind"]
   return out
@@ -91,6 +116,24 @@ def extract_average_dyn(state_in):
 
 @jit
 def extract_average_hypervis(state_in, state_tendency, diffusion_config):
+  """
+  Compute the tracer-consistency struct from a hyperviscosity tendency.
+
+  Parameters
+  ----------
+  state_in : dict[str, Array]
+      Shallow-water model state before the hyperviscosity step.
+  state_tendency : dict[str, Array]
+      Hyperviscosity tendency struct (output of ``eval_hypervis_*``).
+  diffusion_config : dict[str, Any]
+      Hyperviscosity configuration; must contain ``"nu_d_mass"``.
+
+  Returns
+  -------
+  tracer_consist : dict[str, Array]
+      Dict with keys ``"d_mass_hypervis_avg"`` (layer thickness) and
+      ``"d_mass_hypervis_tend"`` (effective mass flux tendency for tracers).
+  """
   out = {}
   out["d_mass_hypervis_avg"] = state_in["h"]
   nu = jnp.where(diffusion_config["nu_d_mass"] > 0.0, diffusion_config["nu_d_mass"], 1.0)
@@ -102,26 +145,21 @@ def extract_average_hypervis(state_in, state_tendency, diffusion_config):
 def sum_state_series(states_in,
                      coeffs):
   """
-  [Description]
+  Compute a weighted linear combination of a sequence of shallow-water states.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  states_in : list[dict[str, Array]]
+      Sequence of shallow-water model states, each as returned by
+      ``wrap_model_state``. Must have the same length as ``coeffs``.
+  coeffs : list[float]
+      Scalar coefficients for each state in ``states_in``.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  state_res : dict[str, Array]
+      Weighted sum of the input states; surface topography ``"hs"`` is
+      taken from the first state unchanged.
   """
   state_res = wrap_model_state(states_in[0]["horizontal_wind"] * coeffs[0],
                                states_in[0]["h"] * coeffs[0],

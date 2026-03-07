@@ -31,7 +31,7 @@ def test_remap_state():
     w_i[:, :, :, -1] = ((u[:, :, :, -1, 0] * static_forcing["grad_phi_surf"][:, :, :, 0] +
                          u[:, :, :, -1, 1] * static_forcing["grad_phi_surf"][:, :, :, 1]) /
                         phi_to_g(static_forcing["phi_surf"], model_config, model))
-    dynamics["w_i"] = device_wrapper(w_i)
+    dynamics["w_i"] = device_wrapper(w_i, elem_sharding_axis=0)
     dynamics_remapped = remap_dynamics(dynamics, static_forcing, v_grid, model_config, len(v_grid["hybrid_a_m"]), model)
 
     for field in ["horizontal_wind", "theta_v_d_mass",

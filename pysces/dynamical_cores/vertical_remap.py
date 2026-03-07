@@ -11,26 +11,40 @@ def zerroukat_remap(tracer_mass,
                     tiny=1e-12,
                     qmax=1e24):
   """
-  [Description]
+  Conservative PPM vertical remap (Zerroukat & Allen 2012).
+
+  Remaps tracer-mass columns from a model-level pressure coordinate to
+  a reference-level pressure coordinate using a piecewise parabolic
+  method (PPM) with optional monotonicity filter.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  tracer_mass : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, n_tracers], Float]
+      Tracer-mass fields (mixing ratio × layer thickness) on model levels.
+  d_mass_model : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]
+      Layer thickness (Pa) on model levels.
+  d_mass_reference : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]
+      Target layer thickness (Pa) on the reference levels.
+  num_lev : int
+      Number of vertical levels (must be static for JIT).
+  filter : bool, optional
+      If True, apply the monotonicity filter from Zerroukat & Allen (2012)
+      (default: False).
+  tiny : float, optional
+      Small number used as a zero threshold in the filter (default: 1e-12).
+  qmax : float, optional
+      Maximum allowed tracer value used in the filter (default: 1e24).
 
   Returns
   -------
-  string
-      a value in a string
+  tracer_mass_out : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, n_tracers], Float]
+      Remapped tracer-mass fields on the reference levels.
 
-  Raises
-  ------
-  KeyError
-      when a key error
+  Notes
+  -----
+  The algorithm uses binary search for the remap indices, followed by a
+  tri-diagonal PPM reconstruction and optional monotonicity correction.
+  See https://doi.org/10.1002/qj.1966 for the method.
   """
   # assumes
   pi_int_reference = jnp.concatenate((jnp.zeros_like(d_mass_reference[:, :, :, 0:1]),

@@ -8,26 +8,21 @@ def horizontal_divergence_3d(vector,
                              h_grid,
                              physics_config):
   """
-  [Description]
+  Compute the horizontal divergence of a 3-D vector field level-by-level.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  vector : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, 2], Float]
+      Horizontal vector field (covariant components).
+  h_grid : SpectralElementGrid
+      Horizontal spectral element grid.
+  physics_config : dict[str, Any]
+      Physical constants; must contain ``radius_earth``.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  div : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]
+      Horizontal divergence (s^-1) at each model level.
   """
   sph_op = partial(horizontal_divergence, grid=h_grid, a=physics_config["radius_earth"])
   return vmap_1d_apply(sph_op, vector, -2, -1)
@@ -38,26 +33,21 @@ def horizontal_vorticity_3d(vector,
                             h_grid,
                             physics_config):
   """
-  [Description]
+  Compute the horizontal (vertical component of) vorticity of a 3-D vector field level-by-level.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  vector : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, 2], Float]
+      Horizontal vector field (covariant components).
+  h_grid : SpectralElementGrid
+      Horizontal spectral element grid.
+  physics_config : dict[str, Any]
+      Physical constants; must contain ``radius_earth``.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  vort : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]
+      Relative vorticity (s^-1) at each model level.
   """
   sph_op = partial(horizontal_vorticity, grid=h_grid, a=physics_config["radius_earth"])
   return vmap_1d_apply(sph_op, vector, -2, -1)
@@ -68,26 +58,21 @@ def horizontal_weak_laplacian_3d(scalar,
                                  h_grid,
                                  physics_config):
   """
-  [Description]
+  Compute the weak-form horizontal scalar Laplacian of a 3-D field level-by-level.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  scalar : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]
+      3-D scalar field.
+  h_grid : SpectralElementGrid
+      Horizontal spectral element grid.
+  physics_config : dict[str, Any]
+      Physical constants; must contain ``radius_earth``.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  lap : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]
+      Weak-form Laplacian at each model level.
   """
   sph_op = partial(horizontal_weak_laplacian, grid=h_grid, a=physics_config["radius_earth"])
   return vmap_1d_apply(sph_op, scalar, -1, -1)
@@ -98,26 +83,21 @@ def horizontal_weak_vector_laplacian_3d(vector,
                                         h_grid,
                                         physics_config):
   """
-  [Description]
+  Compute the weak-form horizontal vector Laplacian of a 3-D vector field level-by-level.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  vector : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, 2], Float]
+      3-D horizontal vector field.
+  h_grid : SpectralElementGrid
+      Horizontal spectral element grid.
+  physics_config : dict[str, Any]
+      Physical constants; must contain ``radius_earth``.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  lap_vec : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, 2], Float]
+      Weak-form vector Laplacian at each model level.
   """
   sph_op = partial(horizontal_weak_vector_laplacian, grid=h_grid, a=physics_config["radius_earth"])
   return vmap_1d_apply(sph_op, vector, -2, -2)
@@ -128,26 +108,21 @@ def horizontal_gradient_3d(scalar,
                            h_grid,
                            physics_config):
   """
-  [Description]
+  Compute the horizontal gradient of a 3-D scalar field level-by-level.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  scalar : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]
+      3-D scalar field.
+  h_grid : SpectralElementGrid
+      Horizontal spectral element grid.
+  physics_config : dict[str, Any]
+      Physical constants; must contain ``radius_earth``.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  grad : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, 2], Float]
+      Covariant horizontal gradient at each model level.
   """
   sph_op = partial(horizontal_gradient, grid=h_grid, a=physics_config["radius_earth"])
   return vmap_1d_apply(sph_op, scalar, -1, -2)

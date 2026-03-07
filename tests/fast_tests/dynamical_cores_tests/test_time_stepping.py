@@ -9,7 +9,8 @@ from frozendict import frozendict
 def get_dummy_time_stepping_config(dynamics_tstep_type=time_step_options.RK3_5STAGE,
                                    dt_dynamics=1.0):
   return frozendict(dynamics=frozendict(step_type=dynamics_tstep_type,
-                                        dt=dt_dynamics))
+                                        dt=dt_dynamics),
+                    dynamics_subcycle=1)
 
 
 epsilons = {"horizontal_wind": 0.02,
@@ -36,27 +37,27 @@ def test_steady_state_euler(nx7_np4_dry_homme_hydro, nx7_np4_dry_se):
     else:
       dry_species = None
       moisture_species = None
-    dynamics_new = advance_dynamics_euler(model_state["dynamics"],
-                                          model_state["static_forcing"],
-                                          h_grid,
-                                          v_grid,
-                                          physics_config,
-                                          timestep_config,
-                                          dims,
-                                          model,
-                                          moisture_species=moisture_species,
-                                          dry_air_species=dry_species)
+    dynamics_new, _ = advance_dynamics_euler(model_state["dynamics"],
+                                             model_state["static_forcing"],
+                                             h_grid,
+                                             v_grid,
+                                             physics_config,
+                                             timestep_config,
+                                             dims,
+                                             model,
+                                             moisture_species=moisture_species,
+                                             dry_air_species=dry_species)
     for s_idx in range(10):
-      dynamics_new = advance_dynamics_euler(dynamics_new,
-                                            model_state["static_forcing"],
-                                            h_grid,
-                                            v_grid,
-                                            physics_config,
-                                            timestep_config,
-                                            dims,
-                                            model,
-                                            moisture_species=moisture_species,
-                                            dry_air_species=dry_species)
+      dynamics_new, _ = advance_dynamics_euler(dynamics_new,
+                                               model_state["static_forcing"],
+                                               h_grid,
+                                               v_grid,
+                                               physics_config,
+                                               timestep_config,
+                                               dims,
+                                               model,
+                                               moisture_species=moisture_species,
+                                               dry_air_species=dry_species)
     dynamics_diff = sum_dynamics(dynamics_new, model_state["dynamics"], 1.0, -1.0, model)
     if model in homme_models:
       dynamics_diff["theta_v_d_mass"] = dynamics_diff["theta_v_d_mass"] / model_state["dynamics"]["d_mass"]
@@ -91,7 +92,7 @@ def test_steady_state_ullrich(nx7_np4_dry_homme_hydro, nx7_np4_dry_se):
                                                                 dims,
                                                                 model,
                                                                 moisture_species=moisture_species,
-                                                                dry_air_species=dry_species)
+                                                                dry_air_species=dry_species)[0]
     dynamics_diff = sum_dynamics(model_state["dynamics"], dynamics_ref, 1.0, -1.0, model)
     if model in homme_models:
       dynamics_diff["theta_v_d_mass"] = dynamics_diff["theta_v_d_mass"] / model_state["dynamics"]["d_mass"]
@@ -122,7 +123,7 @@ def test_steady_state_nonhydro(nx7_np4_dry_homme_nonhydro):
                                                               dims,
                                                               model,
                                                               moisture_species=moisture_species,
-                                                              dry_air_species=dry_species)
+                                                              dry_air_species=dry_species)[0]
   dynamics_diff = sum_dynamics(model_state["dynamics"], dynamics_ref, 1.0, -1.0, model)
   dynamics_diff["theta_v_d_mass"] = dynamics_diff["theta_v_d_mass"] / model_state["dynamics"]["d_mass"]
   for field in dynamics_diff.keys():

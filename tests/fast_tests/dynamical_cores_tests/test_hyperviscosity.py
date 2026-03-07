@@ -302,14 +302,14 @@ def test_hypervis_energy_estimate_quasi_uniform(homme_hydrostatic_noisy,
                                  diffusion_config,
                                  model)
       dt = timestep_config["hyperviscosity"]["dt"]
-      dynamics_step = eval_hypervis_terms(dynamics,
-                                          model_state["static_forcing"],
-                                          h_grid,
-                                          v_grid,
-                                          dims,
-                                          physics_config,
-                                          diffusion_config,
-                                          model)
+      dynamics_step, _ = eval_hypervis_terms(dynamics,
+                                             model_state["static_forcing"],
+                                             h_grid,
+                                             v_grid,
+                                             dims,
+                                             physics_config,
+                                             diffusion_config,
+                                             model)
       dynamics_new = sum_dynamics_series([dynamics, dynamics_step], [1.0, dt], model)
       fields = ["horizontal_wind", "d_mass", thermodynamic_variable_names[model]]
       if model not in hydrostatic_models:
@@ -318,14 +318,14 @@ def test_hypervis_energy_estimate_quasi_uniform(homme_hydrostatic_noisy,
       for field in fields:
         prev_vals[field] = [1e6 for _ in range(nlev)]
       for iter_idx in range(10):
-        dynamics_step = eval_hypervis_terms(dynamics_new,
-                                            model_state["static_forcing"],
-                                            h_grid,
-                                            v_grid,
-                                            dims,
-                                            physics_config,
-                                            diffusion_config,
-                                            model)
+        dynamics_step, _ = eval_hypervis_terms(dynamics_new,
+                                               model_state["static_forcing"],
+                                               h_grid,
+                                               v_grid,
+                                               dims,
+                                               physics_config,
+                                               diffusion_config,
+                                               model)
         dynamics_new = sum_dynamics_series([dynamics_new, dynamics_step], [1.0, dt], model)
         for k_idx in range(nlev):
           for field in fields:
@@ -386,14 +386,14 @@ def test_hypervis_energy_estimate_mobius():
                                diffusion_config,
                                model)
     dt = timestep_config["hyperviscosity"]["dt"]
-    dynamics_step = eval_hypervis_terms(dynamics,
-                                        model_state["static_forcing"],
-                                        h_grid,
-                                        v_grid,
-                                        dims,
-                                        physics_config,
-                                        diffusion_config,
-                                        model)
+    dynamics_step, _ = eval_hypervis_terms(dynamics,
+                                           model_state["static_forcing"],
+                                           h_grid,
+                                           v_grid,
+                                           dims,
+                                           physics_config,
+                                           diffusion_config,
+                                           model)
     dynamics_new = sum_dynamics_series([dynamics, dynamics_step], [1.0, dt], model)
     fields = ["horizontal_wind", "d_mass", thermodynamic_variable_names[model]]
     if model not in hydrostatic_models:
@@ -402,14 +402,14 @@ def test_hypervis_energy_estimate_mobius():
     for field in fields:
       prev_vals[field] = [1e6 for _ in range(nlev)]
     for iter_idx in range(10):
-      dynamics_step = eval_hypervis_terms(dynamics_new,
-                                          model_state["static_forcing"],
-                                          h_grid,
-                                          v_grid,
-                                          dims,
-                                          physics_config,
-                                          diffusion_config,
-                                          model)
+      dynamics_step, _ = eval_hypervis_terms(dynamics_new,
+                                             model_state["static_forcing"],
+                                             h_grid,
+                                             v_grid,
+                                             dims,
+                                             physics_config,
+                                             diffusion_config,
+                                             model)
       dynamics_new = sum_dynamics_series([dynamics_new, dynamics_step], [1.0, dt], model)
       for k_idx in range(nlev):
         for field in fields:
@@ -457,13 +457,13 @@ def test_hypervis_stability(homme_hydrostatic_noisy,
       dynamics = model_state["dynamics"]
 
       dynamics = goop_dynamics(dynamics, model)
-      dynamics_new = advance_hypervis_euler(dynamics, model_state["static_forcing"],
-                                            h_grid, v_grid,
-                                            physics_config, diffusion_config,
-                                            timestep_config, dims, model)
+      dynamics_new, _ = advance_hypervis_euler(dynamics, model_state["static_forcing"],
+                                               h_grid, v_grid,
+                                               physics_config, diffusion_config,
+                                               timestep_config, dims, model)
       for _ in range(30):
-        dynamics_new = advance_hypervis_euler(dynamics_new, model_state["static_forcing"],
-                                              h_grid, v_grid,
-                                              physics_config, diffusion_config,
-                                              timestep_config, dims, model)
+        dynamics_new, _ = advance_hypervis_euler(dynamics_new, model_state["static_forcing"],
+                                                 h_grid, v_grid,
+                                                 physics_config, diffusion_config,
+                                                 timestep_config, dims, model)
         check_dynamics_nan(dynamics_new, h_grid, model)

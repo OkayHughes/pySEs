@@ -18,26 +18,45 @@ def init_model_struct(u,
                       w_i=None,
                       f_plane_center=jnp.pi / 4.0):
   """
-  [Description]
+  Initialise the full HOMME model state from raw prognostic arrays.
+
+  Assembles the dynamics, static forcing, and tracer sub-structs and wraps
+  them into the top-level model state dict.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  u : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, 2], Float]
+      Horizontal wind components ``(u, v)``.
+  theta_v_d_mass : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]
+      Virtual potential temperature times layer mass (HOMME thermodynamic
+      variable).
+  d_mass : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]
+      Dry-air layer mass (Pa).
+  phi_surf : Array[tuple[elem_idx, gll_idx, gll_idx], Float]
+      Surface geopotential (m^2 s^-2).
+  moisture_species : dict[str, Array]
+      Moisture mixing-ratio fields keyed by species name.
+  tracers : dict[str, Array]
+      Passive tracer fields keyed by tracer name.
+  h_grid : SpectralElementGrid
+      Horizontal grid struct.
+  dims : tuple[int, ...]
+      Grid dimension tuple; static JIT argument.
+  physics_config : dict
+      Physics configuration dict.
+  model : str
+      Model identifier; static JIT argument.
+  phi_i : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx+1], Float], optional
+      Interface geopotential; required for non-hydrostatic models.
+  w_i : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx+1], Float], optional
+      Interface vertical velocity; required for non-hydrostatic models.
+  f_plane_center : float, optional
+      Latitude (radians) for the f-plane Coriolis constant (default: pi/4).
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  state : dict
+      Top-level model state dict from :func:`wrap_model_state`.
   """
   dynamics = wrap_dynamics(u,
                            theta_v_d_mass,

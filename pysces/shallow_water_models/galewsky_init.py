@@ -2,6 +2,26 @@ from ..config import device_wrapper, np, jnp
 
 
 def init_galewsky_config(model_config):
+  """
+  Build the parameter struct for the Galewsky barotropic instability test case.
+
+  Parameters
+  ----------
+  model_config : dict[str, Any]
+      Physics configuration containing ``radius_earth``, ``angular_freq_earth``,
+      and ``gravity``.
+
+  Returns
+  -------
+  config : dict[str, Any]
+      Test case configuration to be passed to the other ``eval_galewsky_*``
+      functions in this module.
+
+  Notes
+  -----
+  The test case is described in Galewsky, Scott, and Polvani (2004),
+  *Tellus A*, 56, 429–440.
+  """
   config = {}
   config["deg"] = 100
   pts, weights = device_wrapper(np.polynomial.legendre.leggauss(config["deg"]))
@@ -26,6 +46,21 @@ def init_galewsky_config(model_config):
 
 def eval_galewsky_u(lat,
                     config):
+  """
+  Evaluate the zonal wind speed for the Galewsky test case.
+
+  Parameters
+  ----------
+  lat : Array[tuple[elem_idx, gll_idx, gll_idx], Float]
+      Latitude (radians).
+  config : dict[str, Any]
+      Test case configuration from ``init_galewsky_config``.
+
+  Returns
+  -------
+  u : Array[tuple[elem_idx, gll_idx, gll_idx], Float]
+      Zonal wind speed (m s^-1). Non-zero only between ``phi0`` and ``phi1``.
+  """
   u = jnp.zeros_like(lat)
   mask = jnp.logical_and(lat > config["phi0"], lat < config["phi1"])
   u = jnp.where(mask, config["u_max"] / config["e_norm"] *
@@ -36,6 +71,23 @@ def eval_galewsky_u(lat,
 def eval_galewsky_wind(lat,
                        lon,
                        config):
+  """
+  Evaluate the horizontal wind vector for the Galewsky test case.
+
+  Parameters
+  ----------
+  lat : Array[tuple[elem_idx, gll_idx, gll_idx], Float]
+      Latitude (radians).
+  lon : Array[tuple[elem_idx, gll_idx, gll_idx], Float]
+      Longitude (radians).
+  config : dict[str, Any]
+      Test case configuration from ``init_galewsky_config``.
+
+  Returns
+  -------
+  wind : Array[tuple[elem_idx, gll_idx, gll_idx, 2], Float]
+      Horizontal wind ``(u, v)`` in m s^-1. Meridional wind is identically zero.
+  """
   u = jnp.stack((eval_galewsky_u(lat, config),
                  jnp.zeros_like(lat)), axis=-1)
   return u
@@ -44,6 +96,27 @@ def eval_galewsky_wind(lat,
 def eval_galewsky_h(lat,
                     lon,
                     config):
+  """
+  Evaluate the free-surface height for the Galewsky test case.
+
+  The background height is computed by integrating the gradient-wind balance
+  condition using Gauss-Legendre quadrature. A perturbation is then added
+  to trigger the barotropic instability.
+
+  Parameters
+  ----------
+  lat : Array[tuple[elem_idx, gll_idx, gll_idx], Float]
+      Latitude (radians).
+  lon : Array[tuple[elem_idx, gll_idx, gll_idx], Float]
+      Longitude (radians).
+  config : dict[str, Any]
+      Test case configuration from ``init_galewsky_config``.
+
+  Returns
+  -------
+  h : Array[tuple[elem_idx, gll_idx, gll_idx], Float]
+      Free-surface height (m).
+  """
   quad_amount = lat + jnp.pi / 2.0
   weights_quad = quad_amount.reshape([*lat.shape, 1]) * config["weights"].reshape((*[1 for _ in lat.shape],
                                                                                    config["deg"]))
@@ -61,4 +134,21 @@ def eval_galewsky_h(lat,
 def eval_galewsky_hs(lat,
                      lon,
                      config):
+  """
+  Evaluate the surface topography for the Galewsky test case (identically zero).
+
+  Parameters
+  ----------
+  lat : Array[tuple[elem_idx, gll_idx, gll_idx], Float]
+      Latitude (radians).
+  lon : Array[tuple[elem_idx, gll_idx, gll_idx], Float]
+      Longitude (radians).
+  config : dict[str, Any]
+      Test case configuration from ``init_galewsky_config``.
+
+  Returns
+  -------
+  hs : Array[tuple[elem_idx, gll_idx, gll_idx], Float]
+      Surface topography (m). All zeros for this test case.
+  """
   return jnp.zeros_like(lat)

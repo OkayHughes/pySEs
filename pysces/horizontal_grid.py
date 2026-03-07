@@ -23,6 +23,26 @@ from math import floor
 
 
 def reorder_parallel_axis(var, element_reordering=None, wrapped=use_wrapper):
+  """
+  Reorder the elements of an array along the first (element) axis
+  according to a given index permutation.
+
+  Parameters
+  ----------
+  var : `Array[tuple[elem_idx, ...], Any]`
+      The array whose element axis is to be reordered.
+  element_reordering : `Array[tuple[elem_idx], Int]`, optional
+      Index permutation to apply along the element axis.
+      If ``None``, the identity permutation is used.
+  wrapped : `bool`, default=use_wrapper
+      If ``True``, the array is unwrapped from the device
+      wrapper before reordering and re-wrapped afterwards.
+
+  Returns
+  -------
+  var_out : `Array[tuple[elem_idx, ...], Any]`
+      A copy of ``var`` with elements permuted along the first axis.
+  """
   NELEM_GLOBAL = var.shape[0]
   if element_reordering is None:
     element_reordering = np.arange(0, NELEM_GLOBAL)
@@ -50,6 +70,56 @@ def init_spectral_element_grid(latlon,
                                vert_redundancy_gll_flat,
                                element_reordering=None,
                                wrapped=use_wrapper):
+  """
+  Assemble a ``SpectralElementGrid`` dict from mesh metric data computed
+  during mesh generation.
+
+  Parameters
+  ----------
+  latlon : `Array[tuple[elem_idx, gll_idx, gll_idx, lat_lon], Float]`
+      Physical (latitude, longitude) coordinates at every GLL node.
+  gll_to_sphere_jacobian : `Array[tuple[elem_idx, gll_idx, gll_idx, lon_lat, alpha_beta], Float]`
+      Jacobian mapping from reference-element contravariant components
+      to physical (lon, lat) vector components.
+  gll_to_sphere_jacobian_inv : `Array[tuple[elem_idx, gll_idx, gll_idx, alpha_beta, lon_lat], Float]`
+      Inverse Jacobian mapping from physical to reference-element
+      contravariant components.
+  physical_coords_to_cartesian : `Array[tuple[elem_idx, gll_idx, gll_idx, xyz], Float]`
+      Jacobian mapping physical velocity components to 3-D Cartesian
+      velocity components.
+  rmetdet : `Array[tuple[elem_idx, gll_idx, gll_idx], Float]`
+      Reciprocal of the metric determinant at each GLL node.
+  metdet : `Array[tuple[elem_idx, gll_idx, gll_idx], Float]`
+      Metric determinant at each GLL node.
+  mass_mat : `Array[tuple[elem_idx, gll_idx, gll_idx], Float]`
+      Element-local mass matrix (quadrature weights times metric determinant).
+  inv_mass_mat : `Array[tuple[elem_idx, gll_idx, gll_idx], Float]`
+      Reciprocal of the mass matrix.
+  vert_redundancy_gll_flat : flat redundancy structure
+      Flat representation of vertex DOF redundancy
+      (see ``init_assembly_local``).
+  element_reordering : `Array[tuple[elem_idx], Int]`, optional
+      Index permutation applied to all element-indexed arrays
+      after wrapping.  If ``None``, the natural ordering is kept.
+  wrapped : `bool`, default=use_wrapper
+      If ``True``, arrays are moved onto the configured device
+      (GPU / JAX shards) before being stored in the grid struct.
+
+  Returns
+  -------
+  grid : `dict[str, Array]`
+      ``SpectralElementGrid`` dict containing all metric, assembly,
+      and spectral quantities needed by the operators in
+      ``operations_2d``.
+  grid_dims : `frozendict`
+      Scalar grid dimensions (``N``, ``shape``, ``npt``, ``num_elem``).
+
+  Notes
+  -----
+  This function assumes that the full global grid fits in memory.
+  For distributed-memory parallelism, call ``make_grid_mpi_ready``
+  after this function.
+  """
   # note: test code sometimes sets wrapped=False to test wrapper library (jax, torch) vs stock numpy
   # this extra conditional is not extraneous.
   if wrapped:
@@ -109,6 +179,26 @@ def init_spectral_element_grid(latlon,
 
 def eval_grid_deformation_metrics(grid,
                                   npt):
+  """
+  Compute element-local grid deformation metrics from the metric inverse.
+
+  Parameters
+  ----------
+  grid : `SpectralElementGrid`
+      Spectral element grid struct containing ``metric_inverse``.
+  npt : `int`
+      Number of GLL points per element edge.
+
+  Returns
+  -------
+  max_svd : `Array[tuple[elem_idx, gll_idx, gll_idx], Float]`
+      Largest singular value of the Jacobian at each GLL node,
+      corresponding to the most-compressed grid direction.
+  dx_short : `Array[tuple[elem_idx, gll_idx, gll_idx], Float]`
+      Shortest effective grid spacing at each GLL node (in reference units).
+  dx_long : `Array[tuple[elem_idx, gll_idx, gll_idx], Float]`
+      Longest effective grid spacing at each GLL node (in reference units).
+  """
   eigs, _ = jnp.linalg.eigh(grid["metric_inverse"])
   max_svd = jnp.sqrt(jnp.max(eigs, axis=-1))
   min_svd = jnp.sqrt(jnp.min(eigs, axis=-1))
@@ -119,6 +209,25 @@ def eval_grid_deformation_metrics(grid,
 
 def eval_global_grid_deformation_metrics(h_grid,
                                          dims):
+  """
+  Compute globally reduced grid deformation metrics across all MPI ranks.
+
+  Parameters
+  ----------
+  h_grid : `SpectralElementGrid`
+      Processor-local spectral element grid struct.
+  dims : `frozendict`
+      Grid dimension metadata (must contain ``"npt"``).
+
+  Returns
+  -------
+  max_norm_jac_inv : `float`
+      Global maximum of the largest singular value of the Jacobian inverse.
+  max_min_dx : `float`
+      Global maximum of the shortest effective grid spacing.
+  min_max_dx : `float`
+      Global minimum of the longest effective grid spacing.
+  """
   L2_jac_inv, dx_short, dx_long = eval_grid_deformation_metrics(h_grid, dims["npt"])
   max_norm_jac_inv = global_max(jnp.max(L2_jac_inv))
   max_min_dx = global_max(jnp.max(dx_short))
@@ -131,6 +240,42 @@ def eval_cfl(h_grid,
              diffusion_config,
              dims,
              sphere=True):
+  """
+  Estimate CFL-based stability limits for dynamics, tracer advection,
+  and hyperviscosity time-stepping.
+
+  Parameters
+  ----------
+  h_grid : `SpectralElementGrid`
+      Processor-local spectral element grid struct.
+  radius_earth : `float`
+      Radius of the sphere (metres).  Used to non-dimensionalise
+      spatial scales when ``sphere=True``.
+  diffusion_config : `dict`
+      Hyperviscosity configuration dict.  Recognised keys include
+      ``"nu"``, ``"nu_div_factor"``, and ``"nu_d_mass"``.
+  dims : `frozendict`
+      Grid dimension metadata (must contain ``"npt"``).
+  sphere : `bool`, default=True
+      If ``True``, scale grid spacings by ``1/radius_earth``.
+
+  Returns
+  -------
+  dt_limits : `dict[str, float]`
+      Dictionary of stability-limited timestep estimates with keys:
+      ``"dt_rkssp_euler"``, ``"dt_rk2_tracer"``, ``"dt_gravity_wave"``,
+      ``"dt_hypervis_scalar"``, ``"dt_hypervis_vort"``,
+      ``"dt_hypervis_div"``.
+  grid_info : `dict[str, float]`
+      Supporting grid metrics used in the calculation, including
+      ``"max_norm_jac_inv"``, ``"max_min_dx"``, ``"min_min_dx"``,
+      ``"lambda_vis"``, and ``"scale_inv"``.
+
+  Notes
+  -----
+  Stability constants (``lambda_max``, ``lambda_vis``) are taken
+  from Ullrich & Jablonowski (2012) as implemented in CAM-SE/HOMME.
+  """
   #
   # estimate various CFL limits
   # Credit: This is basically copy-pasted from CAM-SE/HOMME
@@ -201,6 +346,27 @@ def eval_cfl(h_grid,
 
 
 def smooth_tensor(grid, dims):
+  """
+  Smooth the hyperviscosity tensor by projecting it onto a continuous
+  bilinear representation over each element.
+
+  The tensor is first projected onto the continuous spectral element
+  space via DSS assembly, then re-sampled at each GLL node using
+  bilinear interpolation from the element corners.
+
+  Parameters
+  ----------
+  grid : `SpectralElementGrid`
+      Spectral element grid struct whose ``"viscosity_tensor"`` field
+      will be replaced with the smoothed version.
+  dims : `frozendict`
+      Grid dimension metadata (must contain ``"npt"``).
+
+  Returns
+  -------
+  grid : `SpectralElementGrid`
+      The same grid struct with an updated ``"viscosity_tensor"`` field.
+  """
   npt = dims["npt"]
   spectral = init_spectral(npt)
 
@@ -239,6 +405,39 @@ def smooth_tensor(grid, dims):
 
 def shard_grid(grid,
                dims):
+  """
+  Pad and shard the grid arrays across multiple JAX devices.
+
+  Arrays whose element-axis length is not divisible by the number
+  of devices are zero-padded (or NaN-padded in debug mode) before
+  sharding.  A ghost mask is also added to the grid so that
+  padded elements can be excluded from reductions.
+
+  Parameters
+  ----------
+  grid : `SpectralElementGrid`
+      Global spectral element grid struct to be sharded.
+  dims : `frozendict`
+      Grid dimension metadata (must contain ``"num_elem"`` and ``"npt"``).
+
+  Returns
+  -------
+  grid : `SpectralElementGrid`
+      Updated grid struct with all element arrays sharded across
+      JAX devices and a ``"shard_extraction_map"`` and
+      ``"ghost_mask"`` field added.
+
+  Raises
+  ------
+  NotImplementedError
+      If called in an MPI environment outside of debug mode.
+
+  Notes
+  -----
+  This function is only relevant when using JAX multi-device sharding
+  (``num_jax_devices > 1``).  For MPI parallelism, use
+  ``make_grid_mpi_ready`` instead.
+  """
   if not DEBUG and do_mpi_communication:
     raise NotImplementedError("Sharding with MPI parallelism is not tested.")
 
@@ -281,6 +480,24 @@ def shard_grid(grid,
 
 
 def get_global_grid(grid, dims):
+  """
+  Gather all sharded element arrays back into a single global grid.
+
+  Parameters
+  ----------
+  grid : `SpectralElementGrid`
+      A sharded or device-wrapped spectral element grid struct.
+  dims : `frozendict`
+      Grid dimension metadata (must contain ``"num_elem"``).
+      Used to strip padding from sharded arrays.
+
+  Returns
+  -------
+  global_grid : `dict[str, Array]`
+      A grid struct where all element arrays have been moved to host
+      memory and trimmed to ``dims["num_elem"]`` elements.
+      Non-element fields are copied through unchanged.
+  """
   global_grid = {}
   global_grid["physical_coords"] = get_global_array(grid["physical_coords"], dims)
   global_grid["physical_to_cartesian"] = get_global_array(grid["physical_to_cartesian"], dims)
@@ -300,12 +517,70 @@ def get_global_grid(grid, dims):
 
 
 def extract_subset_parallel_dim(var, proc_idx, decomp):
+  """
+  Extract the processor-local slice of an array along its first (element) axis.
+
+  Parameters
+  ----------
+  var : `Array[tuple[elem_idx, ...], Any]`
+      Global array to slice.
+  proc_idx : `int`
+      MPI rank index of the target processor.
+  decomp : sequence of tuple[int, int]
+      Element-range decomposition returned by ``init_decomp``.
+      ``decomp[proc_idx]`` gives the ``(start, end)`` indices
+      of the slice assigned to processor ``proc_idx``.
+
+  Returns
+  -------
+  `Array[tuple[local_elem_idx, ...], Any]`
+      The sub-array belonging to processor ``proc_idx``.
+  """
   slices = [slice(None, None) for _ in range(var.ndim)]
   slices[0] = slice(decomp[proc_idx][0], decomp[proc_idx][1])
   return var[*slices]
 
 
 def make_grid_mpi_ready(grid, dims, proc_idx, decomp=None, wrapped=use_wrapper):
+  """
+  Partition a global grid into a processor-local grid for MPI parallelism.
+
+  Splits the global element arrays along the element axis according to
+  a 1-D domain decomposition, and partitions the DSS assembly triples
+  into local, send, and receive components for halo exchanges.
+
+  Parameters
+  ----------
+  grid : `SpectralElementGrid`
+      Global spectral element grid struct (assembled on rank 0 or
+      broadcast to all ranks).
+  dims : `frozendict`
+      Global grid dimension metadata.
+  proc_idx : `int`
+      MPI rank of the calling processor.
+  decomp : sequence of tuple[int, int]`, optional
+      Element-range decomposition.  If ``None``, a uniform
+      decomposition over ``mpi_size`` ranks is computed via
+      ``init_decomp``.
+  wrapped : `bool`, default=use_wrapper
+      If ``True``, local arrays are moved onto the configured device.
+
+  Returns
+  -------
+  local_grid : `dict[str, Array]`
+      Processor-local grid struct containing sliced element arrays,
+      local/send/receive DSS assembly triples, and ghost masks.
+  local_dims : `frozendict`
+      Updated dimension metadata for the local grid, including
+      ``"num_elem"`` set to the local element count and per-rank
+      send buffer sizes.
+
+  Raises
+  ------
+  NotImplementedError
+      If called with both MPI communication and multi-device
+      JAX sharding enabled outside of debug mode.
+  """
   if not DEBUG and num_jax_devices > 1:
     raise NotImplementedError("Sharding with MPI parallelism is not tested.")
 

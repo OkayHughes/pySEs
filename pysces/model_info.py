@@ -7,8 +7,7 @@ models = Enum('dynamical_core',
                ("homme_nonhydrostatic", 4),
                ("homme_nonhydrostatic_deep", 5),
                ("homme_hydrostatic_f_plane", 6),
-               ("homme_nonhydrostatic_f_plane", 7),
-               ("homme_hydostatic_split_transport", 8)])
+               ("homme_nonhydrostatic_f_plane", 7)])
 
 tracer_schemes = Enum('tracer_schemes',
                       [('eulerian_spectral', 1)])

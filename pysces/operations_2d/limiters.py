@@ -1,6 +1,33 @@
 from ..config import jnp
 
 def clip_and_sum_limiter(tracer_mass_tend, mass_matrix, tracer_min, tracer_max, d_mass):
+  """
+  Apply a clip-and-redistribute limiter to tracer mass tendencies.
+
+  Clips over- and under-shooting tracer values to the element-local bounds
+  ``[tracer_min, tracer_max]``, then redistributes the clipped mass to
+  unsaturated DOFs within each element to conserve the element-integrated
+  tracer mass.  If the element mean already falls outside the supplied
+  bounds the bounds are relaxed to the element mean.
+
+  Parameters
+  ----------
+  tracer_mass_tend : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]
+      Tracer mass (``q * d_mass``) after advection, to be limited.
+  mass_matrix : Array[tuple[elem_idx, gll_idx, gll_idx], Float]
+      GLL quadrature weights times metric determinant at each node.
+  tracer_min : Array[tuple[elem_idx, lev_idx], Float]
+      Lower bound for the tracer mixing ratio in each element.
+  tracer_max : Array[tuple[elem_idx, lev_idx], Float]
+      Upper bound for the tracer mixing ratio in each element.
+  d_mass : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]
+      Dry-air layer mass (Pa) used to convert between mixing ratio and mass.
+
+  Returns
+  -------
+  tracer_mass_tend_out : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]
+      Limited tracer mass with the same element-integral as the input.
+  """
   # c -> scaled_mass
   # x -> tracer
   scaled_mass = mass_matrix[:, :, :, jnp.newaxis] * d_mass
@@ -42,6 +69,36 @@ def clip_and_sum_limiter(tracer_mass_tend, mass_matrix, tracer_min, tracer_max, 
   return tracer_mass_tend_out
 
 def full_limiter(tracer_mass_tend, mass_matrix, tracer_min, tracer_max, d_mass, tol_limiter=1e-10):
+  """
+  Apply an iterative mass-conservative limiter to tracer mass tendencies.
+
+  Repeatedly clips over- and under-shooting tracer values to
+  ``[tracer_min, tracer_max]`` and redistributes the surplus/deficit mass to
+  unsaturated DOFs within the element, iterating ``npt^2 - 1`` times until
+  convergence.  If the element mean already falls outside the supplied bounds
+  the bounds are relaxed to the element mean.
+
+  Parameters
+  ----------
+  tracer_mass_tend : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]
+      Tracer mass (``q * d_mass``) after advection, to be limited.
+  mass_matrix : Array[tuple[elem_idx, gll_idx, gll_idx], Float]
+      GLL quadrature weights times metric determinant at each node.
+  tracer_min : Array[tuple[elem_idx, lev_idx], Float]
+      Lower bound for the tracer mixing ratio in each element.
+  tracer_max : Array[tuple[elem_idx, lev_idx], Float]
+      Upper bound for the tracer mixing ratio in each element.
+  d_mass : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]
+      Dry-air layer mass (Pa).
+  tol_limiter : float, optional
+      Unused tolerance parameter (reserved for future stopping criterion).
+      Defaults to ``1e-10``.
+
+  Returns
+  -------
+  tracer_mass_tend_out : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]
+      Limited tracer mass with the same element-integral as the input.
+  """
   # c -> scaled_mass
   # x -> tracer
   npt = tracer_mass_tend.shape[1]

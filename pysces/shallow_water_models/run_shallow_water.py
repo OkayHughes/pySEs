@@ -15,26 +15,35 @@ def simulate_shallow_water(end_time,
                            diffusion=True,
                            tracers_in=None):
   """
-  [Description]
+  Run the shallow-water model forward in time from ``0`` to ``end_time``.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  end_time : float
+      Total simulation duration in seconds.
+  state_in : dict[str, Array]
+      Initial shallow-water model state, as returned by ``wrap_model_state``.
+  grid : SpectralElementGrid
+      Horizontal spectral element grid.
+  physics_config : dict[str, Any]
+      Physical constants (e.g. ``radius_earth``, ``gravity``).
+  diffusion_config : dict[str, Any]
+      Hyperviscosity configuration.
+  timestep_config : frozendict
+      Time-step configuration from ``init_timestep_config``.
+  dims : dict[str, int]
+      Grid dimension parameters.
+  diffusion : bool, optional
+      Whether to apply hyperviscosity after each dynamics step (default: True).
+  tracers_in : dict[str, Array] or None, optional
+      Initial named passive tracer fields. If ``None``, tracers are not
+      advanced.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  result : dict[str, Any]
+      Dict with key ``"dynamics"`` containing the final model state, and
+      optionally ``"tracers"`` if ``tracers_in`` was provided.
   """
   state_n = state_in
   if tracers_in is not None:

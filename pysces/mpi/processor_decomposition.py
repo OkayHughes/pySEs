@@ -229,19 +229,16 @@ def init_mapping(n_subdiv,
 
   Returns
   -------
-  string
-      a value in a string
+  index_map : Array[tuple[elem_idx], Int]
+      Permutation array such that ``grid[index_map]`` reorders
+      the global element array along the Hilbert curve,
+      placing spatially adjacent elements close together in memory.
 
   Notes
   -----
   Although this decomposition method is based
   on the cubed sphere,
   it can also be used for unstructured grids on the sphere.
-
-  Raises
-  ------
-  KeyError
-      when a key error
   """
   face_idx, x, y = sphere_coord_to_face_idx_pos(latlons[:, 0], latlons[:, 1])
   idxs = eval_hilbert_curve(n_subdiv)

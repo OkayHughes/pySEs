@@ -10,10 +10,7 @@ def test_grid():
   cart_coords = arr["cart_coords"]
   connect_map = arr["connect_map"]
   element_permuation = arr["element_permutation"]
-  print("grid read")
   vert_pos, face_connectivity = exodus_to_pysces_grid_corners(cart_coords, connect_map, element_permuation)
-  print("redundancy generated")
-  print(face_connectivity.dtype)
   grid, dims = init_unstructured_grid(face_connectivity, vert_pos, npt)
   assert np.allclose(np.sum(grid["mass_matrix"]), 4*np.pi)
   

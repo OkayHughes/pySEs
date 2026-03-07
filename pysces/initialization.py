@@ -48,6 +48,34 @@ def integrate_weight_of_vapor(p_moist_given_z,
                               z,
                               z_top,
                               config):
+  """
+  Integrate the weight of water vapor in a vertical column using
+  10-point Gauss-Legendre quadrature.
+
+  Parameters
+  ----------
+  p_moist_given_z : callable
+      Function ``z -> p`` returning total moist pressure at height ``z``.
+  Tv_given_z : callable
+      Function ``z -> Tv`` returning virtual temperature at height ``z``.
+  q_given_z : callable
+      Function ``z -> q`` returning the water vapour mass mixing ratio
+      at height ``z``.
+  z : `Array[..., Float]`
+      Lower integration limit (surface height) at each column point.
+  z_top : `Array[..., Float]`
+      Upper integration limit (top-of-atmosphere height) at each
+      column point.
+  config : `dict`
+      Model physics configuration dict.  Must contain ``"Rgas"``
+      (dry gas constant) and ``"gravity"``.
+
+  Returns
+  -------
+  weight : `Array[..., Float]`
+      Vertically integrated weight of water vapour (Pa) at each
+      column point.
+  """
   weight = jnp.zeros_like(z)
   for gauss_point, gauss_weight in zip(gauss_points, gauss_weights):
     z_quad = z_top - gauss_point * (z_top - z)
@@ -65,26 +93,41 @@ def z_from_p_monotonic_dry(pressures,
                            eps=1e-5,
                            z_top=80e3):
   """
-  [Description]
+  Invert a dry pressure profile to obtain height levels using iterative
+  bisection.
+
+  Given a set of target dry pressure values, finds the heights at which
+  the dry pressure (total moist pressure minus the weight of water vapour)
+  equals those targets.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  pressures : `Array[..., Float]`
+      Target dry pressure values (Pa) for which heights are sought.
+  p_moist_given_z : callable
+      Function ``z -> p_moist`` returning total moist pressure at height
+      ``z``.
+  q_given_z : callable
+      Function ``z -> q`` returning water vapour mixing ratio at height
+      ``z``.
+  Tv_given_z : callable
+      Function ``z -> Tv`` returning virtual temperature at height ``z``.
+  v_grid : `dict`
+      Vertical grid struct used to determine the model top pressure
+      via ``eval_top_interface_mass``.
+  config : `dict`
+      Model physics configuration dict.  Must contain ``"Rgas"``
+      and ``"gravity"``.
+  eps : `float`, default=1e-5
+      Relative convergence tolerance.
+  z_top : `float`, default=80e3
+      Initial estimate of the top-of-atmosphere height (metres).
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  z_guesses : `Array[..., Float]`
+      Heights (metres) at which the dry pressure equals ``pressures``
+      to within the requested tolerance.
   """
   if DEBUG:
     print(f"Calculating z levels for {pressures.size} dry mass values. This may take a while.")
@@ -118,26 +161,29 @@ def z_from_p_monotonic_moist(pressures,
                              eps=1e-5,
                              z_top=80e3):
   """
-  [Description]
+  Invert a moist (total) pressure profile to obtain height levels using
+  iterative bisection.
+
+  Given a set of target moist pressure values, finds the heights at which
+  the total moist pressure equals those targets.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  pressures : `Array[..., Float]`
+      Target moist pressure values (Pa) for which heights are sought.
+  p_given_z : callable
+      Function ``z -> p`` returning total moist pressure at height ``z``.
+  eps : `float`, default=1e-5
+      Relative convergence tolerance.
+  z_top : `float`, default=80e3
+      Initial estimate of the top-of-atmosphere height (metres), used
+      to initialise the bisection search.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  z_guesses : `Array[..., Float]`
+      Heights (metres) at which the moist pressure equals ``pressures``
+      to within the requested tolerance.
   """
   z_guesses = 0.0 * p_given_z(z_top * jnp.ones_like(pressures))
   not_converged = jnp.logical_not(jnp.abs((p_given_z(z_guesses) - pressures)) / pressures < eps)
@@ -173,26 +219,54 @@ def init_model_pressure(z_pi_surf_func,
                         eps=1e-8,
                         enforce_hydrostatic=False):
   """
-  [Description]
+  Initialise a 3-D model state by specifying the atmospheric fields as
+  functions of latitude, longitude, and height.
+
+  Converts analytic pressure/temperature/wind profiles into the
+  internal model representation (CAM-SE or HOMME) on the given
+  horizontal and vertical grids.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  z_pi_surf_func : callable
+      Function ``(lat, lon) -> (z_surf, surface_mass)`` returning the
+      surface geopotential height (m) and surface dry/moist pressure (Pa).
+  p_moist_func : callable
+      Function ``z -> p_moist`` returning total moist pressure (Pa) at
+      height ``z``.
+  Tv_func : callable
+      Function ``(lat, lon, z) -> Tv`` returning virtual temperature (K).
+  u_func : callable
+      Function ``(lat, lon, z) -> u`` returning the zonal wind (m/s).
+  v_func : callable
+      Function ``(lat, lon, z) -> v`` returning the meridional wind (m/s).
+  Q_func : callable
+      Function ``(lat, lon, z) -> q`` returning the water vapour mixing
+      ratio (kg/kg).
+  h_grid : `SpectralElementGrid`
+      Horizontal spectral element grid struct.
+  v_grid : `dict`
+      Vertical grid struct containing hybrid coordinate coefficients.
+  config : `dict`
+      Model physics configuration dict.
+  dims : `frozendict`
+      Grid dimension metadata.
+  model : `models`
+      Dynamical core identifier (from ``model_info.models``).
+  w_func : callable, default ``lambda lat, lon, z: 0.0``
+      Function ``(lat, lon, z) -> w`` returning the vertical velocity
+      (m/s).  Only used by non-hydrostatic models.
+  eps : `float`, default=1e-8
+      Convergence tolerance passed to the height-inversion routines.
+  enforce_hydrostatic : `bool`, default=False
+      If ``True``, overwrite the initial interface geopotential with the
+      hydrostatically balanced value (HOMME non-hydrostatic only).
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  initial_state : model state struct
+      Fully initialised model state struct suitable for passing to the
+      time-stepping routines.
   """
   lat = h_grid["physical_coords"][:, :, :, 0]
   lon = h_grid["physical_coords"][:, :, :, 1]
@@ -303,6 +377,46 @@ def init_baroclinic_wave_state(h_grid,
                                eps=1e-6,
                                pert_type=perturbation_opts.none,
                                enforce_hydrostatic=False):
+  """
+  Initialise model state for the Jablonowski-Williamson baroclinic
+  wave test case.
+
+  Wraps ``init_model_pressure`` with the analytic surface state,
+  pressure/temperature profile, and wind functions from the
+  moist baroclinic wave analytic initialisation module.
+
+  Parameters
+  ----------
+  h_grid : `SpectralElementGrid`
+      Horizontal spectral element grid struct.
+  v_grid : `dict`
+      Vertical grid struct containing hybrid coordinate coefficients.
+  model_config : `dict`
+      Model physics configuration dict.
+  test_config : `dict`
+      Test-case parameters passed to the analytic initialisation
+      functions (e.g. rotation rate, lapse rate).
+  dims : `frozendict`
+      Grid dimension metadata.
+  model : `models`
+      Dynamical core identifier (from ``model_info.models``).
+  mountain : `bool`, default=False
+      If ``True``, add an idealised surface topography perturbation.
+  moist : `bool`, default=False
+      If ``True``, include water vapour in the initial state.
+  eps : `float`, default=1e-6
+      Convergence tolerance passed to the height-inversion routines.
+  pert_type : `perturbation_opts`, default=perturbation_opts.none
+      Type of initial wind perturbation to apply.
+  enforce_hydrostatic : `bool`, default=False
+      If ``True``, overwrite the initial interface geopotential with the
+      hydrostatically balanced value (HOMME non-hydrostatic only).
+
+  Returns
+  -------
+  model_state : model state struct
+      Fully initialised model state struct for the baroclinic wave test.
+  """
   lat = h_grid["physical_coords"][:, :, :, 0]
   deep = model in deep_atmosphere_models
 

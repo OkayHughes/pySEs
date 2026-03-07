@@ -22,6 +22,41 @@ def dynamics_tendency(dynamics,
                       model,
                       moisture_species=None,
                       dry_air_species=None):
+  """
+  Evaluate the explicit adiabatic tendency and apply DSS projection.
+
+  Dispatches to the appropriate model's ``eval_explicit_tendency`` function
+  (CAM-SE or HOMME) and then projects the raw discontinuous tendency onto
+  the C0-continuous space via :func:`project_dynamics`.
+
+  Parameters
+  ----------
+  dynamics : dict[str, Array]
+      Current dynamics state from :func:`wrap_dynamics`.
+  static_forcing : dict[str, Array]
+      Time-invariant forcing from :func:`init_static_forcing`.
+  h_grid : SpectralElementGrid
+      Horizontal grid struct.
+  v_grid : dict[str, Array]
+      Vertical grid struct from :func:`init_vertical_grid`.
+  physics_config : dict
+      Physics configuration dict.
+  dims : tuple[int, ...]
+      Grid dimension tuple; static JIT argument.
+  model : str
+      Model identifier; selects HOMME or CAM-SE explicit tendency.
+  moisture_species : dict[str, Array] or None, optional
+      Moisture mixing-ratio fields (required for CAM-SE models).
+  dry_air_species : dict[str, Array] or None, optional
+      Dry-air species fields (required for CAM-SE models).
+
+  Returns
+  -------
+  dynamics_tend_c0 : dict[str, Array]
+      DSS-projected dynamics tendency.
+  tracer_consist : dict[str, Array]
+      Tracer-consistency flux struct from :func:`wrap_tracer_consist_dynamics`.
+  """
   if model in cam_se_models:
     dynamics_tend, tracer_consist = eval_explicit_tendency_se(dynamics,
                                                               static_forcing,
@@ -48,6 +83,31 @@ def enforce_conservation(dynamics,
                          dt,
                          physics_config,
                          model):
+  """
+  Apply model-specific energy/mass conservation corrections after a dynamics step.
+
+  For HOMME models this calls :func:`correct_state` to enforce discrete energy
+  conservation.  For CAM-SE models no correction is applied and the state is
+  returned unchanged.
+
+  Parameters
+  ----------
+  dynamics : dict[str, Array]
+      Dynamics state after an explicit time step.
+  static_forcing : dict[str, Array]
+      Time-invariant forcing from :func:`init_static_forcing`.
+  dt : float
+      Timestep size (s) used in the correction.
+  physics_config : dict
+      Physics configuration dict.
+  model : str
+      Model identifier.
+
+  Returns
+  -------
+  dynamics_conserve : dict[str, Array]
+      Dynamics state with conservation correction applied.
+  """
   if model in cam_se_models:
     dynamics_conserve = dynamics
   else:
@@ -61,6 +121,34 @@ def eval_cfl_3d(h_grid,
                 diffusion_config,
                 dims,
                 model):
+  """
+  Compute CFL-based stability time-step estimates for the 3-D dynamical core.
+
+  Wraps :func:`eval_cfl` and appends a sponge-layer stability estimate when
+  ``"sponge_layer"`` is present in ``diffusion_config``.
+
+  Parameters
+  ----------
+  h_grid : SpectralElementGrid
+      Horizontal grid struct.
+  physics_config : dict
+      Physics configuration dict; ``"radius_earth"`` is forwarded to
+      :func:`eval_cfl`.
+  diffusion_config : dict
+      Diffusion/hyperviscosity configuration dict; may contain
+      ``"nu_ramp"`` and ``"nu_top"`` for sponge-layer estimates.
+  dims : tuple[int, ...]
+      Grid dimension tuple.
+  model : str
+      Model identifier forwarded to :func:`eval_cfl`.
+
+  Returns
+  -------
+  cfl_info : dict[str, float]
+      Stability time-step estimates including ``"dt_rk2_tracer"``,
+      ``"dt_gravity_wave"``, ``"dt_hypervis_scalar"``, ``"dt_hypervis_vort"``,
+      ``"dt_hypervis_div"``, and ``"dt_sponge_layer"``.
+  """
   cfl_info, grid_info = eval_cfl(h_grid, physics_config["radius_earth"], diffusion_config, dims, model)
   max_norm_jac_inv = grid_info["max_norm_jac_inv"]
 
@@ -89,6 +177,55 @@ def init_timestep_config(dt_coupling,
                          sponge_steps_per_dyn=-1,
                          physics_dynamics_coupling=coupling_types.none,
                          print_cfl=False):
+  """
+  Build the time-stepping configuration dict for the 3-D dynamical core.
+
+  Computes subcycle counts for tracer advection, dynamics, hyperviscosity, and
+  the sponge layer from CFL stability estimates.  Each subcycle count is the
+  maximum of the CFL-derived minimum and any user-supplied floor value.
+
+  Parameters
+  ----------
+  dt_coupling : float
+      Physics–dynamics coupling interval (s); the outer time step.
+  h_grid : SpectralElementGrid
+      Horizontal grid struct; forwarded to :func:`eval_cfl_3d`.
+  physics_config : dict
+      Physics configuration dict.
+  diffusion_config : dict
+      Diffusion/hyperviscosity configuration dict.
+  dims : tuple[int, ...]
+      Grid dimension tuple.
+  model : str
+      Model identifier.
+  tracer_tstep_type : time_step_options, optional
+      Time-stepping scheme for tracer advection (default: ``RK2``).
+  hypervis_tstep_type : time_step_options, optional
+      Time-stepping scheme for hyperviscosity (default: ``Euler``).
+  dynamics_tstep_type : time_step_options, optional
+      Time-stepping scheme for dynamics (default: ``RK3_5STAGE``).
+  sponge_tstep_type : time_step_options, optional
+      Time-stepping scheme for the sponge layer (default: ``Euler``).
+  tracer_steps_per_coupling_interval : int, optional
+      Minimum tracer subcycles per coupling interval; ``-1`` means CFL only.
+  dyn_steps_per_tracer : int, optional
+      Minimum dynamics subcycles per tracer step; ``-1`` means CFL only.
+  hypervis_steps_per_dyn : int, optional
+      Minimum hyperviscosity subcycles per dynamics step; ``-1`` means CFL only.
+  sponge_steps_per_dyn : int, optional
+      Minimum sponge-layer subcycles per dynamics step; ``-1`` means CFL only.
+  physics_dynamics_coupling : coupling_types, optional
+      Physics–dynamics coupling strategy (default: ``coupling_types.none``).
+  print_cfl : bool, optional
+      Currently unused; reserved for printing CFL diagnostics.
+
+  Returns
+  -------
+  timestep_config : frozendict
+      Nested frozen dict with sub-dicts ``"tracer_advection"``, ``"dynamics"``,
+      ``"hyperviscosity"``, ``"sponge"`` (each containing ``"step_type"`` and
+      ``"dt"``), plus integer subcycle counts and ``"physics_dt"``.
+  """
   cfl_info = eval_cfl_3d(h_grid, physics_config, diffusion_config, dims, model)
   tracer_S = stability_info[tracer_tstep_type]
   hypervisc_S = stability_info[hypervis_tstep_type]
@@ -169,26 +306,42 @@ def advance_dynamics_euler(dynamics_in,
                            moisture_species=None,
                            dry_air_species=None):
   """
-  [Description]
+  Advance the dynamics state by one forward-Euler step.
+
+  Evaluates the explicit adiabatic tendency via :func:`dynamics_tendency`,
+  applies a forward-Euler update, enforces conservation, and scales the
+  tracer-consistency struct by the dynamics subcycle fraction.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  dynamics_in : dict[str, Array]
+      Dynamics state at the start of the step.
+  static_forcing : dict[str, Array]
+      Time-invariant forcing.
+  h_grid : SpectralElementGrid
+      Horizontal grid struct.
+  v_grid : dict[str, Array]
+      Vertical grid struct.
+  physics_config : dict
+      Physics configuration dict.
+  timestep_config : frozendict
+      Time-stepping configuration from :func:`init_timestep_config`; static
+      JIT argument.
+  dims : tuple[int, ...]
+      Grid dimension tuple; static JIT argument.
+  model : str
+      Model identifier; static JIT argument.
+  moisture_species : dict[str, Array] or None, optional
+      Moisture mixing-ratio fields (CAM-SE models).
+  dry_air_species : dict[str, Array] or None, optional
+      Dry-air species fields (CAM-SE models).
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  dynamics_out : dict[str, Array]
+      Updated dynamics state after the Euler step.
+  tracer_consist : dict[str, Array]
+      Scaled tracer-consistency struct for this dynamics sub-step.
   """
   dt = timestep_config["dynamics"]["dt"]
   dynamics_tend_cont, tracer_consist = dynamics_tendency(dynamics_in,
@@ -226,26 +379,41 @@ def advance_hypervis_euler(dynamics,
                            dims,
                            model):
   """
-  [Description]
+  Advance the dynamics state through all hyperviscosity sub-steps.
+
+  Applies ``timestep_config["hypervis_subcycle"]`` forward-Euler steps of
+  biharmonic hyperviscosity via :func:`eval_hypervis_terms`, accumulating the
+  scaled tracer-consistency struct across sub-steps.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  dynamics : dict[str, Array]
+      Dynamics state at the start of the hyperviscosity pass.
+  static_forcing : dict[str, Array]
+      Time-invariant forcing.
+  h_grid : SpectralElementGrid
+      Horizontal grid struct.
+  v_grid : dict[str, Array]
+      Vertical grid struct.
+  physics_config : dict
+      Physics configuration dict.
+  diffusion_config : dict
+      Hyperviscosity configuration from :func:`init_hypervis_config_const` or
+      :func:`init_hypervis_config_tensor`.
+  timestep_config : frozendict
+      Time-stepping configuration; static JIT argument.
+  dims : tuple[int, ...]
+      Grid dimension tuple; static JIT argument.
+  model : str
+      Model identifier; static JIT argument.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  state_out : dict[str, Array]
+      Dynamics state after all hyperviscosity sub-steps.
+  tracer_consist_total : dict[str, Array]
+      Accumulated tracer-consistency struct scaled by the joint
+      dynamics–hypervis subcycle fraction.
   """
   state_out = dynamics
   tracer_consist_frac = 1.0 / (timestep_config["dynamics_subcycle"] * timestep_config["hypervis_subcycle"])
@@ -282,26 +450,32 @@ def advance_sponge_euler(dynamics,
                          dims,
                          model):
   """
-  [Description]
+  Advance the dynamics state through all sponge-layer sub-steps.
+
+  Applies ``timestep_config["sponge_subcycle"]`` forward-Euler steps of the
+  top-of-model sponge damping via :func:`advance_sponge_layer`.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  dynamics : dict[str, Array]
+      Dynamics state at the start of the sponge pass.
+  h_grid : SpectralElementGrid
+      Horizontal grid struct.
+  physics_config : dict
+      Physics configuration dict.
+  diffusion_config : dict
+      Diffusion configuration containing sponge-layer parameters.
+  timestep_config : frozendict
+      Time-stepping configuration; static JIT argument.
+  dims : tuple[int, ...]
+      Grid dimension tuple; static JIT argument.
+  model : str
+      Model identifier; static JIT argument.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  dynamics_out : dict[str, Array]
+      Dynamics state after all sponge-layer sub-steps.
   """
   dynamics_out = dynamics
   for _ in range(timestep_config["sponge_subcycle"]):
@@ -327,26 +501,44 @@ def advance_dynamics_ullrich_5stage(dynamics_in,
                                     moisture_species=None,
                                     dry_air_species=None):
   """
-  [Description]
+  Advance the dynamics state by one step of the Ullrich 5-stage RK3 scheme.
+
+  Implements the low-storage 5-stage third-order Runge–Kutta method of
+  Ullrich et al. with five explicit tendency evaluations and a final
+  weighted combination using only two stored states.  The tracer-consistency
+  struct is accumulated from stage 1 and stage 5 with weights 1/4 and 3/4.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  dynamics_in : dict[str, Array]
+      Dynamics state at the start of the step.
+  static_forcing : dict[str, Array]
+      Time-invariant forcing.
+  h_grid : SpectralElementGrid
+      Horizontal grid struct.
+  v_grid : dict[str, Array]
+      Vertical grid struct.
+  physics_config : dict
+      Physics configuration dict.
+  timestep_config : frozendict
+      Time-stepping configuration from :func:`init_timestep_config`; static
+      JIT argument.
+  dims : tuple[int, ...]
+      Grid dimension tuple; static JIT argument.
+  model : str
+      Model identifier; static JIT argument.
+  moisture_species : dict[str, Array] or None, optional
+      Moisture mixing-ratio fields (CAM-SE models).
+  dry_air_species : dict[str, Array] or None, optional
+      Dry-air species fields (CAM-SE models).
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  final_state : dict[str, Array]
+      Updated dynamics state after the 5-stage step.
+  tracer_consist_total : dict[str, Array]
+      Tracer-consistency struct accumulated from stages 1 and 5, scaled by
+      the dynamics subcycle fraction.
   """
   dt = timestep_config["dynamics"]["dt"]
   tracer_consist_frac = 1.0 / timestep_config["dynamics_subcycle"]

@@ -22,26 +22,33 @@ def init_common_variables(dynamics,
                           physics_config,
                           model):
   """
-  [Description]
+  Pre-compute intermediate quantities shared across all HOMME tendency terms.
+
+  Evaluates interface geopotential, pressure, Exner function, radial scaling,
+  mass-weighted interface velocities, horizontal divergence, and horizontal
+  gradients.  Results are returned in a single dict so each term function can
+  read what it needs without redundant computation.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  dynamics : dict[str, Array]
+      Dynamics state from :func:`wrap_dynamics`.
+  static_forcing : dict[str, Array]
+      Time-invariant forcing from :func:`init_static_forcing`.
+  h_grid : SpectralElementGrid
+      Horizontal grid struct.
+  v_grid : dict[str, Array]
+      Vertical grid struct from :func:`init_vertical_grid`.
+  physics_config : dict
+      Physics configuration dict.
+  model : str
+      Model identifier; selects hydrostatic/non-hydrostatic and deep/shallow
+      branches.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  common_variables : dict[str, Array]
+      Dict of pre-computed quantities used by the individual tendency functions.
   """
   if model in hydrostatic_models:
     p_mid = eval_midlevel_pressure(dynamics, v_grid)
@@ -124,26 +131,25 @@ def eval_vorticity_term(common_variables,
                         h_grid,
                         config):
   """
-  [Description]
+  Evaluate the horizontal Coriolis + relative-vorticity tendency for momentum.
+
+  Computes ``(f + zeta/r_hat_m) * u_perp`` in vector-invariant form, where
+  ``zeta`` is the horizontal relative vorticity and ``r_hat_m`` is the
+  mid-level radial scaling factor (``1`` for shallow-atmosphere models).
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  common_variables : dict[str, Array]
+      Pre-computed quantities from :func:`init_common_variables`.
+  h_grid : SpectralElementGrid
+      Horizontal grid struct.
+  config : dict
+      Physics configuration dict.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  vort_term : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, 2], Float]
+      Vorticity acceleration for the horizontal wind.
   """
   u = common_variables["horizontal_wind"]
   fcor = common_variables["coriolis_param"]
@@ -159,26 +165,24 @@ def eval_grad_kinetic_energy_h_term(common_variables,
                                     h_grid,
                                     config):
   """
-  [Description]
+  Evaluate the horizontal kinetic-energy gradient tendency for momentum.
+
+  Computes ``-grad(KE_h) / r_hat_m`` where ``KE_h = (u^2 + v^2) / 2``
+  is the horizontal kinetic energy.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  common_variables : dict[str, Array]
+      Pre-computed quantities from :func:`init_common_variables`.
+  h_grid : SpectralElementGrid
+      Horizontal grid struct.
+  config : dict
+      Physics configuration dict.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  ke_h_term : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, 2], Float]
+      Horizontal kinetic-energy gradient acceleration.
   """
   u = common_variables["horizontal_wind"]
   grad_kinetic_energy = horizontal_gradient_3d((u[:, :, :, :, 0]**2 +
@@ -191,26 +195,26 @@ def eval_grad_kinetic_energy_v_term(common_variables,
                                     h_grid,
                                     config):
   """
-  [Description]
+  Evaluate the vertical kinetic-energy gradient tendency for horizontal momentum.
+
+  Computes ``-grad(KE_v) / r_hat_m`` where ``KE_v = w^2 / 2`` is the vertical
+  kinetic energy, linearly interpolated to mid-levels from interfaces.
+  Non-hydrostatic models only.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  common_variables : dict[str, Array]
+      Pre-computed quantities from :func:`init_common_variables`; requires
+      ``"w_i"``.
+  h_grid : SpectralElementGrid
+      Horizontal grid struct.
+  config : dict
+      Physics configuration dict.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  ke_v_term : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, 2], Float]
+      Vertical kinetic-energy gradient acceleration for the horizontal wind.
   """
   w_i = common_variables["w_i"]
   w_sq_m = interface_to_midlevel(w_i * w_i) / 2.0
@@ -221,26 +225,22 @@ def eval_grad_kinetic_energy_v_term(common_variables,
 @jit
 def eval_w_vorticity_correction_term(common_variables):
   """
-  [Description]
+  Evaluate the vertical-vorticity correction to horizontal momentum.
+
+  Computes the interface-to-midlevel average of ``w * grad(w) / r_hat_m``,
+  which arises from the vector-invariant form of the momentum equation when
+  the flow has a non-negligible vertical component.  Non-hydrostatic models only.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  common_variables : dict[str, Array]
+      Pre-computed quantities from :func:`init_common_variables`; requires
+      ``"w_i"`` and ``"grad_w_i"``.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  w_vort_term : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, 2], Float]
+      Vertical-vorticity correction to the horizontal wind tendency.
   """
   w_grad_w_m = interface_to_midlevel_vec(common_variables["w_i"][:, :, :, :, np.newaxis] *
                                          common_variables["grad_w_i"])
@@ -251,26 +251,21 @@ def eval_w_vorticity_correction_term(common_variables):
 @jit
 def eval_u_metric_term(common_variables):
   """
-  [Description]
+  Evaluate the metric (curvature) correction to horizontal momentum.
+
+  Computes ``-w_m * u / r_m``, the correction to horizontal wind arising
+  from spherical-geometry metric terms in the deep-atmosphere equations.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  common_variables : dict[str, Array]
+      Pre-computed quantities from :func:`init_common_variables`; requires
+      ``"w_m"`` and ``"r_m"``.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  u_metric : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, 2], Float]
+      Metric correction to the horizontal wind tendency.
   """
   return -(common_variables["w_m"][:, :, :, :, np.newaxis] * common_variables["horizontal_wind"] /
            common_variables["r_m"][:, :, :, np.newaxis])
@@ -279,26 +274,22 @@ def eval_u_metric_term(common_variables):
 @jit
 def eval_u_nct_term(common_variables):
   """
-  [Description]
+  Evaluate the non-traditional Coriolis correction to horizontal momentum.
+
+  Computes ``-w_m * f_cos`` for the zonal component (zero for meridional),
+  where ``f_cos = 2 Omega cos(lat)`` is the non-traditional Coriolis parameter.
+  Deep-atmosphere models only.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  common_variables : dict[str, Array]
+      Pre-computed quantities from :func:`init_common_variables`; requires
+      ``"w_m"`` and ``"nontrad_coriolis_param"``.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  u_nct : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, 2], Float]
+      Non-traditional Coriolis correction to the horizontal wind tendency.
   """
   w_m = common_variables["w_m"]
   fcorcos = common_variables["nontrad_coriolis_param"]
@@ -310,26 +301,25 @@ def eval_pgrad_pressure_term(common_variables,
                              h_grid,
                              config):
   """
-  [Description]
+  Evaluate the Exner-pressure gradient force for horizontal momentum.
+
+  Uses the symmetrised form ``-cp * (theta_v * grad(pi) + grad(theta_v * pi) -
+  pi * grad(theta_v)) / 2`` to improve discrete energy conservation.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  common_variables : dict[str, Array]
+      Pre-computed quantities from :func:`init_common_variables`; requires
+      ``"theta_v"``, ``"exner"``, ``"grad_exner"``, and ``"r_hat_m"``.
+  h_grid : SpectralElementGrid
+      Horizontal grid struct.
+  config : dict
+      Physics configuration dict with ``"cp"``.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  pgrad_p : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, 2], Float]
+      Pressure-gradient acceleration for the horizontal wind.
   """
   theta_v = common_variables["theta_v"]
   exner = common_variables["exner"]
@@ -344,26 +334,22 @@ def eval_pgrad_pressure_term(common_variables,
 @jit
 def eval_pgrad_phi_term(common_variables):
   """
-  [Description]
+  Evaluate the geopotential-gradient pressure force for horizontal momentum.
+
+  Computes the interface-to-midlevel average of ``-mu * grad(phi_i) / r_hat_m``,
+  where ``mu = dp/d(d_mass)`` couples the non-hydrostatic pressure to the
+  geopotential gradient.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  common_variables : dict[str, Array]
+      Pre-computed quantities from :func:`init_common_variables`; requires
+      ``"mu"``, ``"grad_phi_i"``, and ``"r_hat_m"``.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  pgrad_phi : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, 2], Float]
+      Geopotential-gradient pressure-force acceleration for the horizontal wind.
   """
   pgf_grad_phi_m = interface_to_midlevel_vec(common_variables["mu"][:, :, :, :, np.newaxis] *
                                              common_variables["grad_phi_i"])
@@ -374,26 +360,21 @@ def eval_pgrad_phi_term(common_variables):
 @jit
 def eval_w_advection_term(common_variables):
   """
-  [Description]
+  Evaluate the horizontal advection of vertical velocity at interfaces.
+
+  Computes ``-v/r_hat_i · grad(w_i)`` at vertical interfaces, where the
+  mass-weighted interface velocity ``v_over_r_hat_i`` is used.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  common_variables : dict[str, Array]
+      Pre-computed quantities from :func:`init_common_variables`; requires
+      ``"v_over_r_hat_i"`` and ``"grad_w_i"``.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  w_adv : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx+1], Float]
+      Horizontal advection of ``w`` at interfaces.
   """
   v_over_r_hat_i = common_variables["v_over_r_hat_i"]
   grad_w_i = common_variables["grad_w_i"]
@@ -405,26 +386,22 @@ def eval_w_advection_term(common_variables):
 @jit
 def eval_w_metric_term(common_variables):
   """
-  [Description]
+  Evaluate the metric (curvature) correction to vertical velocity at interfaces.
+
+  Computes the mass-weighted interface average of ``(u^2 + v^2) / r_m``,
+  the centrifugal contribution to the vertical momentum equation from
+  spherical-geometry metric terms.  Deep-atmosphere models only.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  common_variables : dict[str, Array]
+      Pre-computed quantities from :func:`init_common_variables`; requires
+      ``"horizontal_wind"``, ``"r_m"``, ``"d_mass"``, and ``"d_mass_i"``.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  w_metric : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx+1], Float]
+      Metric correction to the interface vertical-velocity tendency.
   """
   v_sq_over_r_i = midlevel_to_interface_vel(common_variables["horizontal_wind"]**2 / common_variables["r_m"],
                                             common_variables["d_mass"],
@@ -435,26 +412,23 @@ def eval_w_metric_term(common_variables):
 @jit
 def eval_w_nct_term(common_variables):
   """
-  [Description]
+  Evaluate the non-traditional Coriolis correction to vertical velocity.
+
+  Computes ``u_i * f_cos`` at interfaces, the contribution to the vertical
+  momentum equation from the non-traditional Coriolis parameter
+  ``f_cos = 2 Omega cos(lat)``.  Deep-atmosphere models only.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  common_variables : dict[str, Array]
+      Pre-computed quantities from :func:`init_common_variables`; requires
+      ``"u_i"`` and ``"nontrad_coriolis_param"``.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  w_nct : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx+1], Float]
+      Non-traditional Coriolis correction to the interface vertical-velocity
+      tendency.
   """
   fcorcos = common_variables["nontrad_coriolis_param"]
   return common_variables["u_i"][:, :, :, :, 0] * fcorcos[:, :, :, np.newaxis]
@@ -463,26 +437,22 @@ def eval_w_nct_term(common_variables):
 @jit
 def eval_w_buoyancy_term(common_variables):
   """
-  [Description]
+  Evaluate the buoyancy tendency for vertical velocity at interfaces.
+
+  Computes ``-g * (1 - mu)`` at interfaces, where ``g`` is local gravity and
+  ``mu = dp/d(d_mass)`` is the non-hydrostatic coefficient.  For hydrostatic
+  models this term is zero.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  common_variables : dict[str, Array]
+      Pre-computed quantities from :func:`init_common_variables`; requires
+      ``"g"`` and ``"mu"``.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  w_buoy : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx+1], Float]
+      Buoyancy acceleration at vertical interfaces.
   """
   return -common_variables["g"] * (1 - common_variables["mu"])
 
@@ -490,26 +460,21 @@ def eval_w_buoyancy_term(common_variables):
 @jit
 def eval_phi_advection_term(common_variables):
   """
-  [Description]
+  Evaluate the horizontal advection of interface geopotential.
+
+  Computes ``-v/r_hat_i · grad(phi_i)`` at vertical interfaces, using the
+  mass-weighted interface velocity ``v_over_r_hat_i``.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  common_variables : dict[str, Array]
+      Pre-computed quantities from :func:`init_common_variables`; requires
+      ``"v_over_r_hat_i"`` and ``"grad_phi_i"``.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  phi_adv : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx+1], Float]
+      Horizontal advection of ``phi_i`` at interfaces.
   """
   v_over_r_hat_i = common_variables["v_over_r_hat_i"]
   grad_phi_i = common_variables["grad_phi_i"]
@@ -521,26 +486,21 @@ def eval_phi_advection_term(common_variables):
 @jit
 def eval_phi_acceleration_v_term(common_variables):
   """
-  [Description]
+  Evaluate the vertical-velocity contribution to the interface geopotential tendency.
+
+  Computes ``g * w_i`` at interfaces — the rate of change of geopotential due
+  to vertical motion against gravity.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  common_variables : dict[str, Array]
+      Pre-computed quantities from :func:`init_common_variables`; requires
+      ``"g"`` and ``"w_i"``.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  phi_accel_v : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx+1], Float]
+      Vertical-motion contribution to the ``phi_i`` tendency.
   """
   return common_variables["g"] * common_variables["w_i"]
 
@@ -550,26 +510,28 @@ def eval_theta_v_divergence_term(common_variables,
                                  h_grid,
                                  config):
   """
-  [Description]
+  Evaluate the virtual-potential-temperature divergence tendency.
+
+  Uses a symmetrised advection form that combines flux divergence and
+  advective components to improve discrete energy conservation:
+  ``-(div(u * theta_v_d_mass) + theta_v * div(d_mass * u) +
+  d_mass * u · grad(theta_v)) / (2 * r_hat_m)``.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  common_variables : dict[str, Array]
+      Pre-computed quantities from :func:`init_common_variables`; requires
+      ``"r_hat_m"``, ``"theta_v"``, ``"theta_v_d_mass"``, ``"horizontal_wind"``,
+      ``"div_d_mass"``, and ``"d_mass"``.
+  h_grid : SpectralElementGrid
+      Horizontal grid struct.
+  config : dict
+      Physics configuration dict.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  theta_v_tend : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]
+      Tendency of virtual potential temperature times layer mass.
   """
   r_hat_m = common_variables["r_hat_m"]
   theta_v = common_variables["theta_v"]
@@ -590,32 +552,44 @@ def eval_theta_v_divergence_term(common_variables,
 @jit
 def eval_d_mass_divergence_term(common_variables):
   """
-  [Description]
+  Evaluate the layer-mass continuity tendency.
+
+  Returns ``-div(d_mass * u / r_hat_m)``, the negative horizontal divergence
+  of the mass flux, which drives changes in layer mass.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  common_variables : dict[str, Array]
+      Pre-computed quantities from :func:`init_common_variables`; requires
+      ``"div_d_mass"``.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  d_mass_tend : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]
+      Layer-mass continuity tendency.
   """
   return -common_variables["div_d_mass"]
 
 
 @jit
 def eval_tracer_velocity_term(common_variables):
+  """
+  Evaluate the mass-weighted tracer-consistency flux.
+
+  Computes ``d_mass * u / r_hat_m``, the flux used to transport tracers
+  consistently with the dynamical-core mass update.
+
+  Parameters
+  ----------
+  common_variables : dict[str, Array]
+      Pre-computed quantities from :func:`init_common_variables`; requires
+      ``"d_mass"``, ``"horizontal_wind"``, and ``"r_hat_m"``.
+
+  Returns
+  -------
+  tracer_flux : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, 2], Float]
+      Mass-weighted horizontal tracer-consistency flux.
+  """
   return (common_variables["d_mass"][:, :, :, :, jnp.newaxis] *
           common_variables["horizontal_wind"] / common_variables["r_hat_m"])
 
@@ -628,26 +602,34 @@ def eval_explicit_tendency(dynamics,
                            config,
                            model):
   """
-  [Description]
+  Evaluate the full explicit adiabatic tendency for HOMME.
+
+  Combines all tendency terms: vorticity, horizontal and vertical kinetic-energy
+  gradients, pressure-gradient forces, geopotential, virtual potential
+  temperature, and layer-mass continuity.  Non-hydrostatic and deep-atmosphere
+  terms are included only when applicable to ``model``.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  dynamics : dict[str, Array]
+      Current dynamics state from :func:`wrap_dynamics`.
+  static_forcing : dict[str, Array]
+      Time-invariant forcing from :func:`init_static_forcing`.
+  h_grid : SpectralElementGrid
+      Horizontal grid struct.
+  v_grid : dict[str, Array]
+      Vertical grid struct from :func:`init_vertical_grid`.
+  config : dict
+      Physics configuration dict.
+  model : str
+      Model identifier; static JIT argument.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  dynamics_tend : dict[str, Array]
+      Dynamics tendency dict from :func:`wrap_dynamics`.
+  tracer_consistency : dict[str, Array]
+      Tracer-consistency flux struct from :func:`wrap_tracer_consist_dynamics`.
   """
 
   common_variables = init_common_variables(dynamics,
@@ -700,26 +682,38 @@ def eval_energy_quantities(dynamics,
                            dims,
                            model):
   """
-  [Description]
+  Compute discrete energy transfer pairs and empirical energy tendencies.
+
+  Evaluates all pairwise energy exchanges (KE-KE, KE-PE, KE-IE, PE-PE) between
+  kinetic, potential, and internal energy reservoirs.  Also computes empirical
+  total energy tendencies from the explicit tendency by direct inner products.
+  Used for diagnosing discrete energy conservation.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  dynamics : dict[str, Array]
+      Current dynamics state from :func:`wrap_dynamics`.
+  static_forcing : dict[str, Array]
+      Time-invariant forcing from :func:`init_static_forcing`.
+  h_grid : SpectralElementGrid
+      Horizontal grid struct.
+  v_grid : dict[str, Array]
+      Vertical grid struct from :func:`init_vertical_grid`.
+  config : dict
+      Physics configuration dict.
+  dims : tuple[int, ...]
+      Grid dimension tuple used for DSS projection; static JIT argument.
+  model : str
+      Model identifier; static JIT argument.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  pairs : dict[str, tuple[Array, Array]]
+      Dict of ``(a_term, b_term)`` pairs; each pair should sum to zero for
+      exact discrete energy conservation.
+  empirical_tendencies : dict[str, Array]
+      Dict with keys ``"ke"``, ``"ie"``, ``"pe"`` containing the total
+      tendency of each energy reservoir integrated over the column.
   """
   common_variables = init_common_variables(dynamics,
                                            static_forcing,
@@ -844,26 +838,30 @@ def correct_state(dynamics,
                   config,
                   model):
   """
-  [Description]
+  Apply the lower-boundary conservation correction to the dynamics state.
+
+  For non-hydrostatic models, adjusts the lowest-level horizontal wind and
+  interface vertical velocity so that the kinematic lower-boundary condition
+  is satisfied.  For hydrostatic models this is a no-op.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  dynamics : dict[str, Array]
+      Dynamics state to be corrected.
+  static_forcing : dict[str, Array]
+      Time-invariant forcing; ``"grad_phi_surf"`` is used for the surface
+      normal constraint.
+  dt : float
+      Timestep size (s).
+  config : dict
+      Physics configuration dict.
+  model : str
+      Model identifier; static JIT argument.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  dynamics_corrected : dict[str, Array]
+      Dynamics state with corrected lowest-level wind and vertical velocity.
   """
   if model in hydrostatic_models:
     return dynamics
@@ -894,26 +892,34 @@ def eval_lower_boundary_correction(dynamics,
                                    config,
                                    model):
   """
-  [Description]
+  Compute the lower-boundary correction to wind and vertical velocity.
+
+  Determines a scalar multiplier ``mu_surf`` such that, after the correction,
+  the lowest-level wind satisfies the kinematic no-penetration condition
+  ``w_surf = u · grad(phi_surf) / g``.  Returns the corrected lowest-level
+  horizontal wind, vertical velocity at the surface interface, and ``mu_surf``.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  dynamics : dict[str, Array]
+      Current dynamics state.
+  static_forcing : dict[str, Array]
+      Time-invariant forcing; requires ``"grad_phi_surf"`` and ``"phi_surf"``.
+  dt : float
+      Timestep size (s) used to scale the correction.
+  config : dict
+      Physics configuration dict.
+  model : str
+      Model identifier; hydrostatic models return the uncorrected values.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  u_corrected : Array[tuple[elem_idx, gll_idx, gll_idx, 2], Float]
+      Corrected lowest-level horizontal wind.
+  w_corrected : Array[tuple[elem_idx, gll_idx, gll_idx], Float] or float
+      Corrected surface-interface vertical velocity (``0.0`` for hydrostatic).
+  mu_surf : Array[tuple[elem_idx, gll_idx, gll_idx], Float] or float
+      Boundary correction multiplier (``1.0`` for hydrostatic).
   """
   # we need to pass in original state. Something is wrong here.
   if model in hydrostatic_models:

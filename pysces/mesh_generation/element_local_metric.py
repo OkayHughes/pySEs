@@ -13,6 +13,35 @@ from .spherical_coord_utils import (unit_sphere_to_cart_coords,
 def eval_metric_terms_elem_local(latlon_corners,
                                  npt,
                                  rotate=False):
+  """
+  Compute metric terms for a general unstructured spherical element mesh
+  using a bilinear mapping from element corners.
+
+  Projects Cartesian element corners onto the unit sphere, bilinearly maps
+  them to GLL nodes, then chains the reference-to-Cartesian and
+  Cartesian-to-sphere Jacobians to produce the GLL grid positions and metric.
+
+  Parameters
+  ----------
+  latlon_corners : Array[tuple[elem_idx, vert_idx, 2], Float]
+      Spherical coordinates ``(lat, lon)`` (radians) of the four element
+      corners in pysces vertex ordering.
+  npt : int
+      Number of GLL points per element edge.
+  rotate : bool, optional
+      If ``True``, apply a small rotation to the Cartesian element corners
+      before projection (used to break symmetry for debugging).  Defaults
+      to ``False``.
+
+  Returns
+  -------
+  gll_latlon : Array[tuple[elem_idx, gll_idx, gll_idx, 2], Float]
+      Spherical coordinates ``(lat, lon)`` of each GLL node.
+  gll_to_cart_jacobian : Array[tuple[elem_idx, gll_idx, gll_idx, 3, 2], Float]
+      Jacobian of the bilinear reference-to-Cartesian mapping.
+  cart_to_sphere_jacobian : Array[tuple[elem_idx, gll_idx, gll_idx, 2, 3], Float]
+      Jacobian of the Cartesian-to-sphere coordinate change.
+  """
   cart_corners = unit_sphere_to_cart_coords(latlon_corners)
   if rotate:
     theta = 1e-3
@@ -51,6 +80,36 @@ def init_quasi_uniform_grid_elem_local(nx,
                                        wrapped=use_wrapper,
                                        calc_smooth_tensor=False,
                                        rotate=True):
+  """
+  Build a quasi-uniform cubed-sphere spectral element grid using element-local bilinear metric.
+
+  Generates the cubed-sphere topology for an ``nx``-element-per-face grid,
+  computes element-corner latitudes/longitudes from the equiangular projection,
+  then uses :func:`eval_metric_terms_elem_local` to produce the GLL metric.
+
+  Parameters
+  ----------
+  nx : int
+      Number of elements along one edge of a cubed-sphere face.
+  npt : int
+      Number of GLL points per element edge.
+  wrapped : bool, optional
+      If ``True``, arrays are moved onto the configured device after assembly.
+      Defaults to ``use_wrapper``.
+  calc_smooth_tensor : bool, optional
+      If ``True``, smooth the hyperviscosity tensor after grid assembly.
+      Defaults to ``False``.
+  rotate : bool, optional
+      If ``True``, apply a small rotation to break element symmetry.
+      Defaults to ``True``.
+
+  Returns
+  -------
+  grid : SpectralElementGrid
+      Assembled spectral element grid struct.
+  dims : frozendict
+      Grid dimension metadata ``{"N", "shape", "npt", "num_elem"}``.
+  """
   face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
   vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
   gll_position_equi, gll_jacobian = mesh_to_cart_bilinear(face_position_2d, npt)
@@ -87,6 +146,47 @@ def init_stretched_grid_elem_local(nx,
                                    wrapped=use_wrapper,
                                    calc_smooth_tensor=False,
                                    rotate=True):
+  """
+  Build a stretched cubed-sphere spectral element grid using element-local metric.
+
+  Applies an affine transformation ``x' = Q diag(s) x + c`` (followed by
+  re-projection onto the unit sphere) to the equiangular cubed-sphere corners
+  before computing the element-local bilinear metric.  This allows the grid
+  to be concentrated toward a chosen region.
+
+  Parameters
+  ----------
+  nx : int
+      Number of elements along one edge of a cubed-sphere face.
+  npt : int
+      Number of GLL points per element edge.
+  axis_dilation : Array[3] or None, optional
+      Per-axis scaling factors ``s`` for the affine map.  Defaults to ones
+      (no stretching).
+  orthogonal_transform : Array[3, 3] or None, optional
+      Orthogonal rotation matrix ``Q`` applied before axis dilation.
+      Defaults to the identity.
+  offset : Array[3] or None, optional
+      Translation vector ``c`` added after dilation.  Must satisfy
+      ``‖Q^T s^{-1} c‖ < 1`` so the mapping is bijective.  Defaults to
+      zero.
+  wrapped : bool, optional
+      If ``True``, arrays are moved onto the configured device after assembly.
+      Defaults to ``use_wrapper``.
+  calc_smooth_tensor : bool, optional
+      If ``True``, smooth the hyperviscosity tensor after grid assembly.
+      Defaults to ``False``.
+  rotate : bool, optional
+      If ``True``, apply a small rotation to break element symmetry.
+      Defaults to ``True``.
+
+  Returns
+  -------
+  grid : SpectralElementGrid
+      Assembled spectral element grid struct.
+  dims : frozendict
+      Grid dimension metadata ``{"N", "shape", "npt", "num_elem"}``.
+  """
   if axis_dilation is None:
     axis_dilation = np.ones((3,))
   if orthogonal_transform is None:
@@ -137,6 +237,41 @@ def init_unstructured_grid(face_connectivity,
                            wrapped=use_wrapper,
                            calc_smooth_tensor=False,
                            rotate=False):
+  """
+  Build a spectral element grid from an arbitrary unstructured mesh.
+
+  Accepts pre-computed element corner Cartesian positions and a
+  face-connectivity array, projects the corners onto the unit sphere,
+  then uses :func:`eval_metric_terms_elem_local` to produce the GLL metric.
+
+  Parameters
+  ----------
+  face_connectivity : Array[tuple[elem_idx, edge_idx, 3], Int]
+      Topological connectivity array; each entry contains
+      ``(remote_elem_idx, remote_edge_idx, same_direction)`` for the
+      element edge at ``(elem_idx, edge_idx)``.
+  corner_cart_positions : Array[tuple[elem_idx, vert_idx, 3], Float]
+      Cartesian positions of the four element corners in pysces vertex
+      ordering.  Will be projected onto the unit sphere internally.
+  npt : int
+      Number of GLL points per element edge.
+  wrapped : bool, optional
+      If ``True``, arrays are moved onto the configured device after
+      assembly.  Defaults to ``use_wrapper``.
+  calc_smooth_tensor : bool, optional
+      If ``True``, smooth the hyperviscosity tensor after grid assembly.
+      Defaults to ``False``.
+  rotate : bool, optional
+      If ``True``, apply a small rotation to break element symmetry.
+      Defaults to ``False``.
+
+  Returns
+  -------
+  grid : SpectralElementGrid
+      Assembled spectral element grid struct.
+  dims : frozendict
+      Grid dimension metadata ``{"N", "shape", "npt", "num_elem"}``.
+  """
   vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
   print("vert redundancy finished")
   cube_redundancy = init_spectral_grid_redundancy(vert_redundancy, npt)

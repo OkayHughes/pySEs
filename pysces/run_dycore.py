@@ -25,6 +25,45 @@ def advance_coupling_step(state_in,
                           dims,
                           model,
                           physics_forcing=None):
+  """
+  Advance the model by one physics timestep.
+
+  Performs the full physics–dynamics coupling sequence, including
+  subcycled dynamics (and optional hyperviscosity), tracer subcycling
+  with consistency corrections, sponge layer damping, and vertical
+  remapping.
+
+  Parameters
+  ----------
+  state_in : model state dict
+      Current model state containing ``"dynamics"``, ``"tracers"``,
+      and ``"static_forcing"`` sub-dicts.
+  h_grid : `SpectralElementGrid`
+      Horizontal spectral element grid struct.
+  v_grid : `dict`
+      Vertical grid struct containing hybrid coordinate coefficients.
+  physics_config : `dict`
+      Model physics configuration dict.
+  diffusion_config : `dict`
+      Hyperviscosity and sponge-layer configuration dict.
+  timestep_config : `dict`
+      Timestep configuration dict.  Must contain
+      ``"physics_dynamics_coupling"``, ``"tracer_subcycle"``,
+      ``"dynamics_subcycle"``, ``"physics_dt"``, ``"dynamics"``,
+      and ``"hyperviscosity"`` keys.
+  dims : `frozendict`
+      Grid dimension metadata.
+  model : `models`
+      Dynamical core identifier (from ``model_info.models``).
+  physics_forcing : dict, optional
+      Physics tendencies to be applied during the coupling step.
+      If ``None``, no physics forcing is applied.
+
+  Returns
+  -------
+  state_out : model state dict
+      Updated model state after advancing one physics timestep.
+  """
   physics_dynamics_coupling = timestep_config["physics_dynamics_coupling"]
 
   dynamics_state = state_in["dynamics"]
@@ -122,7 +161,7 @@ def advance_coupling_step(state_in,
                                                timestep_config,
                                                dims,
                                                model)
-      if "d_mass_tracer" in diffusion_config.keys():
+      if "d_mass_tracer" in diffusion_config.keys() or "disable_diffusion" in diffusion_config.keys():
         tracer_consist_visc_total = None
 
       if n_split > 0:
@@ -162,6 +201,31 @@ def validate_custom_configuration(state_in,
                                   timestep_config,
                                   dims,
                                   model):
+  """
+  Validate a user-supplied model configuration.
+
+  Intended as an extension point where configuration-specific
+  sanity checks can be added.  Currently unimplemented.
+
+  Parameters
+  ----------
+  state_in : model state dict
+      Current model state.
+  h_grid : `SpectralElementGrid`
+      Horizontal spectral element grid struct.
+  v_grid : `dict`
+      Vertical grid struct.
+  physics_config : `dict`
+      Model physics configuration dict.
+  diffusion_config : `dict`
+      Hyperviscosity and sponge-layer configuration dict.
+  timestep_config : `dict`
+      Timestep configuration dict.
+  dims : `frozendict`
+      Grid dimension metadata.
+  model : `models`
+      Dynamical core identifier (from ``model_info.models``).
+  """
   pass
 
 
@@ -173,26 +237,46 @@ def init_simulator(h_grid,
                    dims,
                    model):
   """
-  [Description]
+  Create a generator-based simulator that advances the model forward
+  in time indefinitely.
+
+  The returned generator accepts optional physics forcings via
+  ``send`` and yields ``(t, state)`` after each physics timestep.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  h_grid : `SpectralElementGrid`
+      Horizontal spectral element grid struct.
+  v_grid : `dict`
+      Vertical grid struct containing hybrid coordinate coefficients.
+  physics_config : `dict`
+      Model physics configuration dict.
+  diffusion_config : `dict`
+      Hyperviscosity and sponge-layer configuration dict.
+  timestep_config : `dict`
+      Timestep configuration dict including ``"physics_dt"``.
+  dims : `frozendict`
+      Grid dimension metadata.
+  model : `models`
+      Dynamical core identifier (from ``model_info.models``).
 
   Returns
   -------
-  string
-      a value in a string
+  simulator : generator
+      A Python generator.  Call ``next(sim)`` or
+      ``sim.send(physics_forcing)`` to advance by one physics timestep.
+      Each iteration yields ``(t, state_n)`` where ``t`` is the
+      elapsed simulation time (s) and ``state_n`` is the updated
+      model state dict.
 
-  Raises
-  ------
-  KeyError
-      when a key error
+  Examples
+  --------
+  ::
+
+      sim = init_simulator(h_grid, v_grid, physics_config,
+                           diffusion_config, timestep_config, dims, model)
+      next(sim)  # prime the generator
+      t, state = sim.send(None)
   """
   def simulator(state_in, physics_forcing=None):
     state_n = state_in

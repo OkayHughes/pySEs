@@ -259,6 +259,21 @@ def init_spectral_grid_redundancy(vert_redundancy,
 
 
 def vert_red_flat_to_hierarchy(vert_redundancy_gll_flat):
+  """
+  Convert a flat list of redundancy pairs to a nested hierarchy dict.
+
+  Parameters
+  ----------
+  vert_redundancy_gll_flat : list[tuple[tuple[int,int,int], tuple[int,int,int]]]
+      Flat redundancy list where each entry is
+      ``((target_idx, target_i, target_j), (source_idx, source_i, source_j))``.
+
+  Returns
+  -------
+  vert_redundancy : dict[int, dict[tuple[int,int], list[tuple[int,int,int]]]]
+      Nested dict ``[target_idx][(target_i, target_j)]`` → list of
+      ``(source_idx, source_i, source_j)`` tuples.
+  """
   vert_redundancy = {}
   for ((target_idx, target_i, target_j),
        (source_idx, source_i, source_j)) in vert_redundancy_gll_flat:
@@ -271,6 +286,23 @@ def vert_red_flat_to_hierarchy(vert_redundancy_gll_flat):
 
 
 def vert_red_hierarchy_to_flat(vert_redundancy_gll):
+  """
+  Convert a nested redundancy hierarchy dict to a flat list of pairs.
+
+  Reverses :func:`vert_red_flat_to_hierarchy`.
+
+  Parameters
+  ----------
+  vert_redundancy_gll : dict[int, dict[tuple[int,int], set[tuple[int,int,int]]]]
+      Nested dict ``[target_idx][(target_i, target_j)]`` → set of
+      ``(source_idx, source_i, source_j)`` tuples.
+
+  Returns
+  -------
+  vert_redundancy : list[tuple[tuple[int,int,int], tuple[int,int,int]]]
+      Flat list of ``((target_idx, target_i, target_j), (source_idx, source_i, source_j))``
+      pairs.
+  """
   vert_redundancy = []
 
   for target_idx in vert_redundancy_gll.keys():

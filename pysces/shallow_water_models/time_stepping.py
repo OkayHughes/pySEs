@@ -17,26 +17,27 @@ def advance_step_euler(state_in,
                        timestep_config,
                        dims):
   """
-  [Description]
+  Advance the shallow-water model by one dynamics timestep using forward Euler.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  state_in : dict[str, Array]
+      Shallow-water model state as returned by ``wrap_model_state``.
+  grid : SpectralElementGrid
+      Horizontal spectral element grid.
+  physics_config : dict[str, Any]
+      Physical constants (e.g. ``radius_earth``, ``gravity``).
+  timestep_config : frozendict
+      Time-step configuration from ``init_timestep_config``.
+  dims : dict[str, int]
+      Grid dimension parameters.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  state_out : dict[str, Array]
+      Updated shallow-water model state after one Euler step.
+  tracer_consist : dict[str, Array]
+      Tracer-consistency struct with key ``"u_d_mass_avg"``.
   """
 
   state_tend = eval_explicit_terms(state_in,
@@ -53,26 +54,29 @@ def advance_step_ssprk3(state0,
                         timestep_config,
                         dims):
   """
-  [Description]
+  Advance the shallow-water model by one dynamics timestep using strong-stability-preserving
+  Runge-Kutta 3 (SSPRK3).
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  state0 : dict[str, Array]
+      Shallow-water model state at the beginning of the timestep.
+  grid : SpectralElementGrid
+      Horizontal spectral element grid.
+  physics_config : dict[str, Any]
+      Physical constants (e.g. ``radius_earth``, ``gravity``).
+  timestep_config : frozendict
+      Time-step configuration from ``init_timestep_config``.
+  dims : dict[str, int]
+      Grid dimension parameters.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  state_out : dict[str, Array]
+      Updated shallow-water model state after one SSPRK3 step.
+  avg : dict[str, Array]
+      Tracer-consistency struct with the time-averaged
+      thickness-weighted wind ``"u_d_mass_avg"``.
   """
   dt = timestep_config["dynamics"]["dt"]
 
@@ -104,26 +108,31 @@ def advance_hypervis_euler(state_in,
                            timestep_config,
                            dims):
   """
-  [Description]
+  Apply hyperviscosity to the shallow-water model state using forward Euler subcycling.
 
   Parameters
   ----------
-  [first] : array_like
-      the 1st param name `first`
-  second :
-      the 2nd param
-  third : {'value', 'other'}, optional
-      the 3rd param, by default 'value'
+  state_in : dict[str, Array]
+      Shallow-water model state to be diffused.
+  grid : SpectralElementGrid
+      Horizontal spectral element grid.
+  physics_config : dict[str, Any]
+      Physical constants (e.g. ``radius_earth``).
+  diffusion_config : dict[str, Any]
+      Hyperviscosity configuration; must contain ``"nu"`` and ``"nu_d_mass"``.
+  timestep_config : frozendict
+      Time-step configuration; must contain ``"hypervis_subcycle"`` and
+      ``"hyperviscosity"`` (with ``"dt"``).
+  dims : dict[str, int]
+      Grid dimension parameters.
 
   Returns
   -------
-  string
-      a value in a string
-
-  Raises
-  ------
-  KeyError
-      when a key error
+  state_out : dict[str, Array]
+      Diffused shallow-water model state.
+  avg : dict[str, Array]
+      Tracer-consistency struct accumulated over hyperviscosity subcycles,
+      with keys ``"d_mass_hypervis_avg"`` and ``"d_mass_hypervis_tend"``.
   """
   next_step = state_in
   for k in range(timestep_config["hypervis_subcycle"]):
@@ -150,6 +159,40 @@ def init_timestep_config(dt_coupling,
                          dyn_steps_per_coupling=-1,
                          hypervis_steps_per_dyn=3,
                          sphere=True):
+  """
+  Compute the shallow-water timestep configuration from CFL stability estimates.
+
+  Parameters
+  ----------
+  dt_coupling : float
+      The physics coupling timestep in seconds.
+  h_grid : SpectralElementGrid
+      Horizontal spectral element grid.
+  dims : dict[str, int]
+      Grid dimension parameters.
+  physics_config : dict[str, Any]
+      Physical constants including ``radius_earth``.
+  diffusion_config : dict[str, Any]
+      Hyperviscosity configuration.
+  hypervis_tstep_type : time_step_options, optional
+      Time integration scheme for hyperviscosity (default: Euler).
+  dynamics_tstep_type : time_step_options, optional
+      Time integration scheme for dynamics (default: SSPRK3).
+  dyn_steps_per_coupling : int, optional
+      Override for the number of dynamics subcycles per coupling step.
+      Negative values use the CFL-derived estimate.
+  hypervis_steps_per_dyn : int, optional
+      Minimum number of hyperviscosity subcycles per dynamics step (default: 3).
+  sphere : bool, optional
+      Whether to use spherical CFL estimates (default: True).
+
+  Returns
+  -------
+  timestep_config : frozendict
+      Nested frozen dict containing ``"dynamics"``, ``"hyperviscosity"``,
+      ``"tracer_advection"``, ``"dt_coupling"``,
+      ``"dynamics_subcycle"``, and ``"hypervis_subcycle"`` entries.
+  """
   cfl_info, _ = eval_cfl(h_grid, physics_config["radius_earth"], diffusion_config, dims, sphere=sphere)
   hypervisc_S = stability_info[hypervis_tstep_type]
   dynamics_S = stability_info[dynamics_tstep_type]
