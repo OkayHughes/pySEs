@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>How does the Spectral Finite Element work? &#8212; pyses  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="how-does-the-spectral-finite-element-work">
+<h1>How does the Spectral Finite Element work?<a class="headerlink" href="#how-does-the-spectral-finite-element-work" title="Link to this heading">¶</a></h1>
+<p>Let’s say that you’re mostly familiar with vectors of the form <span class="math notranslate nohighlight">\(x \in \mathbb{R}^n\)</span>, and you’re most familiar with
+formulating linear systems of equations in terms of :math:` Amathbf{x} = mathbf{b}`, where <span class="math notranslate nohighlight">\(A \in \mathbb{R}^{n\times m}\)</span>, <span class="math notranslate nohighlight">\(\mathbf{x} \in \mathbb{R}^m\)</span>,
+and <span class="math notranslate nohighlight">\(\mathbf{b} \in \mathbb{R}^n\)</span>.</p>
+<p>Throughout this work, we will work with what I call the “column sum” characterization of matrix multiplication, in which (working in <span class="math notranslate nohighlight">\(\mathbb{R}^3\)</span> for concreteness)
+math:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>\<span class="n">begin</span><span class="p">{</span><span class="n">pmatrix</span><span class="p">}</span><span class="mi">1</span> <span class="o">&amp;</span> <span class="mi">2</span> <span class="o">&amp;</span> <span class="mi">3</span> \\ <span class="mi">4</span> <span class="o">&amp;</span> <span class="mi">5</span> <span class="o">&amp;</span> <span class="mi">6</span> \\ <span class="mi">7</span> <span class="o">&amp;</span> <span class="mi">8</span> <span class="o">&amp;</span> <span class="mi">9</span> \<span class="n">end</span><span class="p">{</span><span class="n">pmatrix</span><span class="p">}</span> \<span class="n">begin</span><span class="p">{</span><span class="n">pmatrix</span><span class="p">}</span><span class="n">x_1</span> \\ <span class="n">x_2</span> \\ <span class="n">x_3</span> \<span class="n">end</span><span class="p">{</span><span class="n">pmatrix</span><span class="p">}</span>
+<span class="o">&amp;=</span> <span class="n">x_1</span> \<span class="n">begin</span><span class="p">{</span><span class="n">pmatrix</span><span class="p">}</span> <span class="mi">1</span> \\ <span class="mi">4</span> \\ <span class="mi">5</span> \<span class="n">end</span><span class="p">{</span><span class="n">pmatrix</span><span class="p">}</span> <span class="o">+</span> <span class="n">x_2</span> \<span class="n">begin</span><span class="p">{</span><span class="n">pmatrix</span><span class="p">}</span> <span class="mi">2</span> \\ <span class="mi">5</span> \\ <span class="mi">8</span> \<span class="n">end</span><span class="p">{</span><span class="n">pmatrix</span><span class="p">}</span> <span class="o">+</span> <span class="n">x_3</span> \<span class="n">begin</span><span class="p">{</span><span class="n">pmatrix</span><span class="p">}</span> <span class="mi">3</span> \\ <span class="mi">6</span> \\ <span class="mi">9</span> \<span class="n">end</span><span class="p">{</span><span class="n">pmatrix</span><span class="p">}</span> \\
+<span class="o">&amp;</span>\<span class="n">stackrel</span><span class="p">{</span>\<span class="n">textrm</span><span class="p">{</span><span class="n">algorithmic</span> <span class="n">definition</span><span class="p">}}{</span><span class="o">=</span><span class="p">}</span> \<span class="n">begin</span><span class="p">{</span><span class="n">pmatrix</span><span class="p">}</span> <span class="n">x_1</span> <span class="o">+</span> <span class="mi">2</span><span class="n">x_2</span> <span class="o">+</span> <span class="mi">3</span><span class="n">x_3</span> \\ <span class="mi">4</span><span class="n">x_1</span> <span class="o">+</span> <span class="mi">5</span><span class="n">x_2</span> <span class="o">+</span> <span class="mi">6</span><span class="n">x_3</span> \\ <span class="mi">7</span><span class="n">x_1</span> <span class="o">+</span> <span class="mi">8</span><span class="n">x_2</span> <span class="o">+</span> <span class="mi">9</span><span class="n">x_3</span> \<span class="n">end</span><span class="p">{</span><span class="n">pmatrix</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>Within this characterization of matrix multiplication, each column can be thought of in the “arrow” sense of vectors, and matrix multiplication
+is simply scaling each column vector by a particular amount, then joining the scaled vectors end-to-end.</p>
+<section id="linear-structure">
+<h2>Linear structure<a class="headerlink" href="#linear-structure" title="Link to this heading">¶</a></h2>
+<section id="why-would-we-want-more-generality-than-this">
+<h3>Why would we want more generality than this?<a class="headerlink" href="#why-would-we-want-more-generality-than-this" title="Link to this heading">¶</a></h3>
+<p>“Linearity” typically looks like various extensions of the 1D linear system <span class="math notranslate nohighlight">\(y=mx+b\)</span>.
+We want to be able to multiply by coefficients (e.g., <span class="math notranslate nohighlight">\(m\)</span>) and add potential solutions (<span class="math notranslate nohighlight">\(x, b\)</span>) together.
+You can verify using the laws of matrix multiplication that <span class="math notranslate nohighlight">\(A(\mathbf{x} + \mathbf{y}) = A\mathbf{x} + A\mathbf{y}\)</span>,
+and that <span class="math notranslate nohighlight">\(A(a\mathbf{x} + \mathbf{y}) = aA\mathbf{x} + A\mathbf{y}\)</span> (<span class="math notranslate nohighlight">\(a \in \mathbb{R}\)</span>).
+These equation show that vector addition and scalar multiplication, even if you’ve only encountered them as “joining arrows” or “scaling arrows” in <cite>$$mathbb{R}^n$$</cite>,
+are “preserved”, in some sense, by matrix multiplication.</p>
+<p>We know from introductory calculus that for (suitably not-evil) functions <span class="math notranslate nohighlight">\(f, g : \mathbb{R} \to \mathbb{R}\)</span>, <span class="math notranslate nohighlight">\(\int_0^1 f + g \intd{x} = \int_0^1 f \intd{x} + \int_0^1 g \intd{x}\)</span>, and that
+:math:` int_0^1 af + g intd{x} = aint_0^1 f intd{x} + int_0^1 g intd{x}`.
+Likewise, if :math:` f, g ` are continuously first-differentiable :math:` der{}{x} left[af + g right] = ader{f}{x} + der{g}{x} <cite>.
+In a sense that can be made extremely mathematically precise, the operations of differentiation and integration can be used to formulate linear equations (but which are MUCH harder to solve/characterize than systems in :math:</cite>mathbb{R}^n`, because they are infinite dimensional).
+However, in their most general form, there isn’t a very natural way to write differentiation and integration as a matrix (integration can sometimes be thought of as an infinite-dimensional matrix, in a limiting sense, but differentiation in infinite dimensions absolutely cannot be thought of this way).
+This leads us to the question “what properties do matrices and more general linear operations share”.
+This is one reason to define “linear operators”, of which matrices, integration, and differentiation are examples. In finite dimensions, operators always have a matrix representation.</p>
+<p>Let’s continue this analogy even further: suppose I have the system of equations
+math:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">A</span>\<span class="n">mathbf</span><span class="p">{</span><span class="n">x</span><span class="p">}</span> <span class="o">=</span>
+\<span class="n">begin</span><span class="p">{</span><span class="n">pmatrix</span><span class="p">}</span>
+<span class="mi">1</span><span class="o">&amp;</span> <span class="mi">0</span> <span class="o">&amp;</span> <span class="mi">0</span> \\
+<span class="mi">0</span> <span class="o">&amp;</span> <span class="mi">1</span> <span class="o">&amp;</span> <span class="mi">0</span> \\
+<span class="mi">0</span> <span class="o">&amp;</span> <span class="mi">0</span> <span class="o">&amp;</span> <span class="mi">0</span>
+\<span class="n">end</span><span class="p">{</span><span class="n">pmatrix</span><span class="p">}</span> \<span class="n">mathbf</span><span class="p">{</span><span class="n">x</span><span class="p">}</span> <span class="o">=</span> \<span class="n">begin</span><span class="p">{</span><span class="n">pmatrix</span><span class="p">}</span> <span class="mi">1</span> \\ <span class="mi">1</span> \\ <span class="mi">0</span> \<span class="n">end</span><span class="p">{</span><span class="n">pmatrix</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>:math:` mathbf{x} = (1, 1, 0)^top$$` is a solution, but so is <cite>$$ mathbf{x} = (1, 1, textrm{one hkjdillion})^top</cite>.
+It turns out that this is because for :math:` mathbf{n} = (0, 0, 1)^top$$`,  <cite>$$ Amathbf{n} = 0</cite>, meaning that for any scalar :math:` a in mathbb{R}`, <span class="math notranslate nohighlight">\(A(a\mathbf{n}) = aA\mathbf{n} = 0a = 0\)</span>.
+Therefore if we have a solution to <span class="math notranslate nohighlight">\(A\mathbf{x} = \mathbf{b}\)</span>, then <span class="math notranslate nohighlight">\(A (\mathbf{x} + a\mathbf{n}) = A\mathbf{x} + aA\mathbf{n} = A\mathbf{x} + 0 = b\)</span>, so <span class="math notranslate nohighlight">\(\mathbf{x} + a\mathbf{n}\)</span> is also a solution. Therefore this system of linear equations has an infinite number of solutions.
+Suppose your calculus teacher asked you to find functions <span class="math notranslate nohighlight">\(f\)</span> that satisfy :math:` der{f}{x} = x^2`.
+You would immediately go “well, there are infinitely many such <span class="math notranslate nohighlight">\(f\)</span>, because :math:` der{}{x}left[f + C right] = der{f}{x}` for any constant <span class="math notranslate nohighlight">\(C\)</span>”.
+Therefore for any <span class="math notranslate nohighlight">\(f\)</span> that is a solution to that equation, <span class="math notranslate nohighlight">\(f + C ` is also a solution. In both cases, non-uniqueness of solutions to a linear equation
+can be derived from the fact that the linear operators (:math:`A, \der{}{x}\)</span>) have certain non-zero vectors that they squash (the space of such vectors is called the nullspace).
+By talking about linear operators more generally, we can use the tools of linear algebra to examine the properties of operators like <span class="math notranslate nohighlight">\(\der{}{x}\)</span>.</p>
+<p>This means that there should be some analogy between a summation <span class="math notranslate nohighlight">\((0, 0, 1)^\top + (0, 1, 0)^\top = (0, 1, 1)^\top ` and :math:\)</span> f + g`, right?
+Exactly, but you’ve already been doing this since you were 13.
+If we let <span class="math notranslate nohighlight">\(f = x^3\)</span> and <span class="math notranslate nohighlight">\(g = x^2\)</span>, :math:` f + 2g = x^3 + 2x^2`.
+Put formally, if you have two functions <span class="math notranslate nohighlight">\(f, g : \mathbb{R} \to \mathbb{R}\)</span>, and <span class="math notranslate nohighlight">\(a \in \mathbb{R}\)</span>, <span class="math notranslate nohighlight">\((af +g)(x) = af(x) + g(x)\)</span>.
+For a moment, let’s consider polynomials of a fixed maximum degree, e.g. 1D polynomials that contain no power higher than <cite>$$x^3$$</cite>.
+These take the form of :math:` ax^3 + bx^2 + cx + d`. Hmm.
+What if I make the definition :math:` mathbf{e}_0 = 1, mathbf{e}_1 = x, mathbf{e}_2 = x^2, mathbf{e}_3 = x^3 <cite>.
+Then it seems that for a cubic polynomial :math:</cite> f <cite>, I can write it as :math:</cite> f = dmathbf{e}_0 + c mathbf{e}_1 + b mathbf{e}_2 + a mathbf{e}_3`.
+Recall that in <span class="math notranslate nohighlight">\(\mathbb{R}^n\)</span>, we define the basis vectors as :math:` mathbf{e}_i = (0, ldots, stackrel{i}{1}, ldots, 0)^top <cite>, so a vector :math:</cite> mathbf{x} = (x_1, x_2, ldots, x_n)^top` can be written as :math:` mathbf{x} = sum_i x_i mathbf{e}_i`.
+If we let the space <span class="math notranslate nohighlight">\(V^3_1(\mathbb{R})\)</span> be the set of all cubic polynomials in one real variable, it turns out that this is a four-dimensional vector space that is mathematically indistinguishable from (isomorphic to) :math:` mathbb{R}^4 <a href="#id1"><span class="problematic" id="id2">`</span></a>. We will continue this analogy in the next section.</p>
+<p>As a cautionary note, you might look at the last example and say “well, I looked at the problem in the last section and started solving it by integrating both sides of the equation, so shouldn’t there be a way to formalize that differentiation  and integration are analogous to :math:` A ` and <span class="math notranslate nohighlight">\(A^{-1}\)</span>.
+The answer is yes, in many contexts there are ways to formalize this (these are typically called “the fundamental theorem of calculus” for whatever structure you’re working with, <span class="math notranslate nohighlight">\(L^p\)</span> spaces, general banach spaces, sobolev spaces, etc).
+However, if you aren’t adequately mathematically precise about how you do this, you produce mathematical statements that are either wrong or so ambiguous that they may as well be wrong.
+I’ve personally wasted weeks of my life where physicists somehow got this crap published and I had to figure out what they actually meant (this gets especially hairy when you’re dealing with PDEs with boundary conditions).
+If you aren’t planning to spend a year learning intro graduate analysis, don’t DIY this. Ask someone to help you.</p>
+</section>
+<section id="a-little-finite-dimensional-example">
+<h3>A little finite dimensional example<a class="headerlink" href="#a-little-finite-dimensional-example" title="Link to this heading">¶</a></h3>
+<p>Let’s return to :math:` V^3_1(mathbb{R}) <cite>, the space of cubic polynomials in one real variable, (I forget the standard notation for this).
+The identity :math:</cite> der{}{x} left[x^n right] = nx^{n-1}`
+means that if we choose the monomial basis :math:` mathbf{e}_n = x^{n-1}, n=1,ldots,4` and write polynomials as :math:` mathbf{f} = sum_n f_n mathbf{e}_n <cite>, then we can ask: is there a matrix :math:</cite> D ` such that if we associate a polynomial  <span class="math notranslate nohighlight">\(f ` to its representation :math:\)</span> mathbf{f} in mathbf{R}^4 <cite>, then the  :math:</cite> Dmathbf{f} ` is equivalent to the representation of <span class="math notranslate nohighlight">\(f'\)</span> as a vector?
+Yes. It looks like
+math:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">D</span> \<span class="n">equiv</span> \<span class="n">begin</span><span class="p">{</span><span class="n">pmatrix</span><span class="p">}</span>
+<span class="mi">0</span> <span class="o">&amp;</span> <span class="n">C</span> <span class="o">&amp;</span> <span class="mi">0</span> <span class="o">&amp;</span> <span class="mi">0</span> \\
+<span class="mi">0</span> <span class="o">&amp;</span> <span class="mi">0</span> <span class="o">&amp;</span> <span class="mi">2</span> <span class="o">&amp;</span> <span class="mi">0</span> \\
+<span class="mi">0</span> <span class="o">&amp;</span> <span class="mi">0</span> <span class="o">&amp;</span> <span class="mi">0</span> <span class="o">&amp;</span> <span class="mi">3</span> \\
+<span class="mi">0</span> <span class="o">&amp;</span> <span class="mi">0</span> <span class="o">&amp;</span> <span class="mi">0</span> <span class="o">&amp;</span> <span class="mi">0</span>
+\<span class="n">end</span><span class="p">{</span><span class="n">pmatrix</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>some good exercises:
+* Take a deep breath, don’t panic like I did when I went through this example when I was in college. If you took high school math and understood it, you can do this!
+* how would you encode our monomial basis, e.g. :math:` e_2 = x^2` (recall that vectors index top to bottom) ? How does the matrix act on this vector?
+* Use the information from the last question to determine the value of <span class="math notranslate nohighlight">\(C\)</span>.
+* Verify that the matrix behaves how you would expect it to when calculating <span class="math notranslate nohighlight">\(D(f + g) = Df + Dg\)</span> for <span class="math notranslate nohighlight">\(f = 6x^3 + 3\)</span>, <span class="math notranslate nohighlight">\(g = 2x\)</span>.
+* this matrix is not invertible. Why? How does this relate to your understanding of calculus?
+* How would you extend this matrix for <span class="math notranslate nohighlight">\(V^4_1(\mathbb{R})\)</span>, which is the space of at-most-quartic polynomials in one real variable.
+* Hard exercise: What would the matrix look like for :math:` V^1_2(mathbb{R})`, the space of at-most-linear polynomials in two real variables.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Step 1: What is the dimension of this space?</p></li>
+<li><p>Step 2: What does your monomial basis look like?</p></li>
+<li><p>Step 3: Does it actually matter what order you put the monomials in?</p></li>
+<li><p>Step 4: Write down the matrix.</p></li>
+</ul>
+</div></blockquote>
+<section id="quadrature">
+<h4>Quadrature<a class="headerlink" href="#quadrature" title="Link to this heading">¶</a></h4>
+<p>Let’s now work over :math:` V_1^2(mathbb{R})` for brevity.
+Let’s say I want to compute :math:` int_I f intd{x} = int_I sum_n f_n x^n intd{x}` for some interval <span class="math notranslate nohighlight">\(I\)</span> (you can assume :math:` I = [0,1]` without losing any generality).
+Well, by expanding we find that :math:` int_I sum_n f_n x^n intd{x} = sum_n f_n int_I x^n intd{x}`.
+Wait, :math:` int_I x^n intd{x}` doesn’t seem to depend on my specific polynomial, <span class="math notranslate nohighlight">\(f\)</span>, at all!
+In fact, it doesn’t, so one can compute <span class="math notranslate nohighlight">\(w_n = \int_I x^n \intd{x}\)</span>.
+Suddenly, we can compute <span class="math notranslate nohighlight">\(\int_I f \intd{x} = \sum_n f_n w_n = \langle \mathbf{f}, \mathbf{w} \rangle ` and this is an analytic integral that contains no numerical approximation whatsoever.
+:math:\)</span> langle cdot, cdot rangle ` is the standard inner (dot) product on <span class="math notranslate nohighlight">\(\mathbb{R}^3\)</span> (see below).
+This is one way in which integration can be represented as a linear operator (in this case, the matrix representation of <span class="math notranslate nohighlight">\(w_n\)</span> would be the “row vector” :math:` (w_1, ldots, w_n) <a href="#id3"><span class="problematic" id="id4">`</span></a>.</p>
+</section>
+</section>
+</section>
+<section id="you-actually-do-need-to-learn-what-a-basis-is">
+<h2>You actually do need to learn what a basis is<a class="headerlink" href="#you-actually-do-need-to-learn-what-a-basis-is" title="Link to this heading">¶</a></h2>
+<p>First we need to talk about what bases are.
+In <span class="math notranslate nohighlight">\(\mathbb{R}^n\)</span>, a basis is a set of <span class="math notranslate nohighlight">\(n\)</span> vectors <span class="math notranslate nohighlight">\(\mathbf{b}_k\)</span> such that any <span class="math notranslate nohighlight">\(\mathbf{x} \in \mathbb{R}^n\)</span> can be written as <span class="math notranslate nohighlight">\(\sum_k b_k \mathbf{b}_k = \mathbf{x}\)</span> (where <span class="math notranslate nohighlight">\(b_k \in \mathbb{R}\)</span> in exactly one way).
+It can be shown that a basis must contain exactly <span class="math notranslate nohighlight">\(n\)</span> vectors.
+Any more than that, and there will be multiple <span class="math notranslate nohighlight">\(b_k\)</span> that can be used to reconstruct <span class="math notranslate nohighlight">\(\mathbf{x}\)</span>.
+Any fewer and there will be vectors <span class="math notranslate nohighlight">\(x\)</span> that cannot be reconstructed by any choice of <span class="math notranslate nohighlight">\(b_k\)</span>.
+To see why this is, imagine that I choose <span class="math notranslate nohighlight">\(\mathbf{b}_1 = (1, 0, 0)^\top `, :math:\)</span>mathbf{b}_2 = (0, 1, 0)^top`, and <span class="math notranslate nohighlight">\(\mathbf{b}_3 = (1, 1, 0)^\top\)</span>.
+If we let each entry of the vector be the dimensions <span class="math notranslate nohighlight">\(x, y, z\)</span>, respectively, then we see that the first two vectors can be used to reconstruct (span) the plane :math:` z = 0`.
+But our third vector lies in that plane.
+That means that any vector <span class="math notranslate nohighlight">\(\mathbf{x} = (x_1, x_2, x_3)\)</span> with <span class="math notranslate nohighlight">\(x_3 \neq 0\)</span> lies out of reach of our <span class="math notranslate nohighlight">\(\mathbf{b}_n\)</span>.
+Any failure of <span class="math notranslate nohighlight">\(n\)</span> vectors to be a basis for <span class="math notranslate nohighlight">\(\mathbb{R}^n\)</span> fails in exactly this way, which can be formalized.
+If you stack your <span class="math notranslate nohighlight">\(\mathbf{b}_k\)</span> as columns of a matrix, this equivalent to that matrix being invertible.
+Indeed, if you have a vector :math:` mathbf{x} = sum x_k mathbf{e}_k`, with <span class="math notranslate nohighlight">\(\mathbf{e}_k = (0, \ldots, \stackrel{k}{1}, \ldots, 0)\)</span> the “standard basis” on <span class="math notranslate nohighlight">\(\mathbb{R}^n\)</span>,
+then solving the system
+math:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>\<span class="n">begin</span><span class="p">{</span><span class="n">bmatrix</span><span class="p">}</span> \<span class="n">mathbf</span><span class="p">{</span><span class="n">b</span><span class="p">}</span><span class="n">_1</span> <span class="o">&amp;</span> \<span class="n">ldots</span> <span class="o">&amp;</span> \<span class="n">mathbf</span><span class="p">{</span><span class="n">b</span><span class="p">}</span><span class="n">_k</span> \<span class="n">end</span><span class="p">{</span><span class="n">bmatrix</span><span class="p">}</span> \<span class="n">mathbf</span><span class="p">{</span><span class="n">x</span><span class="p">}</span><span class="n">_</span>\<span class="n">mathbf</span><span class="p">{</span><span class="n">b</span><span class="p">}</span> <span class="o">=</span> \<span class="n">mathbf</span><span class="p">{</span><span class="n">x</span><span class="p">}</span><span class="n">_</span>\<span class="n">mathbf</span><span class="p">{</span><span class="n">e</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>finds <span class="math notranslate nohighlight">\(\mathbf{x}_\mathbf{b} = (b_1, \ldots, b_n)\)</span> that reconstruct <span class="math notranslate nohighlight">\(\mathbf{x}\)</span> in the <span class="math notranslate nohighlight">\(\mathbf{b}_k\)</span> basis.</p>
+<p>Ok, let’s see how matrices and bases are related using the concrete example of the polynomial space above.
+Let’s suppose we have <span class="math notranslate nohighlight">\(f = \sum_{k=1}^4 f_k x^{k-1}\)</span>, and that I want to characterize the <span class="math notranslate nohighlight">\(\der{}{x}\)</span> operator.
+Then we find
+math:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>\<span class="n">der</span><span class="p">{</span><span class="n">f</span><span class="p">}{</span><span class="n">x</span><span class="p">}</span> <span class="o">=</span> \<span class="n">der</span><span class="p">{}{</span><span class="n">x</span><span class="p">}</span> \<span class="n">left</span><span class="p">[</span> \<span class="n">sum_</span><span class="p">{</span><span class="n">k</span><span class="o">=</span><span class="mi">1</span><span class="p">}</span><span class="o">^</span><span class="mi">4</span> <span class="n">f_k</span> <span class="n">x</span><span class="o">^</span><span class="p">{</span><span class="n">k</span><span class="o">-</span><span class="mi">1</span><span class="p">}</span> \<span class="n">right</span><span class="p">]</span>  <span class="o">=</span> \<span class="n">sum_</span><span class="p">{</span><span class="n">k</span><span class="o">=</span><span class="mi">1</span><span class="p">}</span><span class="o">^</span><span class="mi">4</span> <span class="n">f_k</span> \<span class="n">der</span><span class="p">{}{</span><span class="n">x</span><span class="p">}</span> \<span class="n">left</span><span class="p">[</span> <span class="n">x</span><span class="o">^</span><span class="p">{</span><span class="n">k</span><span class="o">-</span><span class="mi">1</span><span class="p">}</span> \<span class="n">right</span><span class="p">]</span> <span class="o">=</span> \<span class="n">sum_</span><span class="p">{</span><span class="n">k</span><span class="o">=</span><span class="mi">1</span><span class="p">}</span><span class="o">^</span><span class="mi">4</span> <span class="n">f_k</span> <span class="p">(</span><span class="n">k</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="n">x</span><span class="o">^</span><span class="p">{</span><span class="n">k</span><span class="o">-</span><span class="mi">2</span><span class="p">}</span><span class="o">.</span>
+</pre></div>
+</div>
+<p>If we make the association we made earlier, with :math:` x^{0} simeq (1, 0, 0, 0)^top, x simeq (0, 1, 0, 0)^top, x^2 simeq (0, 0, 1, 0)^top, x^3 simeq (0, 0, 0, 1)^top `
+then we find that the matrix representation of our differentiation operator, <span class="math notranslate nohighlight">\(D\)</span> should satisfy
+math:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>\<span class="n">der</span><span class="p">{</span><span class="n">f</span><span class="p">}{</span><span class="n">x</span><span class="p">}</span> <span class="o">&amp;=</span> <span class="n">f_1</span> \<span class="n">der</span><span class="p">{}{</span><span class="n">x</span><span class="p">}</span> \<span class="n">left</span><span class="p">[</span><span class="mi">1</span> \<span class="n">right</span><span class="p">]</span> <span class="o">+</span> <span class="n">f_2</span> \<span class="n">der</span><span class="p">{}{</span><span class="n">x</span><span class="p">}</span> \<span class="n">left</span><span class="p">[</span><span class="n">x</span> \<span class="n">right</span><span class="p">]</span> <span class="o">+</span> <span class="n">f_3</span>\<span class="n">cdot</span> \<span class="n">der</span><span class="p">{}{</span><span class="n">x</span><span class="p">}</span> \<span class="n">left</span><span class="p">[</span><span class="n">x</span><span class="o">^</span><span class="mi">2</span> \<span class="n">right</span><span class="p">]</span> <span class="o">+</span> <span class="n">f_4</span> \<span class="n">cdot</span> \<span class="n">der</span><span class="p">{}{</span><span class="n">x</span><span class="p">}</span>\<span class="n">left</span><span class="p">[</span> <span class="n">x</span><span class="o">^</span><span class="mi">3</span>\<span class="n">right</span><span class="p">]</span>   \\
+<span class="o">&amp;=</span> <span class="n">f_1</span> <span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="n">f_2</span> \<span class="n">cdot</span> <span class="mi">1</span>  <span class="o">+</span> <span class="n">f_3</span>\<span class="n">cdot</span> <span class="mi">2</span> <span class="n">x</span> <span class="o">+</span> <span class="n">f_4</span> \<span class="n">cdot</span> <span class="mi">3</span><span class="n">x</span><span class="o">^</span><span class="mi">2</span>   \\
+<span class="o">&amp;</span>\<span class="n">simeq</span> <span class="n">f_1</span> \<span class="n">cdot</span> <span class="mi">0</span> <span class="o">+</span> <span class="n">f_2</span> \<span class="n">cdot</span> <span class="mi">1</span> \<span class="n">begin</span><span class="p">{</span><span class="n">pmatrix</span><span class="p">}</span><span class="mi">1</span> \\ <span class="mi">0</span> \\ <span class="mi">0</span> \\ <span class="mi">0</span> \<span class="n">end</span><span class="p">{</span><span class="n">pmatrix</span><span class="p">}</span> <span class="o">+</span> <span class="n">f_3</span> \<span class="n">cdot</span> <span class="mi">2</span> \<span class="n">begin</span><span class="p">{</span><span class="n">pmatrix</span><span class="p">}</span><span class="mi">0</span> \\ <span class="mi">1</span> \\ <span class="mi">0</span> \\ <span class="mi">0</span> \<span class="n">end</span><span class="p">{</span><span class="n">pmatrix</span><span class="p">}</span> <span class="o">+</span> <span class="n">f_4</span> \<span class="n">cdot</span> <span class="mi">3</span> \<span class="n">begin</span><span class="p">{</span><span class="n">pmatrix</span><span class="p">}</span><span class="mi">0</span> \\ <span class="mi">0</span> \\ <span class="mi">1</span> \\ <span class="mi">0</span> \<span class="n">end</span><span class="p">{</span><span class="n">pmatrix</span><span class="p">}</span> \\
+<span class="o">&amp;=</span> <span class="n">f_1</span> \<span class="n">begin</span><span class="p">{</span><span class="n">pmatrix</span><span class="p">}</span><span class="mi">0</span> \\ <span class="mi">0</span> \\ <span class="mi">0</span> \\ <span class="mi">0</span> \<span class="n">end</span><span class="p">{</span><span class="n">pmatrix</span><span class="p">}</span> <span class="o">+</span> <span class="n">f_2</span> \<span class="n">begin</span><span class="p">{</span><span class="n">pmatrix</span><span class="p">}</span><span class="mi">1</span> \\ <span class="mi">0</span> \\ <span class="mi">0</span> \\ <span class="mi">0</span> \<span class="n">end</span><span class="p">{</span><span class="n">pmatrix</span><span class="p">}</span> <span class="o">+</span> <span class="n">f_3</span> \<span class="n">begin</span><span class="p">{</span><span class="n">pmatrix</span><span class="p">}</span><span class="mi">0</span> \\ <span class="mi">2</span> \\ <span class="mi">0</span> \\ <span class="mi">0</span> \<span class="n">end</span><span class="p">{</span><span class="n">pmatrix</span><span class="p">}</span> <span class="o">+</span> <span class="n">f_4</span> \<span class="n">begin</span><span class="p">{</span><span class="n">pmatrix</span><span class="p">}</span><span class="mi">0</span> \\ <span class="mi">0</span> \\ <span class="mi">3</span> \\ <span class="mi">0</span> \<span class="n">end</span><span class="p">{</span><span class="n">pmatrix</span><span class="p">}</span>  \\
+<span class="o">&amp;=</span> \<span class="n">begin</span><span class="p">{</span><span class="n">pmatrix</span><span class="p">}</span> <span class="mi">0</span> <span class="o">&amp;</span> <span class="mi">1</span> <span class="o">&amp;</span> <span class="mi">0</span> <span class="o">&amp;</span> <span class="mi">0</span> \\ <span class="mi">0</span> <span class="o">&amp;</span> <span class="mi">0</span> <span class="o">&amp;</span> <span class="mi">2</span> <span class="o">&amp;</span> <span class="mi">0</span> \\ <span class="mi">0</span> <span class="o">&amp;</span> <span class="mi">0</span> <span class="o">&amp;</span> <span class="mi">0</span> <span class="o">&amp;</span> <span class="mi">3</span> \\ <span class="mi">0</span> <span class="o">&amp;</span> <span class="mi">0</span> <span class="o">&amp;</span> <span class="mi">0</span> <span class="o">&amp;</span> <span class="mi">0</span> \<span class="n">end</span><span class="p">{</span><span class="n">pmatrix</span><span class="p">}</span>\<span class="n">begin</span><span class="p">{</span><span class="n">pmatrix</span><span class="p">}</span><span class="n">f_1</span> \\ <span class="n">f_2</span> \\ <span class="n">f_3</span> \\ <span class="n">f_4</span> \<span class="n">end</span><span class="p">{</span><span class="n">pmatrix</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>which means that we have found a matrix representation of <span class="math notranslate nohighlight">\(\der{}{x}\)</span> just by examining how it acts on a basis of :math:` V_1^3(mathbb{R})`.</p>
+<p>Some exercises:
+* The polynomials :math:` -1, x, -x^2, x^3 ` also form a basis of :math:` V_1^3(mathbb{R})`.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Letting the standard monomial basis be identified with :math:` mathbf{e}_k`, and this new basis be :math:` mathbf{b}_l`, write each new basis vector in terms of</p></li>
+</ul>
+<p>the “standard” monomial basis, i.e. find <span class="math notranslate nohighlight">\(e_{k, l}\)</span> so that :math:` mathbf{b}_k = sum_{l=1}^4 e_{k, l} mathbf{e}_l`. Hint: :math:` e_{2,2} = 1`, <span class="math notranslate nohighlight">\(e_{2, \{1, 3, 4\}} = 0\)</span>.
+* Use these coefficients to form the matrix equation :math:` begin{bmatrix} mathbf{b}_1 ~ ldots ~ mathbf{b}_k end{bmatrix} mathbf{x}_mathbf{b} = mathbf{x}_mathbf{e}.` How
+does this equation show that <span class="math notranslate nohighlight">\(-1, x, -x^2, x^3\)</span> form a basis? (Hint: use invertibility and the determinant).
+* Redo the process above to derive the derivative operator in the <span class="math notranslate nohighlight">\(\mathbf{b}_k\)</span> basis. Show that the derivative of a constant polynomial is still zero.</p>
+</div></blockquote>
+<p>Note: this exercise shows that the matrix representation of :math:` der{}{x} ` is different for different bases. However, it can be shown that features of the linear operator <span class="math notranslate nohighlight">\(\der{}{x}\)</span> like
+the nullspace do not depend on this choice of basis. As a result, while representation of linear operators in a basis (i.e., as a matrix) are helpful for calculations (and certain bases can make it easy to read off properties of your linear operator from the matrix itself), most properties of <span class="math notranslate nohighlight">\(A\)</span> do not depend on what basis you write it in. I have also glossed over what happens when the dimensions of the domain and range of your linear operator are not equal, in which case you must use separate bases of the domain and range to find the coefficients of your matrix.</p>
+<div class="math notranslate nohighlight">
+\[\]</div>
+</section>
+<section id="inner-products-duals">
+<h2>Inner products, duals<a class="headerlink" href="#inner-products-duals" title="Link to this heading">¶</a></h2>
+<p>An inner product is an additional operation <cite>$$langle cdot, cdot rangle $$</cite> that one can add to a vector space.
+It must satisfy certain [requirements](<a class="reference external" href="https://en.wikipedia.org/wiki/Inner_product_space">https://en.wikipedia.org/wiki/Inner_product_space</a>).
+It is a generalization of the dot product on <cite>$$mathbb{R}^n$$</cite>, <cite>$$ langle mathbf{x}, mathbf{y} rangle = sum_k x_k y_k $$</cite>.
+The aforementioned requirements are the minimal set of constraints required to guarantee that the inner product you defined on your vector space <cite>$$V$$</cite>, gets you the properties that make the dot product useful. The most concise way to state these properties are that for  <cite>$$x, y, z in V $$</cite>, <cite>$$a, b in mathbb{R} $$</cite>, <cite>$$langle x, y rangle = langle y, x rangle $$</cite> (this changes if you have a complex vector space!), <cite>$$ langle ax + by, z rangle = alangle x, z rangle + blangle y, x rangle $$</cite>, and <cite>$$ langle x, x rangle &gt; 0, langle x, x rangle = 0 iff x = 0 $$</cite>.</p>
+<p>## Why are orthogonal bases good?
+Bases do not require an inner product to be defined and analyzed. However, if we have an inner product, we can define a condition for a basis to be particularly nice.
+The standard basis <cite>$$ mathbf{e}_k$$</cite> satisfies <cite>$$$ langle mathbf{e}_i, mathbf{e}_j rangle = begin{cases} 1 textrm{ if } i = j \ 0 textrm{ otherwise} end{cases} $$$</cite>,
+meaning that for distinct <cite>$$ mathbf{e}_i, mathbf{e}_j$$</cite>, the vectors are at 90º to each other. A basis that satisfies this latter property alone is called “orthogonal”; if, additionally, <cite>$$langle e_i, e_i rangle = 1$$</cite>, then the basis is called “orthonormal”.</p>
+<p>Recall that for a general basis <cite>$$mathbf{b}_k $$</cite>, solving for the coefficients <cite>$$ b_k $$</cite> that reconstruct a vector <cite>$$mathbf{x}$$</cite> as <cite>$$ mathbf{x} = sum b_k mathbf{b_k}$$</cite> requires a full linear solve.
+However, let <cite>$$ mathbf{e}_l $$</cite> be an orthonormal basis. First, suppose we do the full solve to reconstruct <cite>$$ mathbf{x} = sum e_l mathbf{e}_l$$</cite>.
+Then we can calculate
+<cite>$$$
+langle x, mathbf{e}_k rangle = langle sum e_l mathbf{e}_l, mathbf{e}_k rangle = sum e_l langle mathbf{e}_l, mathbf{e}_k rangle = sum e_l begin{cases}1 textrm{ if } k = l \ 0 textrm{ otherwise}end{cases} = e_k.
+$$$</cite>
+What this means is, the coefficient <cite>$$ e_k $$</cite> in the sum above can be calculated simply from <cite>$$ langle x, e_k rangle $$</cite>. You don’t have to solve a full system.</p>
+<section id="a-concrete-example-from-function-approximation-the-construction-of-the-legendre-polynomials">
+<h3>A concrete example from function approximation: The construction of the Legendre polynomials:<a class="headerlink" href="#a-concrete-example-from-function-approximation-the-construction-of-the-legendre-polynomials" title="Link to this heading">¶</a></h3>
+<p>Let’s return to the example of polynomial quadrature above. It turns out that for, e.g., <cite>$$ f, g in V^3_1 (mathbb{R})$$</cite>, making the definition <cite>$$ langle f, g rangle equiv int_I fg intd{x} $$</cite> satisfies the requirements of an inner product! Starting with the convention <cite>$$mathbf{l}_1 = 1$$</cite>, and requiring that the polynomial <cite>$$mathbf{l}_{k+1}$$</cite> satisfy <cite>$$ langle mathbf{l}_{k+1}, mathbf{l}_l rangle = 0$$</cite> for <cite>$$ l leq k $$</cite> (this is analogous to gram-schmidt, if you’ve encountered that), you generate a sequence of polynomials that are an orthogonal (easily made orthonormal) basis for <cite>$$V_1^n(mathbb{R})$$</cite>. Using the standard (unweighted) inner product <cite>$$ int fg intd{x} $$</cite>, this generates the Legendre polynomials.
+## The adjoint, and bilinear mappings
+While the adjoint of an operator can be defined without any reference to an inner product, it is much easier to talk about them when we do have an inner product.</p>
+<p>Let’s first work in <cite>$$mathbb{R}^n$$</cite>. Suppose we have some linear operator <cite>$$A : mathbb{R}^n mapsto mathbb{R}^n $$</cite>, which can be written in the standard basis with entries <cite>$$ A_{i,j}$$</cite>.  You can extract this matrix representation by computing
+<a href="#id5"><span class="problematic" id="id6">`</span></a>$$$</p>
+<blockquote>
+<div><p>langle e_j, A(e_i) rangle = mathbf{e}_j^top A mathbf{e}_i  = A_{i,j}.</p>
+</div></blockquote>
+<p>$$$`</p>
+<p>This gives some indication that all of the information contained in the linear operator <cite>$$ A $$</cite> can be extracted by the construction <cite>$$ b_A(x, y) = langle x, Ay rangle $$</cite>. One can verify that <cite>$$b_A(x, y)$$</cite> is linear in each argument, and returns a real number (this is called a bilinear form). For reasons that we will see soon, it will be worth asking the question, is there a linear operator <cite>$$A’$$</cite> such that`$$langle x, A(y) rangle = langle A’(x), y rangle   $$`? Well, let’s see if we can figure it out by working in a basis:
+<a href="#id7"><span class="problematic" id="id8">`</span></a>$$$
+begin{align*}</p>
+<blockquote>
+<div><dl class="simple">
+<dt>langle e_k, A(e_i) rangle &amp;= langle A’(e_j), e_i rangle \</dt><dd><p>&amp;= langle e_i, A’(e_j) rangle,</p>
+</dd>
+</dl>
+</div></blockquote>
+<p>end{align*}
+$$$`
+but we know that the final line extracts the entries of <cite>$$A’$$</cite> in the standard basis, therefore we see <cite>$$ A_{i,j} = A’_{j,i}$$</cite>, or, instead <cite>$$ A’ = A^top $$</cite>. This shows
+that for a real vector space, the adjoint of an operator can be characterized by the transpose of a matrix representation.
+## Weak form of an equation</p>
+<p>The Galerkin method first derives from the fact that differential equations can often be rewritten equivalently
+by using integration by parts to transfer differential operators into integral ones. We will discuss a prototypical example, <cite>$$ nabla^2 u = f $$</cite>
+We can rewrite this as <cite>$$ nabla cdot nabla u = f$$</cite>, and then if we multiply by a suitable function <cite>$$v$$</cite> and integrate both sides of the equation, we get
+<a href="#id9"><span class="problematic" id="id10">`</span></a>$$$
+begin{align*}</p>
+<blockquote>
+<div><dl class="simple">
+<dt>int fv intd{x} &amp;= int vnabla cdot nabla u \</dt><dd><p>&amp;= 0 - int nabla v cdot nabla u intd{x}</p>
+</dd>
+</dl>
+</div></blockquote>
+<p>end{align*}
+$$$`</p>
+<p>For technical reasons, there are solutions <cite>$$u$$</cite> to this rewritten (weak form) equation that do not satisfy <cite>$$ nabla^2 u = f$$</cite> (strong form), but any <cite>$$u$$</cite> that satisfies the
+strong form satisfy the weak form.</p>
+<p>If are vector-valued functions <cite>$$ mathbf{q}, mathbf{r} : mathbb{R}^n to mathbb{R}^n$$</cite>, then <cite>$$ langle mathbf{q}, mathbf{r} rangle  equiv int mathbf{q} cdot mathbf{r} intd{x}$$</cite> is an inner product on that space of functions. As one final jargon explanation, <cite>$$ tilde{f}(v) = int fv intd{x} $$</cite> is linear in <cite>$$v$$</cite> and returns a real value. We refer to functions like <cite>$$tilde{f}$$</cite> as “linear functionals”.</p>
+<p>Therefore, we can rewrite our strong equation <cite>$$ nabla^2 u = f$$</cite> as <cite>$$ int nabla v cdot nabla u intd{x} equiv langle nabla u, nabla v rangle  = tilde{f}(v) equiv int fv intd{x} $$</cite>.
+Note that <cite>$$ a(u, v) = langle nabla u, nabla v rangle $$</cite> is a bilinear form, and indeed <cite>$$ a(v, u) = langle nabla u, nabla v rangle = langle nabla v, nabla a rangle = a(u, v)$$</cite> so <cite>$$a$$</cite>
+is symmetric.</p>
+</section>
+</section>
+<section id="galerkin">
+<h2>Galerkin<a class="headerlink" href="#galerkin" title="Link to this heading">¶</a></h2>
+<p>Galerkin methods start with assuming that <cite>$$u, v$$</cite> are elements of some function space <cite>$$V$$</cite> that’s typically infinite dimensional (frequently <cite>$$L^2$$</cite> or <cite>$$H^1$$</cite>) complete normed vector spaces.
+Bilinear forms, like <cite>$$a(u,v)$$</cite> can be defined without a defined inner product, but the inner product allows you to construct bilinear forms very naturally.
+Let <cite>$$a(u, v) $$</cite> be a bilinear form and a linear functional <cite>$$f$$</cite>, and say we want to solve the equation <cite>$$a(u,v) = f(v)$$</cite>. Many PDEs can be rewritten in this form (the general idea here
+is very naturally extended to forms that are not bilinear, but which are linearized as part of newton’s method). If we know that this problem is well posed (i.e. it has a unique solution),
+then we want a sequence of finite-dimensional problems whose solutions <cite>$$u_n$$</cite> will approach (converge to) the infinite-dimensional solution <cite>$$u$$</cite> as the size of our
+approximation of the function space increases.
+## Bobunov-Galerkin
+For simplicity let <cite>$$V$$</cite> be a nice space of functions of two real variables. Let <cite>$$V_2^n$$</cite> be, e.g., the space of at-most-n-degree polynomials in two real variables. <cite>$$V_2^n subset V$$</cite> is called a subspace (a subset that is a vector space in which vector addition and scalar multiplication agree on <cite>$$ V_2^n cap V$$</cite>).
+The finite-dimensional approximation of our problem then looks like: find <cite>$$u_n$$</cite> such that  for all`$$ v in V_2^n$$`, <cite>$$ a(u_n, v) = f(v)$$</cite>.
+In finite dimensions, it suffices to let <cite>$$v_1, ldots, v_n$$</cite> be a basis. Let us use the concrete problem above to see what this looks like. Let <cite>$$v_k$$</cite> be some nice polynomial basis.
+<a href="#id11"><span class="problematic" id="id12">`</span></a>$$$
+begin{align*}</p>
+<blockquote>
+<div><dl class="simple">
+<dt>int f v_k intd{x} &amp;= int nabla u cdot nabla v_k intd{x} \</dt><dd><p>&amp;= int  sum_l left(u_l nabla  v_l right)  cdot nabla v_k intd{x}</p>
+</dd>
+</dl>
+</div></blockquote>
+<p>end{align*}
+$$$`</p>
+<p>If we let <cite>$$A$$</cite> be the matrix with entries <cite>$$A_{k, l} = langle nabla v_l, nabla v_k rangle $$</cite>, and <cite>$$ mathbf{b}$$</cite> be the vector with entries <cite>$$ b_k = int f v_k intd{x} $$</cite>,
+then the above equation becomes
+<a href="#id13"><span class="problematic" id="id14">`</span></a>$$$</p>
+<blockquote>
+<div><p>A mathbf u = mathbf{b},</p>
+</div></blockquote>
+<p>$$$`
+which can be solved however you like! It can be shown that for large classes of <cite>$$a(u, v)$$</cite>, <cite>$$lim_{ntoinfty}  | u_n - u |_V = 0$$</cite>, i.e., that
+our finite dimensional approximations will approach the infinite dimensional solution.</p>
+<section id="petrov-galerkin">
+<h3>Petrov-Galerkin<a class="headerlink" href="#petrov-galerkin" title="Link to this heading">¶</a></h3>
+<p>Test functions <cite>$$w_n$$</cite> don’t have to live in the same vector space as trial functions <cite>$$u_n = sum_k u_k v_k $$</cite>. This situation
+arises a lot when you have boundary conditions, and also equations with operators of odd order.
+You can also get faster numerical convergence by choosing <cite>$$w_n$$</cite> to be a different function space, e.g., by
+weighting test functions upstream of the flow.</p>
+<p>In this case, the galerkin problem looks like letting <cite>$$ V_n subset V$$</cite>, <cite>$$W_n subset W$$</cite>, and satisfying (in infinite dimensions)
+<a href="#id15"><span class="problematic" id="id16">`</span></a>$$$</p>
+<blockquote>
+<div><p>a(u, w) = f(w) forall w in W</p>
+</div></blockquote>
+<p>$$$`
+and discretely
+<a href="#id17"><span class="problematic" id="id18">`</span></a>$$$</p>
+<blockquote>
+<div><p>a(u, w_n) = f(w_n) textrm{ for } w = w_1, ldots, w_n</p>
+</div></blockquote>
+<p>$$$`
+which can be used to write a concrete linear system
+just as above.</p>
+</section>
+</section>
+<section id="an-example-concretely">
+<h2>An example, concretely:<a class="headerlink" href="#an-example-concretely" title="Link to this heading">¶</a></h2>
+<p>In this section we go through building a nodal SEM for the linear advection equation on the periodic unit interval <cite>$$Omega = [-1, 1]$$</cite>. Note that
+since we’re using periodic boundary conditions, <cite>$$partial Omega = empty $$</cite>
+In the continuum this equation reads as <cite>$$ pder{u}{t} +  pder{}{x} [F(u)] = 0 $$</cite> in the strong form.
+In the weak form, let <cite>$$psi $$</cite> be a sufficiently regular test function. Then multiply and integrate to get
+<a href="#id19"><span class="problematic" id="id20">`</span></a>$$$
+begin{align*}</p>
+<blockquote>
+<div><p>0 &amp;= int_Omega psi pder{u}{t} intd{x} + int_Omega psi pder{}{x} F(u)   intd{x} \
+&amp;= int_Omega psi pder{u}{t} intd{x} + stackrel{=0}{left[psi F(u) right]_{partial Omega}} - int pder{psi}{x} F(u) intd{x} \
+&amp;= int_Omega psi pder{u}{t} intd{x} - int pder{psi}{x} F(u) intd{x} \</p>
+</div></blockquote>
+<p>end{align*}
+$$$`
+Note that <cite>$$F$$</cite> might be a nonlinear operator in the general case, but in all cases we see that the first term is a linear functional in <cite>$$pder{u}{t} $$</cite>. For, e.g., linear advection with <cite>$$F(u) = a(x) u$$</cite>,
+we immediately see that the second term becomes a bilinear form in <cite>$$psi, u$$</cite>. There isn’t an inherent reason that <cite>$$u, psi$$</cite> need to lie in exactly the same function space, so this
+looks like a Petrov-Galerkin method might apply (indeed, for the paper we’re discussing, we end up using a Bobunov-Galerkin method). We’re going to let <cite>$$u, psi $$</cite> live in the same function space for the moment.</p>
+<p>Let <cite>$$u, psi in V$$</cite> be functions (i.e., infinite dimensional vectors). Let’s apply a Galerkin method and see what our equation looks like: let <cite>$$ psi_j  in V_n$$</cite> be basis functions. For the moment, we
+choose them without specifying any kind of orthogonality.</p>
+<blockquote>
+<div><p>Expand <cite>$$ u_n$$</cite> in this basis as <cite>$$ u_n = sum_j a_j psi_j$$</cite>.</p>
+</div></blockquote>
+<p>We do immediately see a potential complication: we’ve declared that our solutions must be periodic, so <cite>$$u(-1) = u(1)$$</cite>.
+You could derive a finite element method with <cite>$$psi_j$$</cite> non-periodic by expanding <cite>$$u_n$$</cite> in a separate basis, but for the SEM this is highly undesirable.
+It turns out that it’s not particularly hard to construct periodic basis functions, so we assume <cite>$$psi_j$$</cite> are periodic.</p>
+<blockquote>
+<div><p>The above equation reads</p>
+</div></blockquote>
+<p><a href="#id21"><span class="problematic" id="id22">`</span></a>$$$
+begin{align*}</p>
+<blockquote>
+<div><dl class="simple">
+<dt>0 &amp;= int psi_k pder{}{t} sum_j a_j psi_j intd{x} - int pder{psi_k}{x} F(u_n) intd{x} \</dt><dd><p>&amp;= sum_j pder{a_j}{t} intpsi_kpsi_j intd{x} - int pder{psi_k}{x} F(u_n) intd{x}.</p>
+</dd>
+</dl>
+</div></blockquote>
+<p>end{align*}
+$$$`
+The term <cite>$$int psi_k psi_j intd{x}$$</cite> is what is termed the “mass matrix” in finite element theory.
+In the above form, the second term turns out to be a vector of length <cite>$$n$$</cite>, and the first term is a <cite>$$ntimes n$$</cite> matrix.
+Deriving your time tendency requires inverting a matrix, which is a computationally expensive operation (<cite>$$&gt;mathcal{O}(n^2)$$</cite>).
+What if we chose our basis to make this better? This is what the “spectral” in spectral finite elements refers to.
+If we let <cite>$$ psi_k$$</cite> be orthogonal with respect to the inner product <cite>$$int fg intd{x}$$</cite>, then the mass matrix <cite>$$ int psi_k psi_j intd{x} = delta_{j,k}$$</cite>, so the equation simplifies to
+<a href="#id23"><span class="problematic" id="id24">`</span></a>$$$</p>
+<blockquote>
+<div><p>pder{a_k}{t} = int pder{psi_k}{x} F(u_n) intd{x}.</p>
+</div></blockquote>
+<p>$$$`</p>
+<p>This appears to be simpler. However: these equations still involve integrals. At this point, the orthogonality of <cite>$$psi_j$$</cite> has only been specified with
+respect to the infinite-dimensional inner product. At the end of the day, if we have <cite>$$n$$</cite> basis functions, you can mathematically show that the vector subspace <cite>$$V_n subset V$$</cite> is mathematically equivalent (isometric)
+to <cite>$$mathbb{R}^n$$</cite> with the standard inner product. Therefore, we should expect that the operation <cite>$$ int fg intd{x}$$</cite> should take <cite>$$n$$</cite> operations.
+There are an unlimited number of ways to approximate <cite>$$int fg intd{x}$$</cite> with a finite number of operations.</p>
+<p>There are two pieces of jargon that you’ll encounter in the SEM literature: the “modal” basis and the “nodal” basis. The exposition we’ve given so far
+makes the “modal” basis choice pretty easy to construct. In a modal method (I’m being slightly imprecise here), if we expand <cite>$$ f = sum f_k psi_k, g = sum g_j psi_j$$</cite>,
+with <cite>$$ f sim (f_1, ldots, f_n) in mathbb{R}^n$$</cite>, then <cite>$$ int fg intd{x} = int sum_k sum_j f_k g_j psi_k psi_j intd{x} = sum_k sum_j f_k g_j delta_{k,j} = sum_k f_k g_k $$</cite>.
+This is precisely the way to map the vector space spanned by <cite>$$psi_j$$</cite> to <cite>$$mathbb{R}^n$$</cite> so that the inner product is just the dot product. This seems very mathematically simple,
+so why would you choose anything other than this basis? Well, the problem turns out to be interpreting quantities like <cite>$$ F(u_n) pder{psi}{k}$$</cite> in
+our problem above. If <cite>$$F$$</cite> is non-linear, there is no guarantee that the result <cite>$$ F(u_n(x))$$</cite> will lie in <cite>$$ V_n$$</cite> even when <cite>$$u_n$$</cite> does (even in the linear case,
+there is no reason to expect this to be the case).  <cite>$$F(u_n(x))$$</cite> must be squashed (projected) back onto <cite>$$V_n$$</cite> in order for the discrete inner product to make sense.</p>
+<p>Notice that in this section, we haven’t talked about evaluation of our functions at particular points. In most problems, it is much easier to calculate <cite>$$F$$</cite> given <cite>$$u_n(x)$$</cite> than
+given coefficients of <cite>$$u_n$$</cite> in the <cite>$$psi_k$$</cite> basis. The broad concept  of a “nodal” basis is that you can choose a
+different polynomial basis <cite>$$xi_k$$</cite>, and a different method of mapping these polynomials onto <cite>$$mathbb{R}^n$$</cite>, then there are a set of points <cite>$$x_k$$</cite>
+such that the best approximation of <cite>$$ F(u_n) = sum_k F(u_n(x_k)) xi_k $$</cite>. In the next section I’ll explain how that works.</p>
+<section id="gauss-quadrature-why-is-it-special">
+<h3>Gauss quadrature: why is it special?<a class="headerlink" href="#gauss-quadrature-why-is-it-special" title="Link to this heading">¶</a></h3>
+<p>For the second part of our derivation, recall that for any set of <cite>$$n$$</cite> function evaluations <cite>$$(x_k, f(x_k)$$</cite> on distinct points <cite>$$x_k$$</cite>, we can uniquely fit a polynomial of degree <cite>$$ n-1 $$</cite> through those points. The coefficients, e.g., in the monomial basis <cite>$$m_k(x)$$</cite> can be calculated by solving the linear system <cite>$$ [m_k(x_j)] [hat{m}_k] = [f(x_j)] $$</cite> (i.e. the columns of the matrix are the evaluation of monomial <cite>$$m_k$$</cite> at point <cite>$$x_j$$</cite>).
+An excellent exercise is to formulate this system and solve it in, e.g., python and seeing how it becomes very numerically unstable as <cite>$$n$$</cite> increases, if you choose your interpolation points arbitrarily).</p>
+<p>The idea behind Gauss-Lobatto quadrature is to take the roots (zeros) of the <cite>$$m$$`th Legendre polynomial, `$$x_1, ldots, x_m$$</cite> (when we eventually get to SE, we will include the endpoints of the interval <cite>$$[-1, 1]$$</cite>, but for now we ignore this). Then let <cite>$$q_k$$</cite> be the interpolating polynomial that satisfies <cite>$$$ q_k(x_l) = begin{cases} 1 textrm{ if } k=l \ 0 textrm{ otherwise} end{cases}. $$$</cite></p>
+<p>If we have a polynomial <cite>$$f$$</cite> and its evaluations <cite>$$ f_k = f(x_k)$$</cite>, then if we define <cite>$$w_k = int_{[-1, 1]} q_k intd{x} $$</cite> and calculate <cite>$$ sum_k w_k f_k$$</cite>, then this sum exactly computes <cite>$$ int_{[-1, 1]} f intd{x}$$</cite> so long as <cite>$$f$$</cite> is of degree <cite>$$ 2n-1$$</cite> or less. (Note: in practice, <cite>$$w_k$$</cite> can be calculated from the derivatives of legendre polynomials).</p>
+<p>Ok, so we have constructed <cite>$$ sum_k w_k f_k $$</cite> as a way to calculate an integral. It turns out that this also allows us to define an inner product, <cite>$$ langle f, g rangle = sum_k w_k f(x_k) g(x_k) $$</cite>. First observe that <cite>$$langle q_k, q_l rangle = int q_k q_l intd{x} = sum_m w_m q_k(x_m) q_l(x_m) = begin{cases} w_m textrm{ if } k = l \ 0 textrm{ otherwise} end{cases}  $$</cite>, so <cite>$$q_k$$</cite> are an orthogonal basis.</p>
+<p>Now we’re prepared to see why orthonormal bases are so useful. Suppose I have polynomials <cite>$$ h = sum_k a_k q_k(x) $$</cite>, <cite>$$ g = sum_k b_k q_k(x)$$</cite>. Then <cite>$$ langle g,h rangle = int sum_k sum_{k’} a_k b_{k’} q_k(x) q_{k’}(x) intd{x} = sum_k w_k a_k b_k $$</cite>. For a non-orthogonal basis, that inner product operation would require <cite>$$N^2$$</cite> operations, while here it requires only <cite>$$n$$</cite>.</p>
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">pyses</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation_and_validation.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_run_quickstart.html">How to run the model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_friendly_api.html">The pySEs public API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="anatomy_of_a_model_struct.html">How is the atmospheric state represented in pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="grid_generation.html">How are horizontal grids generated and read into pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/modules.html">src</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Owen K Hughes.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/how_does_se_work.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

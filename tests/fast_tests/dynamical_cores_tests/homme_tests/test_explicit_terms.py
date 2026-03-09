@@ -1,15 +1,18 @@
-from pysces.mesh_generation.equiangular_metric import init_quasi_uniform_grid
+from src.mesh_generation.equiangular_metric import init_quasi_uniform_grid
 from ....test_data.mass_coordinate_grids import cam30
-from pysces.dynamical_cores.model_state import project_dynamics
-from pysces.dynamical_cores.mass_coordinate import init_vertical_grid
-from pysces.analytic_initialization.moist_baroclinic_wave import init_baroclinic_wave_config
-from pysces.config import jnp, device_wrapper, np
-from pysces.dynamical_cores.physics_config import init_physics_config
-from pysces.dynamical_cores.homme.explicit_terms import eval_energy_quantities
-from pysces.operations_2d.operators import inner_product
-from pysces.operations_2d.local_assembly import project_scalar
-from pysces.initialization import init_baroclinic_wave_state
-from pysces.model_info import models
+from src.dynamical_cores.model_state import project_dynamics
+from src.dynamical_cores.mass_coordinate import init_vertical_grid
+from src.analytic_initialization.moist_baroclinic_wave import init_baroclinic_wave_config, init_baroclinic_wave_state
+from src._config import get_backend as _get_backend
+_be = _get_backend()
+jnp = _be.np
+device_wrapper = _be.array
+import numpy as np
+from src.dynamical_cores.physics_config import init_physics_config
+from src.dynamical_cores.homme.explicit_terms import eval_energy_quantities
+from src.operations_2d.operators import inner_product
+from src.operations_2d.local_assembly import project_scalar
+from src.dynamical_cores.model_info import models
 
 
 def test_notopo():

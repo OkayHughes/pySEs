@@ -1,12 +1,14 @@
-from pysces.config import jnp, np
-from pysces.mesh_generation.equiangular_metric import init_quasi_uniform_grid
-from pysces.initialization import init_baroclinic_wave_state
-from pysces.analytic_initialization.moist_baroclinic_wave import init_baroclinic_wave_config
-from pysces.model_info import models
-from pysces.dynamical_cores.mass_coordinate import init_vertical_grid
-from pysces.dynamical_cores.physics_config import init_physics_config
-from pysces.dynamical_cores.mass_coordinate import d_mass_to_surface_mass, surface_mass_to_d_mass
-from pysces.dynamical_cores.model_state import remap_tracers
+from src._config import get_backend as _get_backend
+_be = _get_backend()
+jnp = _be.np
+import numpy as np
+from src.mesh_generation.equiangular_metric import init_quasi_uniform_grid
+from src.analytic_initialization.moist_baroclinic_wave import init_baroclinic_wave_config, init_baroclinic_wave_state
+from src.dynamical_cores.model_info import models
+from src.dynamical_cores.mass_coordinate import init_vertical_grid
+from src.dynamical_cores.physics_config import init_physics_config
+from src.dynamical_cores.mass_coordinate import d_mass_to_surface_mass, surface_mass_to_d_mass
+from src.dynamical_cores.model_state import remap_tracers
 from ....test_data.mass_coordinate_grids import cam30
 
 def test_remap_tracers():

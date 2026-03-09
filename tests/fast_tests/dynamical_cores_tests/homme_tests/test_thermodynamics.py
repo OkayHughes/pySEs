@@ -1,14 +1,16 @@
-from pysces.analytic_initialization.moist_baroclinic_wave import (init_baroclinic_wave_config,
-                                                                  eval_pressure_temperature)
-from pysces.dynamical_cores.physics_config import init_physics_config
-from pysces.mesh_generation.equiangular_metric import init_quasi_uniform_grid
-from pysces.config import jnp
+from src.analytic_initialization.moist_baroclinic_wave import (init_baroclinic_wave_config,
+                                                                  eval_pressure_temperature,
+                                                                  init_baroclinic_wave_state)
+from src.dynamical_cores.physics_config import init_physics_config
+from src.mesh_generation.equiangular_metric import init_quasi_uniform_grid
+from src._config import get_backend as _get_backend
+_be = _get_backend()
+jnp = _be.np
 from ....test_data.mass_coordinate_grids import vertical_grid_finite_diff
-from pysces.dynamical_cores.utils_3d import interface_to_midlevel
-from pysces.dynamical_cores.mass_coordinate import init_vertical_grid
-from pysces.dynamical_cores.homme.thermodynamics import eval_mu, eval_midlevel_pressure, eval_balanced_geopotential
-from pysces.initialization import init_baroclinic_wave_state
-from pysces.model_info import models
+from src.dynamical_cores.utils_3d import interface_to_midlevel
+from src.dynamical_cores.mass_coordinate import init_vertical_grid
+from src.dynamical_cores.homme.thermodynamics import eval_mu, eval_midlevel_pressure, eval_balanced_geopotential
+from src.dynamical_cores.model_info import models
 
 
 def test_eos_hydro():

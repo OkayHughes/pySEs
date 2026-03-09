@@ -9,12 +9,17 @@ from sphinx.ext.autosummary.generate import generate_autosummary_docs
 
 # List of modules to document
 modules = [
-    'pysces',
-    'pysces.distributed_memory',
-    'pysces.mesh_generation',
-    'pysces.models_3d',
-    'pysces.operations_2d',
-    'pysces.shallow_water_models',
+    'pyses',
+    'pyses.analytic_initialization',
+    'pyses.dynamical_cores',
+    'pyses.dynamical_cores.cam_se',
+    'pyses.dynamical_cores.homme',
+    'pyses.dynamical_cores.tracer_advection',
+    'pyses.mesh_generation',
+    'pyses.mpi',
+    'pyses.operations_2d',
+    'pyses.shallow_water_models',
+    'pyses.tracer_transport',
 ]
 
 # Output directory for generated rst files

@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>src.shallow_water module &#8212; pyses  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="src.simulate module" href="src.simulate.html" />
+    <link rel="prev" title="src.set_config module" href="src.set_config.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-src.shallow_water">
+<span id="src-shallow-water-module"></span><h1>src.shallow_water module<a class="headerlink" href="#module-src.shallow_water" title="Link to this heading">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="src.shallow_water.configure">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">src.shallow_water.</span></span><span class="sig-name descname"><span class="pre">configure</span></span><a class="headerlink" href="#src.shallow_water.configure" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p class="rubric">Methods</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#src.shallow_water.configure.init_hypervis_config_quasi_uniform" title="src.shallow_water.configure.init_hypervis_config_quasi_uniform"><code class="xref py py-obj docutils literal notranslate"><span class="pre">init_hypervis_config_quasi_uniform</span></code></a>(config[, ...])</p></td>
+<td><p>Initialize a quasi-uniform hyperviscosity configuration for the shallow-water model.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#src.shallow_water.configure.init_hypervis_config_variable_res" title="src.shallow_water.configure.init_hypervis_config_variable_res"><code class="xref py py-obj docutils literal notranslate"><span class="pre">init_hypervis_config_variable_res</span></code></a>(dims, config)</p></td>
+<td><p>Initialize a variable-resolution tensor hyperviscosity configuration for the shallow-water model.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#src.shallow_water.configure.init_timestep_config" title="src.shallow_water.configure.init_timestep_config"><code class="xref py py-obj docutils literal notranslate"><span class="pre">init_timestep_config</span></code></a>(h_grid, dims, ...[, ...])</p></td>
+<td><p>Compute the shallow-water timestep configuration from CFL stability estimates.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py method">
+<dt class="sig sig-object py" id="src.shallow_water.configure.init_hypervis_config_quasi_uniform">
+<span class="sig-name descname"><span class="pre">init_hypervis_config_quasi_uniform</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nu_base</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nu_d_mass</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nu_tracer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nu_div_factor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2.5</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.shallow_water.configure.init_hypervis_config_quasi_uniform" title="Link to this definition">¶</a></dt>
+<dd><p>Initialize a quasi-uniform hyperviscosity configuration for the shallow-water model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>ne</strong><span class="classifier">int</span></dt><dd><p>Number of elements along one edge of the cubed-sphere face.</p>
+</dd>
+<dt><strong>config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Physics configuration containing <code class="docutils literal notranslate"><span class="pre">radius_earth</span></code>.</p>
+</dd>
+<dt><strong>nu_base</strong><span class="classifier">float, optional</span></dt><dd><p>Biharmonic viscosity coefficient for the wind (m^4 s^-1).
+Negative values auto-compute from grid resolution.</p>
+</dd>
+<dt><strong>nu_d_mass</strong><span class="classifier">float, optional</span></dt><dd><p>Viscosity for the layer-thickness field.
+Negative values match <code class="docutils literal notranslate"><span class="pre">nu_base</span></code>.</p>
+</dd>
+<dt><strong>nu_tracer</strong><span class="classifier">float, optional</span></dt><dd><p>Viscosity for passive tracers.
+Negative values match <code class="docutils literal notranslate"><span class="pre">nu_base</span></code>.</p>
+</dd>
+<dt><strong>nu_div_factor</strong><span class="classifier">float, optional</span></dt><dd><p>Additional factor applied to the divergence component of the wind
+Laplacian (default: 2.5).</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>diffusion_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Hyperviscosity configuration dict for the shallow-water model.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.shallow_water.configure.init_hypervis_config_variable_res">
+<span class="sig-name descname"><span class="pre">init_hypervis_config_variable_res</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dims</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ad_hoc_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.shallow_water.configure.init_hypervis_config_variable_res" title="Link to this definition">¶</a></dt>
+<dd><p>Initialize a variable-resolution tensor hyperviscosity configuration for the shallow-water model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal spectral element grid (must contain <code class="docutils literal notranslate"><span class="pre">&quot;hypervis_scaling&quot;</span></code>).</p>
+</dd>
+<dt><strong>dims</strong><span class="classifier">frozendict[str, int]</span></dt><dd><p>Grid dimension parameters.</p>
+</dd>
+<dt><strong>config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Physics configuration containing <code class="docutils literal notranslate"><span class="pre">radius_earth</span></code>.</p>
+</dd>
+<dt><strong>ad_hoc_scale</strong><span class="classifier">float, optional</span></dt><dd><p>Empirical rescaling factor applied to the computed viscosity coefficient
+(default: 0.5).</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>diffusion_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Hyperviscosity configuration dict for the shallow-water model.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.shallow_water.configure.init_timestep_config">
+<span class="sig-name descname"><span class="pre">init_timestep_config</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">diffusion_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hypervis_tstep_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">time_step.Euler</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dynamics_tstep_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">time_step.SSPRK3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dyn_steps_per_coupling</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hypervis_steps_per_dyn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sphere</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.shallow_water.configure.init_timestep_config" title="Link to this definition">¶</a></dt>
+<dd><p>Compute the shallow-water timestep configuration from CFL stability estimates.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>dt_coupling</strong><span class="classifier">float</span></dt><dd><p>The physics coupling timestep in seconds.</p>
+</dd>
+<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal spectral element grid.</p>
+</dd>
+<dt><strong>dims</strong><span class="classifier">frozendict[str, int]</span></dt><dd><p>Grid dimension parameters.</p>
+</dd>
+<dt><strong>physics_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Physical constants including <code class="docutils literal notranslate"><span class="pre">radius_earth</span></code>.</p>
+</dd>
+<dt><strong>diffusion_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Hyperviscosity configuration.</p>
+</dd>
+<dt><strong>hypervis_tstep_type</strong><span class="classifier">time_step_options, optional</span></dt><dd><p>Time integration scheme for hyperviscosity (default: Euler).</p>
+</dd>
+<dt><strong>dynamics_tstep_type</strong><span class="classifier">time_step_options, optional</span></dt><dd><p>Time integration scheme for dynamics (default: SSPRK3).</p>
+</dd>
+<dt><strong>dyn_steps_per_coupling</strong><span class="classifier">int, optional</span></dt><dd><p>Override for the number of dynamics subcycles per coupling step.
+Negative values use the CFL-derived estimate.</p>
+</dd>
+<dt><strong>hypervis_steps_per_dyn</strong><span class="classifier">int, optional</span></dt><dd><p>Minimum number of hyperviscosity subcycles per dynamics step (default: 3).</p>
+</dd>
+<dt><strong>sphere</strong><span class="classifier">bool, optional</span></dt><dd><p>Whether to use spherical CFL estimates (default: True).</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>timestep_config</strong><span class="classifier">frozendict</span></dt><dd><p>Nested frozen dict containing <code class="docutils literal notranslate"><span class="pre">&quot;dynamics&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;hyperviscosity&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;tracer_advection&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;dt_coupling&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;dynamics_subcycle&quot;</span></code>, and <code class="docutils literal notranslate"><span class="pre">&quot;hypervis_subcycle&quot;</span></code> entries.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="src.shallow_water.galewsky_init">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">src.shallow_water.</span></span><span class="sig-name descname"><span class="pre">galewsky_init</span></span><a class="headerlink" href="#src.shallow_water.galewsky_init" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p class="rubric">Methods</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#src.shallow_water.galewsky_init.eval_galewky_h" title="src.shallow_water.galewsky_init.eval_galewky_h"><code class="xref py py-obj docutils literal notranslate"><span class="pre">eval_galewky_h</span></code></a>(lon, config)</p></td>
+<td><p>Evaluate the free-surface height for the Galewsky test case.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#src.shallow_water.galewsky_init.eval_galewky_hs" title="src.shallow_water.galewsky_init.eval_galewky_hs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">eval_galewky_hs</span></code></a>(lon, config)</p></td>
+<td><p>Evaluate the surface topography for the Galewsky test case (identically zero).</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#src.shallow_water.galewsky_init.eval_galewky_wind" title="src.shallow_water.galewsky_init.eval_galewky_wind"><code class="xref py py-obj docutils literal notranslate"><span class="pre">eval_galewky_wind</span></code></a>(lon, config)</p></td>
+<td><p>Evaluate the horizontal wind vector for the Galewsky test case.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#src.shallow_water.galewsky_init.init_galewsky_config" title="src.shallow_water.galewsky_init.init_galewsky_config"><code class="xref py py-obj docutils literal notranslate"><span class="pre">init_galewsky_config</span></code></a>()</p></td>
+<td><p>Build the parameter struct for the Galewsky barotropic instability test case.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py method">
+<dt class="sig sig-object py" id="src.shallow_water.galewsky_init.eval_galewky_h">
+<span class="sig-name descname"><span class="pre">eval_galewky_h</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.shallow_water.galewsky_init.eval_galewky_h" title="Link to this definition">¶</a></dt>
+<dd><p>Evaluate the free-surface height for the Galewsky test case.</p>
+<p>The background height is computed by integrating the gradient-wind balance
+condition using Gauss-Legendre quadrature. A perturbation is then added
+to trigger the barotropic instability.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>lat</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx], Float]</span></dt><dd><p>Latitude (radians).</p>
+</dd>
+<dt><strong>lon</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx], Float]</span></dt><dd><p>Longitude (radians).</p>
+</dd>
+<dt><strong>config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Test case configuration from <code class="docutils literal notranslate"><span class="pre">init_galewsky_config</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>h</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx], Float]</span></dt><dd><p>Free-surface height (m).</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.shallow_water.galewsky_init.eval_galewky_hs">
+<span class="sig-name descname"><span class="pre">eval_galewky_hs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.shallow_water.galewsky_init.eval_galewky_hs" title="Link to this definition">¶</a></dt>
+<dd><p>Evaluate the surface topography for the Galewsky test case (identically zero).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>lat</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx], Float]</span></dt><dd><p>Latitude (radians).</p>
+</dd>
+<dt><strong>lon</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx], Float]</span></dt><dd><p>Longitude (radians).</p>
+</dd>
+<dt><strong>config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Test case configuration from <code class="docutils literal notranslate"><span class="pre">init_galewsky_config</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>hs</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx], Float]</span></dt><dd><p>Surface topography (m). All zeros for this test case.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.shallow_water.galewsky_init.eval_galewky_wind">
+<span class="sig-name descname"><span class="pre">eval_galewky_wind</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.shallow_water.galewsky_init.eval_galewky_wind" title="Link to this definition">¶</a></dt>
+<dd><p>Evaluate the horizontal wind vector for the Galewsky test case.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>lat</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx], Float]</span></dt><dd><p>Latitude (radians).</p>
+</dd>
+<dt><strong>lon</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx], Float]</span></dt><dd><p>Longitude (radians).</p>
+</dd>
+<dt><strong>config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Test case configuration from <code class="docutils literal notranslate"><span class="pre">init_galewsky_config</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>wind</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, 2], Float]</span></dt><dd><p>Horizontal wind <code class="docutils literal notranslate"><span class="pre">(u,</span> <span class="pre">v)</span></code> in m s^-1. Meridional wind is identically zero.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.shallow_water.galewsky_init.init_galewsky_config">
+<span class="sig-name descname"><span class="pre">init_galewsky_config</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.shallow_water.galewsky_init.init_galewsky_config" title="Link to this definition">¶</a></dt>
+<dd><p>Build the parameter struct for the Galewsky barotropic instability test case.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>model_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Physics configuration containing <code class="docutils literal notranslate"><span class="pre">radius_earth</span></code>, <code class="docutils literal notranslate"><span class="pre">angular_freq_earth</span></code>,
+and <code class="docutils literal notranslate"><span class="pre">gravity</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Test case configuration to be passed to the other <code class="docutils literal notranslate"><span class="pre">eval_galewsky_*</span></code>
+functions in this module.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The test case is described in Galewsky, Scott, and Polvani (2004),
+<em>Tellus A</em>, 56, 429–440.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="src.shallow_water.model_state">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">src.shallow_water.</span></span><span class="sig-name descname"><span class="pre">model_state</span></span><a class="headerlink" href="#src.shallow_water.model_state" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p class="rubric">Methods</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#src.shallow_water.model_state.project_model_state" title="src.shallow_water.model_state.project_model_state"><code class="xref py py-obj docutils literal notranslate"><span class="pre">project_model_state</span></code></a>(grid, dims)</p></td>
+<td><p>Project the shallow-water model state onto the continuous spectral element space (DSS).</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#src.shallow_water.model_state.wrap_model_state" title="src.shallow_water.model_state.wrap_model_state"><code class="xref py py-obj docutils literal notranslate"><span class="pre">wrap_model_state</span></code></a>(h, hs)</p></td>
+<td><p>Assemble the shallow-water model state dict from its prognostic fields.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py method">
+<dt class="sig sig-object py" id="src.shallow_water.model_state.project_model_state">
+<span class="sig-name descname"><span class="pre">project_model_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.shallow_water.model_state.project_model_state" title="Link to this definition">¶</a></dt>
+<dd><p>Project the shallow-water model state onto the continuous spectral element space (DSS).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>state</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Shallow-water model state, as returned by <code class="docutils literal notranslate"><span class="pre">wrap_model_state</span></code>.</p>
+</dd>
+<dt><strong>grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal spectral element grid.</p>
+</dd>
+<dt><strong>dims</strong><span class="classifier">dict[str, int]</span></dt><dd><p>Grid dimension parameters.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>state_cont</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Shallow-water model state with all fields projected to be
+globally continuous (C0).</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.shallow_water.model_state.wrap_model_state">
+<span class="sig-name descname"><span class="pre">wrap_model_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">h</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.shallow_water.model_state.wrap_model_state" title="Link to this definition">¶</a></dt>
+<dd><p>Assemble the shallow-water model state dict from its prognostic fields.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>horizontal_wind</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, 2], Float]</span></dt><dd><p>Covariant horizontal wind <code class="docutils literal notranslate"><span class="pre">(u,</span> <span class="pre">v)</span></code> in m s^-1.</p>
+</dd>
+<dt><strong>h</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx], Float]</span></dt><dd><p>Free-surface height (m).</p>
+</dd>
+<dt><strong>hs</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx], Float]</span></dt><dd><p>Surface topography (m).</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>state</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Shallow-water model state with keys <code class="docutils literal notranslate"><span class="pre">&quot;horizontal_wind&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;h&quot;</span></code>,
+and <code class="docutils literal notranslate"><span class="pre">&quot;hs&quot;</span></code>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="src.shallow_water.williamson_init">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">src.shallow_water.</span></span><span class="sig-name descname"><span class="pre">williamson_init</span></span><a class="headerlink" href="#src.shallow_water.williamson_init" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p class="rubric">Methods</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#src.shallow_water.williamson_init.init_williamson_steady_config" title="src.shallow_water.williamson_init.init_williamson_steady_config"><code class="xref py py-obj docutils literal notranslate"><span class="pre">init_williamson_steady_config</span></code></a>()</p></td>
+<td><p>Build the parameter struct for Williamson shallow-water test case 2 (steady geostrophic flow).</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#src.shallow_water.williamson_init.init_williamson_tc2_h" title="src.shallow_water.williamson_init.init_williamson_tc2_h"><code class="xref py py-obj docutils literal notranslate"><span class="pre">init_williamson_tc2_h</span></code></a>(lon, config)</p></td>
+<td><p>Evaluate the analytic geopotential height for Williamson test case 2.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#src.shallow_water.williamson_init.init_williamson_tc2_hs" title="src.shallow_water.williamson_init.init_williamson_tc2_hs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">init_williamson_tc2_hs</span></code></a>(lon, config)</p></td>
+<td><p>Evaluate the surface topography for Williamson test case 2 (identically zero).</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#src.shallow_water.williamson_init.init_williamson_tc2_wind" title="src.shallow_water.williamson_init.init_williamson_tc2_wind"><code class="xref py py-obj docutils literal notranslate"><span class="pre">init_williamson_tc2_wind</span></code></a>(lon, config)</p></td>
+<td><p>Evaluate the analytic wind field for Williamson test case 2.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py method">
+<dt class="sig sig-object py" id="src.shallow_water.williamson_init.init_williamson_steady_config">
+<span class="sig-name descname"><span class="pre">init_williamson_steady_config</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.shallow_water.williamson_init.init_williamson_steady_config" title="Link to this definition">¶</a></dt>
+<dd><p>Build the parameter struct for Williamson shallow-water test case 2 (steady geostrophic flow).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>model_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Physics configuration containing <code class="docutils literal notranslate"><span class="pre">radius_earth</span></code>, <code class="docutils literal notranslate"><span class="pre">angular_freq_earth</span></code>,
+<code class="docutils literal notranslate"><span class="pre">gravity</span></code>, and <code class="docutils literal notranslate"><span class="pre">alpha</span></code> (the flow angle in radians).</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Test case configuration to be passed to the other <code class="docutils literal notranslate"><span class="pre">eval_williamson_tc2_*</span></code>
+functions in this module.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The test case is described in Williamson et al. (1992),
+<em>J. Comput. Phys.</em>, 102, 211–224, Test Case 2.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.shallow_water.williamson_init.init_williamson_tc2_h">
+<span class="sig-name descname"><span class="pre">init_williamson_tc2_h</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.shallow_water.williamson_init.init_williamson_tc2_h" title="Link to this definition">¶</a></dt>
+<dd><p>Evaluate the analytic geopotential height for Williamson test case 2.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>lat</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx], Float]</span></dt><dd><p>Latitude (radians).</p>
+</dd>
+<dt><strong>lon</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx], Float]</span></dt><dd><p>Longitude (radians).</p>
+</dd>
+<dt><strong>config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Test case configuration from <code class="docutils literal notranslate"><span class="pre">init_williamson_steady_config</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>h</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx], Float]</span></dt><dd><p>Free-surface height (m).</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.shallow_water.williamson_init.init_williamson_tc2_hs">
+<span class="sig-name descname"><span class="pre">init_williamson_tc2_hs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.shallow_water.williamson_init.init_williamson_tc2_hs" title="Link to this definition">¶</a></dt>
+<dd><p>Evaluate the surface topography for Williamson test case 2 (identically zero).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>lat</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx], Float]</span></dt><dd><p>Latitude (radians).</p>
+</dd>
+<dt><strong>lon</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx], Float]</span></dt><dd><p>Longitude (radians).</p>
+</dd>
+<dt><strong>config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Test case configuration from <code class="docutils literal notranslate"><span class="pre">init_williamson_steady_config</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>hs</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx], Float]</span></dt><dd><p>Surface topography (m). All zeros for this test case.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.shallow_water.williamson_init.init_williamson_tc2_wind">
+<span class="sig-name descname"><span class="pre">init_williamson_tc2_wind</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.shallow_water.williamson_init.init_williamson_tc2_wind" title="Link to this definition">¶</a></dt>
+<dd><p>Evaluate the analytic wind field for Williamson test case 2.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>lat</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx], Float]</span></dt><dd><p>Latitude (radians).</p>
+</dd>
+<dt><strong>lon</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx], Float]</span></dt><dd><p>Longitude (radians).</p>
+</dd>
+<dt><strong>config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Test case configuration from <code class="docutils literal notranslate"><span class="pre">init_williamson_steady_config</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>wind</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, 2], Float]</span></dt><dd><p>Horizontal wind <code class="docutils literal notranslate"><span class="pre">(u,</span> <span class="pre">v)</span></code> in m s^-1.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">pyses</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation_and_validation.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">How to run the model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_friendly_api.html">The pySEs public API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../anatomy_of_a_model_struct.html">How is the atmospheric state represented in pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">How are horizontal grids generated and read into pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">src</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="src.html">src package</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="src.html#subpackages">Subpackages</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="src.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="src.config.html">src.config module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.grids.html">src.grids module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.initialize.html">src.initialize module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.model_utils.html">src.model_utils module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.set_config.html">src.set_config module</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">src.shallow_water module</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="#src.shallow_water.configure"><code class="docutils literal notranslate"><span class="pre">configure</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="#src.shallow_water.configure.init_hypervis_config_quasi_uniform"><code class="docutils literal notranslate"><span class="pre">configure.init_hypervis_config_quasi_uniform()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="#src.shallow_water.configure.init_hypervis_config_variable_res"><code class="docutils literal notranslate"><span class="pre">configure.init_hypervis_config_variable_res()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="#src.shallow_water.configure.init_timestep_config"><code class="docutils literal notranslate"><span class="pre">configure.init_timestep_config()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="#src.shallow_water.galewsky_init"><code class="docutils literal notranslate"><span class="pre">galewsky_init</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="#src.shallow_water.galewsky_init.eval_galewky_h"><code class="docutils literal notranslate"><span class="pre">galewsky_init.eval_galewky_h()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="#src.shallow_water.galewsky_init.eval_galewky_hs"><code class="docutils literal notranslate"><span class="pre">galewsky_init.eval_galewky_hs()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="#src.shallow_water.galewsky_init.eval_galewky_wind"><code class="docutils literal notranslate"><span class="pre">galewsky_init.eval_galewky_wind()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="#src.shallow_water.galewsky_init.init_galewsky_config"><code class="docutils literal notranslate"><span class="pre">galewsky_init.init_galewsky_config()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="#src.shallow_water.model_state"><code class="docutils literal notranslate"><span class="pre">model_state</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="#src.shallow_water.model_state.project_model_state"><code class="docutils literal notranslate"><span class="pre">model_state.project_model_state()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="#src.shallow_water.model_state.wrap_model_state"><code class="docutils literal notranslate"><span class="pre">model_state.wrap_model_state()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="#src.shallow_water.williamson_init"><code class="docutils literal notranslate"><span class="pre">williamson_init</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="#src.shallow_water.williamson_init.init_williamson_steady_config"><code class="docutils literal notranslate"><span class="pre">williamson_init.init_williamson_steady_config()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="#src.shallow_water.williamson_init.init_williamson_tc2_h"><code class="docutils literal notranslate"><span class="pre">williamson_init.init_williamson_tc2_h()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="#src.shallow_water.williamson_init.init_williamson_tc2_hs"><code class="docutils literal notranslate"><span class="pre">williamson_init.init_williamson_tc2_hs()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="#src.shallow_water.williamson_init.init_williamson_tc2_wind"><code class="docutils literal notranslate"><span class="pre">williamson_init.init_williamson_tc2_wind()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="src.simulate.html">src.simulate module</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="src.html#module-src">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">src</a><ul>
+  <li><a href="src.html">src package</a><ul>
+      <li>Previous: <a href="src.set_config.html" title="previous chapter">src.set_config module</a></li>
+      <li>Next: <a href="src.simulate.html" title="next chapter">src.simulate module</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Owen K Hughes.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/api/src.shallow_water.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,22 +1,29 @@
-from pysces.config import jnp, np, DEBUG, device_unwrapper, device_wrapper, mpi_rank
-from pysces.shallow_water_models.run_shallow_water import simulate_shallow_water
-from pysces.shallow_water_models.model_state import wrap_model_state
-from pysces.shallow_water_models.constants import init_physics_config_shallow_water
-from pysces.shallow_water_models.time_stepping import init_timestep_config
-from pysces.shallow_water_models.hyperviscosity import init_hypervis_config_const, init_hypervis_config_tensor
-from pysces.shallow_water_models.williamson_init import (init_williamson_steady_config,
+from src._config import get_backend as _get_backend
+_be = _get_backend()
+jnp = _be.np
+DEBUG = _be.debug
+device_unwrapper = _be.unwrap
+device_wrapper = _be.array
+mpi_rank = _be.mpi_rank
+import numpy as np
+from src.shallow_water_models.run_shallow_water import simulate_shallow_water
+from src.shallow_water_models.model_state import wrap_model_state
+from src.shallow_water_models.constants import init_physics_config_shallow_water
+from src.shallow_water_models.time_stepping import init_timestep_config
+from src.shallow_water_models.hyperviscosity import init_hypervis_config_const, init_hypervis_config_tensor
+from src.shallow_water_models.williamson_init import (init_williamson_steady_config,
                                                          eval_williamson_tc2_h,
                                                          eval_williamson_tc2_hs,
                                                          eval_williamson_tc2_u)
-from pysces.shallow_water_models.galewsky_init import (init_galewsky_config,
+from src.shallow_water_models.galewsky_init import (init_galewsky_config,
                                                        eval_galewsky_wind,
                                                        eval_galewsky_hs,
                                                        eval_galewsky_h)
-from pysces.mesh_generation.equiangular_metric import init_quasi_uniform_grid
-from pysces.mesh_generation.element_local_metric import init_stretched_grid_elem_local
-from pysces.operations_2d.operators import inner_product, horizontal_vorticity
-from pysces.operations_2d.local_assembly import project_scalar
-from pysces.horizontal_grid import make_grid_mpi_ready
+from src.mesh_generation.equiangular_metric import init_quasi_uniform_grid
+from src.mesh_generation.element_local_metric import init_stretched_grid_elem_local
+from src.operations_2d.operators import inner_product, horizontal_vorticity
+from src.operations_2d.local_assembly import project_scalar
+from src.operations_2d.horizontal_grid import make_grid_mpi_ready
 from ...context import get_figdir, plot_grid
 from os import makedirs
 from os.path import join

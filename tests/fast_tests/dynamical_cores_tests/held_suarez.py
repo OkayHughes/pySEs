@@ -1,4 +1,7 @@
-from pysces.config import jnp, jit
+from src._config import get_backend as _get_backend
+_be = _get_backend()
+jnp = _be.np
+jit = _be.jit
 
 sigma_b = 0.70
 secpday = 86400

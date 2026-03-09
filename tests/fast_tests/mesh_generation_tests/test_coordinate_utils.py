@@ -1,10 +1,12 @@
-from pysces.config import np
-from pysces.mesh_generation.bilinear_utils import (eval_bilinear_jacobian, eval_bilinear_mapping)
-from pysces.mesh_generation.spherical_coord_utils import (cart_to_unit_sphere_coords, unit_sphere_to_cart_coords,
+from src._config import get_backend as _get_backend
+_be = _get_backend()
+import numpy as np
+from src.mesh_generation.bilinear_utils import (eval_bilinear_jacobian, eval_bilinear_mapping)
+from src.mesh_generation.spherical_coord_utils import (cart_to_unit_sphere_coords, unit_sphere_to_cart_coords,
                                                           cart_to_unit_sphere_coords_jacobian,
                                                           unit_sphere_to_cart_coords_jacobian)
-from pysces.mesh_generation.cubed_sphere import init_cube_topo
-from pysces.spectral import init_spectral
+from src.mesh_generation.cubed_sphere import init_cube_topo
+from src.mesh_generation.spectral import init_spectral
 from ...context import test_npts
 
 

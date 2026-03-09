@@ -1,10 +1,10 @@
 from ...context import test_npts
-from pysces.mesh_generation.cubed_sphere import init_cube_topo
-from pysces.mesh_generation.mesh import init_element_corner_vert_redundancy
-from pysces.mesh_generation.mesh_definitions import TOP_FACE, BOTTOM_FACE, FRONT_FACE
-from pysces.mesh_generation.mesh_definitions import BACK_FACE, LEFT_FACE, RIGHT_FACE
-from pysces.mesh_generation.cubed_sphere import elem_id_fn
-from pysces.mesh_generation.mesh import mesh_to_cart_bilinear, init_spectral_grid_redundancy
+from src.mesh_generation.cubed_sphere import init_cube_topo
+from src.mesh_generation.mesh import init_element_corner_vert_redundancy
+from src.mesh_generation.mesh_definitions import TOP_FACE, BOTTOM_FACE, FRONT_FACE
+from src.mesh_generation.mesh_definitions import BACK_FACE, LEFT_FACE, RIGHT_FACE
+from src.mesh_generation.cubed_sphere import elem_id_fn
+from src.mesh_generation.mesh import mesh_to_cart_bilinear, init_spectral_grid_redundancy
 
 
 def test_gen_bilinear_grid_cs():

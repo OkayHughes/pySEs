@@ -1,18 +1,25 @@
-from pysces.mesh_generation.equiangular_metric import init_quasi_uniform_grid
+from src.mesh_generation.equiangular_metric import init_quasi_uniform_grid
 from ...reference_implementations.reference_global_assembly import (project_scalar_for_stub,
                                                                     assemble_scalar_for_pack,
                                                                     assemble_scalar_for_unpack,
                                                                     extract_fields_for,
                                                                     accumulate_fields_for,
                                                                     project_scalar_for_mpi)
-from pysces.mpi.global_communication import (_exchange_buffers_stub)
-from pysces.mpi.global_assembly import (extract_fields, accumulate_fields, _project_scalar_stub,
+from src.mpi.global_communication import (_exchange_buffers_stub)
+from src.mpi.global_assembly import (extract_fields, accumulate_fields, _project_scalar_stub,
                                         project_scalar_global)
-from pysces.mesh_generation.mesh import vert_red_flat_to_hierarchy
-from pysces.horizontal_grid import make_grid_mpi_ready
-from pysces.mesh_generation.periodic_plane import init_uniform_grid
-from pysces.mpi.processor_decomposition import init_decomp, elem_idx_global_to_proc_idx, global_to_local
-from pysces.config import device_unwrapper, np, use_wrapper, device_wrapper, mpi_size, mpi_rank
+from src.mesh_generation.mesh import vert_red_flat_to_hierarchy
+from src.operations_2d.horizontal_grid import make_grid_mpi_ready
+from src.mesh_generation.periodic_plane import init_uniform_grid
+from src.mpi.processor_decomposition import init_decomp, elem_idx_global_to_proc_idx, global_to_local
+from src._config import get_backend as _get_backend
+_be = _get_backend()
+device_unwrapper = _be.unwrap
+use_wrapper = _be.use_wrapper
+device_wrapper = _be.array
+mpi_size = _be.mpi_size
+mpi_rank = _be.mpi_rank
+import numpy as np
 from ...test_data.handmade_grids import init_test_grid, vert_redundancy_gll
 from ...context import test_npts
 from ...context import seed as global_seed

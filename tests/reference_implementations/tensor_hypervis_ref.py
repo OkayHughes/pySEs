@@ -1,4 +1,6 @@
-from pysces.config import np
+from src._config import get_backend as _get_backend
+_be = _get_backend()
+import numpy as np
 
 
 def tensor_hypervis_ref(met_inv, jac_inv, hypervis_scaling=3.2):

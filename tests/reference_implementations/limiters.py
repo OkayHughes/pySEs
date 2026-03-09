@@ -1,4 +1,6 @@
-from pysces.config import np
+from src._config import get_backend as _get_backend
+_be = _get_backend()
+import numpy as np
 
 def clip_and_sum_limiter_for(tracer_like_tend_in, mass_matrix_in, tracer_min_in, tracer_max_in, d_mass_in):
   tracer_like_tend = np.copy(tracer_like_tend_in)

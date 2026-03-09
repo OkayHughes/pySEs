@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>src.mesh_generation.periodic_plane module &#8212; pyses  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="src.mesh_generation.spectral module" href="src.mesh_generation.spectral.html" />
+    <link rel="prev" title="src.mesh_generation.mesh_io module" href="src.mesh_generation.mesh_io.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-src.mesh_generation.periodic_plane">
+<span id="src-mesh-generation-periodic-plane-module"></span><h1>src.mesh_generation.periodic_plane module<a class="headerlink" href="#module-src.mesh_generation.periodic_plane" title="Link to this heading">¶</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="src.mesh_generation.periodic_plane.init_periodic_plane">
+<span class="sig-prename descclassname"><span class="pre">src.mesh_generation.periodic_plane.</span></span><span class="sig-name descname"><span class="pre">init_periodic_plane</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ny</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">npt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">length_x</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">length_y</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.mesh_generation.periodic_plane.init_periodic_plane" title="Link to this definition">¶</a></dt>
+<dd><p>Generate grid topology for an axis-aligned
+regular grid on a doubly periodic plane.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>nx</strong><span class="classifier"><cite>int</cite></span></dt><dd><p>Number of grid cells in the horizontal direction</p>
+</dd>
+<dt><strong>ny</strong><span class="classifier"><cite>int</cite></span></dt><dd><p>Number of grid cells in the vertical direction</p>
+</dd>
+<dt><strong>npt</strong><span class="classifier"><cite>int</cite></span></dt><dd><p>Number of Gauss-Lobatto-Legendre points per dimension in reference element.</p>
+</dd>
+<dt><strong>length_x</strong><span class="classifier"><cite>float</cite>, default=2.0</span></dt><dd><p>Length of grid in the horizontal direction</p>
+</dd>
+<dt><strong>length_y</strong><span class="classifier"><cite>float</cite>, default=2.0</span></dt><dd><p>Length of grid in the vertical direction</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl>
+<dt><strong>physical_coords</strong><span class="classifier"><cite>Array[tuple[elem_idx, gll_idx, gll_idx, xy], Float]</cite></span></dt><dd><p>Position of GLL gridpoints in the plane.</p>
+</dd>
+<dt><strong>ref_to_planar</strong><span class="classifier"><cite>Array[tuple[elem_idx, gll_idx, gll_idx, xy, ab], Float]</cite></span></dt><dd><p>Jacobian of bilinear mapping from the reference element to cartesian space
+for the GLL mesh.</p>
+</dd>
+<dt><strong>vert_redundancy_gll</strong><span class="classifier"><cite>dict[elem_idx, dict[tuple(gll_idx, gll_idx),                                             set[tuple[elem_idx, gll_idx, gll_idx]]]]</cite></span></dt><dd><p><cite>dict[elem_idx][(gll_idx,gll_idx)]</cite> is a set
+of redundant DOFs on the global GLL grid.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>KeyError</dt><dd><p>when a key error</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.mesh_generation.periodic_plane.init_uniform_grid">
+<span class="sig-prename descclassname"><span class="pre">src.mesh_generation.periodic_plane.</span></span><span class="sig-name descname"><span class="pre">init_uniform_grid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ny</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">npt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">length_x</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">length_y</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wrapped</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calc_smooth_tensor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.mesh_generation.periodic_plane.init_uniform_grid" title="Link to this definition">¶</a></dt>
+<dd><p>Generate a uniform doubly periodic
+SpectralElementGrid on an axis-aligned cartesian plane.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>nx</strong><span class="classifier"><cite>int</cite></span></dt><dd><p>Number of grid cells in the horizontal direction</p>
+</dd>
+<dt><strong>ny</strong><span class="classifier"><cite>int</cite></span></dt><dd><p>Number of grid cells in the vertical direction</p>
+</dd>
+<dt><strong>npt</strong><span class="classifier"><cite>int</cite></span></dt><dd><p>Number of Gauss-Lobatto-Legendre points per dimension in reference element.</p>
+</dd>
+<dt><strong>length_x</strong><span class="classifier"><cite>float</cite>, default=2.0</span></dt><dd><p>Length of grid in the horizontal direction</p>
+</dd>
+<dt><strong>length_y</strong><span class="classifier"><cite>float</cite>, default=2.0</span></dt><dd><p>Length of grid in the vertical direction</p>
+</dd>
+<dt><strong>wrapped: `bool`, default=use_wrapper</strong></dt><dd><p>Flag that determines whether returned grid
+will use accelerator framework arrays
+or numpy arrays.</p>
+</dd>
+<dt><strong>Returns</strong></dt><dd></dd>
+<dt><strong>——-</strong></dt><dd></dd>
+<dt><strong>SpectralElementGrid</strong></dt><dd><p>Global spectral element grid.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.mesh_generation.periodic_plane.metric_terms_to_grid">
+<span class="sig-prename descclassname"><span class="pre">src.mesh_generation.periodic_plane.</span></span><span class="sig-name descname"><span class="pre">metric_terms_to_grid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">physical_coords</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gll_to_planar_jacobian</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vert_redundancy_gll</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">npt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calc_smooth_tensor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wrapped</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.mesh_generation.periodic_plane.metric_terms_to_grid" title="Link to this definition">¶</a></dt>
+<dd><blockquote>
+<div><p>Collate individual coordinate mappings into into global SpectralElementGrid
+on a periodic plane.</p>
+</div></blockquote>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>physical_coords</strong><span class="classifier"><cite>Array[tuple[elem_idx, gll_idx, gll_idx, phi_lambda], Float]</cite></span></dt><dd><p>Grid point positions in (x, y) coordinates,</p>
+</dd>
+<dt><strong>gll_to_planar_jacobian</strong><span class="classifier"><cite>Array[tuple[elem_idx, gll_idx, gll_idx, xy, ab]</cite></span></dt><dd><p>Jacobian of mapping from reference element onto plane.</p>
+</dd>
+<dt><strong>vert_redundancy_gll: `dict[elem_idx, dict[tuple[gll_idx, gll_idx], set[tuple(elem_idx, gll_idx, gll_idx)]]]`</strong></dt><dd><p>Gridpoint redundancy struct.</p>
+</dd>
+<dt><strong>npt: `int`</strong></dt><dd><p>Number of 1D gll points used in grid.</p>
+</dd>
+<dt><strong>wrapped: `bool`, default=use_wrapper</strong></dt><dd><p>Flag that determines whether returned grid
+will use accelerator framework arrays
+or numpy arrays.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>SpectralElementGrid</dt><dd><p>Global spectral element grid.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>See <cite>init_periodic_plane</cite> for how to initialize <cite>physical_coords</cite>,
+<cite>gll_to_planar_jacobian</cite>, and <cite>vert_redundancy_grid</cite>.</p>
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">pyses</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation_and_validation.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">How to run the model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_friendly_api.html">The pySEs public API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../anatomy_of_a_model_struct.html">How is the atmospheric state represented in pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">How are horizontal grids generated and read into pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">src</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="src.html">src package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="src.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="src.analytic_initialization.html">src.analytic_initialization package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.html">src.dynamical_cores package</a></li>
+<li class="toctree-l4 current"><a class="reference internal" href="src.mesh_generation.html">src.mesh_generation package</a><ul class="current">
+<li class="toctree-l5 current"><a class="reference internal" href="src.mesh_generation.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l6"><a class="reference internal" href="src.mesh_generation.bilinear_utils.html">src.mesh_generation.bilinear_utils module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.mesh_generation.cubed_sphere.html">src.mesh_generation.cubed_sphere module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.mesh_generation.element_local_metric.html">src.mesh_generation.element_local_metric module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.mesh_generation.equiangular_metric.html">src.mesh_generation.equiangular_metric module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.mesh_generation.mesh.html">src.mesh_generation.mesh module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.mesh_generation.mesh_definitions.html">src.mesh_generation.mesh_definitions module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.mesh_generation.mesh_io.html">src.mesh_generation.mesh_io module</a></li>
+<li class="toctree-l6 current"><a class="current reference internal" href="#">src.mesh_generation.periodic_plane module</a><ul>
+<li class="toctree-l7"><a class="reference internal" href="#src.mesh_generation.periodic_plane.init_periodic_plane"><code class="docutils literal notranslate"><span class="pre">init_periodic_plane()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.mesh_generation.periodic_plane.init_uniform_grid"><code class="docutils literal notranslate"><span class="pre">init_uniform_grid()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.mesh_generation.periodic_plane.metric_terms_to_grid"><code class="docutils literal notranslate"><span class="pre">metric_terms_to_grid()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="src.mesh_generation.spectral.html">src.mesh_generation.spectral module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.mesh_generation.spherical_coord_utils.html">src.mesh_generation.spherical_coord_utils module</a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="src.mesh_generation.html#module-src.mesh_generation">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="src.mpi.html">src.mpi package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.operations_2d.html">src.operations_2d package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.shallow_water_models.html">src.shallow_water_models package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.tracer_transport.html">src.tracer_transport package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="src.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="src.html#module-src">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">src</a><ul>
+  <li><a href="src.html">src package</a><ul>
+  <li><a href="src.mesh_generation.html">src.mesh_generation package</a><ul>
+      <li>Previous: <a href="src.mesh_generation.mesh_io.html" title="previous chapter">src.mesh_generation.mesh_io module</a></li>
+      <li>Next: <a href="src.mesh_generation.spectral.html" title="next chapter">src.mesh_generation.spectral module</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Owen K Hughes.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/api/src.mesh_generation.periodic_plane.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

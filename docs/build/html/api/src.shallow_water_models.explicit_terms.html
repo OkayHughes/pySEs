@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>src.shallow_water_models.explicit_terms module &#8212; pyses  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="src.shallow_water_models.galewsky_init module" href="src.shallow_water_models.galewsky_init.html" />
+    <link rel="prev" title="src.shallow_water_models.constants module" href="src.shallow_water_models.constants.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-src.shallow_water_models.explicit_terms">
+<span id="src-shallow-water-models-explicit-terms-module"></span><h1>src.shallow_water_models.explicit_terms module<a class="headerlink" href="#module-src.shallow_water_models.explicit_terms" title="Link to this heading">¶</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="src.shallow_water_models.explicit_terms.eval_explicit_terms">
+<span class="sig-prename descclassname"><span class="pre">src.shallow_water_models.explicit_terms.</span></span><span class="sig-name descname"><span class="pre">eval_explicit_terms</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.shallow_water_models.explicit_terms.eval_explicit_terms" title="Link to this definition">¶</a></dt>
+<dd><p>Calculate the explicit right-hand-side of the rotating shallow water equations on a sphere.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>state_in</strong><span class="classifier"><cite>ShallowWaterModelState</cite></span></dt><dd><p>the 1st param name <cite>first</cite></p>
+</dd>
+<dt><strong>grid</strong><span class="classifier"><cite>SpectralElementGrid</cite></span></dt><dd><p>Spectral element grid struct that contains coordinate and metric data.</p>
+</dd>
+<dt><strong>physics_config</strong><span class="classifier">dict[str, float]</span></dt><dd><p>Struct containing physical constants for the sphere on which simulation is performed.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl>
+<dt><strong>right_hand_side</strong><span class="classifier"><cite>ShallowWaterModelState</cite></span></dt><dd><p>The explicit time tendency, not scaled by ∆t.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>These solve the equations
+∂𝐮/∂t = −(ζ + f_α)𝐤×𝐮 − ∇(g(h+h_s) + (𝐮⋅𝐮)/2)
+∂h/∂t = -∇⋅(h𝐮),
+where the planet’s axis of rotation can be changed by setting
+f_α = 2Ω (−cos(λ)cos(ϕ)sin(α) + sin(ϕ)cos(alpha))</p>
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">pyses</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation_and_validation.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">How to run the model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_friendly_api.html">The pySEs public API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../anatomy_of_a_model_struct.html">How is the atmospheric state represented in pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">How are horizontal grids generated and read into pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">src</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="src.html">src package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="src.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="src.analytic_initialization.html">src.analytic_initialization package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.html">src.dynamical_cores package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.mesh_generation.html">src.mesh_generation package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.mpi.html">src.mpi package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.operations_2d.html">src.operations_2d package</a></li>
+<li class="toctree-l4 current"><a class="reference internal" href="src.shallow_water_models.html">src.shallow_water_models package</a><ul class="current">
+<li class="toctree-l5 current"><a class="reference internal" href="src.shallow_water_models.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l6"><a class="reference internal" href="src.shallow_water_models.constants.html">src.shallow_water_models.constants module</a></li>
+<li class="toctree-l6 current"><a class="current reference internal" href="#">src.shallow_water_models.explicit_terms module</a><ul>
+<li class="toctree-l7"><a class="reference internal" href="#src.shallow_water_models.explicit_terms.eval_explicit_terms"><code class="docutils literal notranslate"><span class="pre">eval_explicit_terms()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="src.shallow_water_models.galewsky_init.html">src.shallow_water_models.galewsky_init module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.shallow_water_models.hyperviscosity.html">src.shallow_water_models.hyperviscosity module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.shallow_water_models.model_state.html">src.shallow_water_models.model_state module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.shallow_water_models.run_shallow_water.html">src.shallow_water_models.run_shallow_water module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.shallow_water_models.time_stepping.html">src.shallow_water_models.time_stepping module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.shallow_water_models.tracers.html">src.shallow_water_models.tracers module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.shallow_water_models.williamson_init.html">src.shallow_water_models.williamson_init module</a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="src.shallow_water_models.html#module-src.shallow_water_models">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="src.tracer_transport.html">src.tracer_transport package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="src.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="src.html#module-src">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">src</a><ul>
+  <li><a href="src.html">src package</a><ul>
+  <li><a href="src.shallow_water_models.html">src.shallow_water_models package</a><ul>
+      <li>Previous: <a href="src.shallow_water_models.constants.html" title="previous chapter">src.shallow_water_models.constants module</a></li>
+      <li>Next: <a href="src.shallow_water_models.galewsky_init.html" title="next chapter">src.shallow_water_models.galewsky_init module</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Owen K Hughes.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/api/src.shallow_water_models.explicit_terms.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

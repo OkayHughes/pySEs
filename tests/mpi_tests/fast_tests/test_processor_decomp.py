@@ -1,5 +1,7 @@
-from pysces.config import np
-from pysces.mpi.processor_decomposition import (init_decomp,
+from src._config import get_backend as _get_backend
+_be = _get_backend()
+import numpy as np
+from src.mpi.processor_decomposition import (init_decomp,
                                                 sphere_coord_to_face_idx_pos,
                                                 init_mapping)
 from ...context import get_figdir

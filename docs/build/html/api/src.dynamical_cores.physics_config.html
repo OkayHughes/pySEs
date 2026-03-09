@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>src.dynamical_cores.physics_config module &#8212; pyses  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="src.dynamical_cores.physics_dynamics_coupling module" href="src.dynamical_cores.physics_dynamics_coupling.html" />
+    <link rel="prev" title="src.dynamical_cores.operators_3d module" href="src.dynamical_cores.operators_3d.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-src.dynamical_cores.physics_config">
+<span id="src-dynamical-cores-physics-config-module"></span><h1>src.dynamical_cores.physics_config module<a class="headerlink" href="#module-src.dynamical_cores.physics_config" title="Link to this heading">¶</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.physics_config.cp_base">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.physics_config.</span></span><span class="sig-name descname"><span class="pre">cp_base</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dof</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.physics_config.cp_base" title="Link to this definition">¶</a></dt>
+<dd><p>Compute the molar heat capacity at constant pressure for an ideal gas.</p>
+<p>Uses the equipartition theorem: <code class="docutils literal notranslate"><span class="pre">cp</span> <span class="pre">=</span> <span class="pre">R</span> <span class="pre">*</span> <span class="pre">(1</span> <span class="pre">+</span> <span class="pre">f/2)</span></code> where <code class="docutils literal notranslate"><span class="pre">f</span></code> is the
+number of active degrees of freedom for a molecule with <code class="docutils literal notranslate"><span class="pre">dof</span></code> atoms.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>dof</strong><span class="classifier">int</span></dt><dd><p>Number of atoms in the molecule (1, 2, or 3); used to look up the
+degrees of freedom from <code class="docutils literal notranslate"><span class="pre">degrees_of_freedom_igl</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>cp_mol</strong><span class="classifier">float</span></dt><dd><p>Molar heat capacity at constant pressure (J mol^-1 K^-1).</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.physics_config.init_physics_config">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.physics_config.</span></span><span class="sig-name descname"><span class="pre">init_physics_config</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Rgas</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">287.0423113650487</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">radius_earth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">6371000.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">angular_freq_earth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">7.292e-05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gravity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">9.81</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p0</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100000.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1004.64</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cp_water_vapor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1810.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">R_water_vapor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">461.5046398201599</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.6219705862045155</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dry_air_species</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">['N2',</span> <span class="pre">'O2']</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.physics_config.init_physics_config" title="Link to this definition">¶</a></dt>
+<dd><p>Build the physics configuration dict for a 3-D atmospheric model.</p>
+<p>For CAM-SE models the dict is extended with per-species gas constants and
+heat capacities for the dry-air mixture and for water vapour.  For
+variable-kappa models the dry-air species are treated individually using
+ideal-gas theory; otherwise a single bulk dry-air entry is used.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier; selects which sub-dicts are populated.</p>
+</dd>
+<dt><strong>Rgas</strong><span class="classifier">float, optional</span></dt><dd><p>Specific gas constant for dry air (J kg^-1 K^-1); default derived from
+universal gas constant and the molecular weight of dry air (~287 J kg^-1 K^-1).</p>
+</dd>
+<dt><strong>radius_earth</strong><span class="classifier">float, optional</span></dt><dd><p>Mean Earth radius in metres (default: 6371e3).</p>
+</dd>
+<dt><strong>angular_freq_earth</strong><span class="classifier">float, optional</span></dt><dd><p>Earth’s rotation rate in rad s^-1 (default: 7.292e-5).</p>
+</dd>
+<dt><strong>gravity</strong><span class="classifier">float, optional</span></dt><dd><p>Surface gravitational acceleration in m s^-2 (default: 9.81).</p>
+</dd>
+<dt><strong>p0</strong><span class="classifier">float, optional</span></dt><dd><p>Reference pressure in Pa (default: 1e5).</p>
+</dd>
+<dt><strong>cp</strong><span class="classifier">float, optional</span></dt><dd><p>Specific heat capacity of dry air at constant pressure in J kg^-1 K^-1
+(default: 1004.64).</p>
+</dd>
+<dt><strong>cp_water_vapor</strong><span class="classifier">float, optional</span></dt><dd><p>Specific heat capacity of water vapour at constant pressure in
+J kg^-1 K^-1 (default: 1810).</p>
+</dd>
+<dt><strong>R_water_vapor</strong><span class="classifier">float, optional</span></dt><dd><p>Specific gas constant for water vapour (J kg^-1 K^-1).</p>
+</dd>
+<dt><strong>epsilon</strong><span class="classifier">float, optional</span></dt><dd><p>Ratio of molecular weight of water vapour to dry air (~0.622).</p>
+</dd>
+<dt><strong>dry_air_species</strong><span class="classifier">list[str], optional</span></dt><dd><p>Species names for the dry-air mixture (default: <code class="docutils literal notranslate"><span class="pre">[&quot;N2&quot;,</span> <span class="pre">&quot;O2&quot;]</span></code>);
+used only for variable-kappa CAM-SE models.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>physics_config</strong><span class="classifier">dict</span></dt><dd><p>Dict containing <code class="docutils literal notranslate"><span class="pre">&quot;gravity&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;radius_earth&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;angular_freq_earth&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;p0&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;epsilon&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;Rgas&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;cp&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;moisture_species_Rgas&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;moisture_species_cp&quot;</span></code>,
+and (for CAM-SE) <code class="docutils literal notranslate"><span class="pre">&quot;dry_air_species_Rgas&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;dry_air_species_cp&quot;</span></code>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">pyses</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation_and_validation.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">How to run the model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_friendly_api.html">The pySEs public API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../anatomy_of_a_model_struct.html">How is the atmospheric state represented in pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">How are horizontal grids generated and read into pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">src</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="src.html">src package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="src.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="src.analytic_initialization.html">src.analytic_initialization package</a></li>
+<li class="toctree-l4 current"><a class="reference internal" href="src.dynamical_cores.html">src.dynamical_cores package</a><ul class="current">
+<li class="toctree-l5"><a class="reference internal" href="src.dynamical_cores.html#subpackages">Subpackages</a></li>
+<li class="toctree-l5 current"><a class="reference internal" href="src.dynamical_cores.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.finite_volume_grid.html">src.dynamical_cores.finite_volume_grid module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.hyperviscosity.html">src.dynamical_cores.hyperviscosity module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.initialization.html">src.dynamical_cores.initialization module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.mass_coordinate.html">src.dynamical_cores.mass_coordinate module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.model_config.html">src.dynamical_cores.model_config module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.model_info.html">src.dynamical_cores.model_info module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.model_state.html">src.dynamical_cores.model_state module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.operators_3d.html">src.dynamical_cores.operators_3d module</a></li>
+<li class="toctree-l6 current"><a class="current reference internal" href="#">src.dynamical_cores.physics_config module</a><ul>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.physics_config.cp_base"><code class="docutils literal notranslate"><span class="pre">cp_base()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.physics_config.init_physics_config"><code class="docutils literal notranslate"><span class="pre">init_physics_config()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.physics_dynamics_coupling.html">src.dynamical_cores.physics_dynamics_coupling module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.run_dycore.html">src.dynamical_cores.run_dycore module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.time_step.html">src.dynamical_cores.time_step module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.time_stepping.html">src.dynamical_cores.time_stepping module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.utils_3d.html">src.dynamical_cores.utils_3d module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.vertical_remap.html">src.dynamical_cores.vertical_remap module</a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="src.dynamical_cores.html#module-src.dynamical_cores">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="src.mesh_generation.html">src.mesh_generation package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.mpi.html">src.mpi package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.operations_2d.html">src.operations_2d package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.shallow_water_models.html">src.shallow_water_models package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.tracer_transport.html">src.tracer_transport package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="src.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="src.html#module-src">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">src</a><ul>
+  <li><a href="src.html">src package</a><ul>
+  <li><a href="src.dynamical_cores.html">src.dynamical_cores package</a><ul>
+      <li>Previous: <a href="src.dynamical_cores.operators_3d.html" title="previous chapter">src.dynamical_cores.operators_3d module</a></li>
+      <li>Next: <a href="src.dynamical_cores.physics_dynamics_coupling.html" title="next chapter">src.dynamical_cores.physics_dynamics_coupling module</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Owen K Hughes.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/api/src.dynamical_cores.physics_config.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

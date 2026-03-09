@@ -1,7 +1,10 @@
-from pysces.config import jnp, np
-from pysces.operations_2d.limiters import clip_and_sum_limiter, full_limiter
+from src._config import get_backend as _get_backend
+_be = _get_backend()
+jnp = _be.np
+import numpy as np
+from src.operations_2d.limiters import clip_and_sum_limiter, full_limiter
 from ...reference_implementations.limiters import clip_and_sum_limiter_for, full_limiter_for
-from pysces.spectral import init_spectral
+from src.mesh_generation.spectral import init_spectral
 
 def test_conservation_bounds():
   npt = 4

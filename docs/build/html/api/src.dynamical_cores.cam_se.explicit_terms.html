@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>src.dynamical_cores.cam_se.explicit_terms module &#8212; pyses  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="src.dynamical_cores.cam_se.se_state module" href="src.dynamical_cores.cam_se.se_state.html" />
+    <link rel="prev" title="src.dynamical_cores.cam_se package" href="src.dynamical_cores.cam_se.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-src.dynamical_cores.cam_se.explicit_terms">
+<span id="src-dynamical-cores-cam-se-explicit-terms-module"></span><h1>src.dynamical_cores.cam_se.explicit_terms module<a class="headerlink" href="#module-src.dynamical_cores.cam_se.explicit_terms" title="Link to this heading">¶</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.cam_se.explicit_terms.eval_d_mass_divergence_term">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.cam_se.explicit_terms.</span></span><span class="sig-name descname"><span class="pre">eval_d_mass_divergence_term</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">common_variables</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.cam_se.explicit_terms.eval_d_mass_divergence_term" title="Link to this definition">¶</a></dt>
+<dd><p>Compute the horizontal divergence tendency for the dry-air layer mass.</p>
+<p>Evaluates <code class="docutils literal notranslate"><span class="pre">-div(d_mass</span> <span class="pre">*</span> <span class="pre">u)</span></code> using the spectral-element divergence
+operator applied to the horizontal mass flux.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>common_variables</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Shared intermediate quantities from <a class="reference internal" href="#src.dynamical_cores.cam_se.explicit_terms.init_common_variables" title="src.dynamical_cores.cam_se.explicit_terms.init_common_variables"><code class="xref py py-func docutils literal notranslate"><span class="pre">init_common_variables()</span></code></a>; must
+contain <code class="docutils literal notranslate"><span class="pre">&quot;d_mass&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;horizontal_wind&quot;</span></code>.</p>
+</dd>
+<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal grid struct.</p>
+</dd>
+<dt><strong>physics_config</strong><span class="classifier">dict</span></dt><dd><p>Physics configuration dict.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>d_mass_tend</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Layer-mass tendency <code class="docutils literal notranslate"><span class="pre">-div(d_mass</span> <span class="pre">*</span> <span class="pre">u)</span></code> (Pa s^-1).</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.cam_se.explicit_terms.eval_energy_gradient_term">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.cam_se.explicit_terms.</span></span><span class="sig-name descname"><span class="pre">eval_energy_gradient_term</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">common_variables</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.cam_se.explicit_terms.eval_energy_gradient_term" title="Link to this definition">¶</a></dt>
+<dd><p>Compute the gradient of total mechanical energy for the wind tendency.</p>
+<p>Evaluates <code class="docutils literal notranslate"><span class="pre">-grad(KE</span> <span class="pre">+</span> <span class="pre">phi)</span></code> where <code class="docutils literal notranslate"><span class="pre">KE</span> <span class="pre">=</span> <span class="pre">|u|^2</span> <span class="pre">/</span> <span class="pre">2</span></code> is the horizontal
+kinetic energy and <code class="docutils literal notranslate"><span class="pre">phi</span></code> is the geopotential.  Used in the vector-invariant
+momentum equation together with <a class="reference internal" href="#src.dynamical_cores.cam_se.explicit_terms.eval_vorticity_term" title="src.dynamical_cores.cam_se.explicit_terms.eval_vorticity_term"><code class="xref py py-func docutils literal notranslate"><span class="pre">eval_vorticity_term()</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>common_variables</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Shared intermediate quantities from <a class="reference internal" href="#src.dynamical_cores.cam_se.explicit_terms.init_common_variables" title="src.dynamical_cores.cam_se.explicit_terms.init_common_variables"><code class="xref py py-func docutils literal notranslate"><span class="pre">init_common_variables()</span></code></a>; must
+contain <code class="docutils literal notranslate"><span class="pre">&quot;horizontal_wind&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;phi&quot;</span></code>.</p>
+</dd>
+<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal grid struct.</p>
+</dd>
+<dt><strong>physics_config</strong><span class="classifier">dict</span></dt><dd><p>Physics configuration dict.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>energy_grad</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, 2], Float]</span></dt><dd><p>Wind tendency <code class="docutils literal notranslate"><span class="pre">-grad(KE</span> <span class="pre">+</span> <span class="pre">phi)</span></code> (m s^-2).</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.cam_se.explicit_terms.eval_explicit_tendency">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.cam_se.explicit_terms.</span></span><span class="sig-name descname"><span class="pre">eval_explicit_tendency</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dynamics</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">static_forcing</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">moist_species</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dry_air_species</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pgf_formulation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">pressure_gradient_options.corrected_grad_exner</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.cam_se.explicit_terms.eval_explicit_tendency" title="Link to this definition">¶</a></dt>
+<dd><p>Assemble the full CAM-SE adiabatic explicit tendency.</p>
+<p>Calls <a class="reference internal" href="#src.dynamical_cores.cam_se.explicit_terms.init_common_variables" title="src.dynamical_cores.cam_se.explicit_terms.init_common_variables"><code class="xref py py-func docutils literal notranslate"><span class="pre">init_common_variables()</span></code></a> to pre-compute shared quantities, then
+sums the individual tendency terms for horizontal wind, temperature, and
+dry-air layer mass.  Also returns the tracer consistency mass flux for
+coupling with tracer advection.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>dynamics</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Dynamics state dict containing <code class="docutils literal notranslate"><span class="pre">&quot;T&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;horizontal_wind&quot;</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">&quot;d_mass&quot;</span></code>.</p>
+</dd>
+<dt><strong>static_forcing</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Static forcing struct from <code class="xref py py-func docutils literal notranslate"><span class="pre">init_static_forcing()</span></code>.</p>
+</dd>
+<dt><strong>moist_species</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Moisture mixing-ratio fields keyed by species name.</p>
+</dd>
+<dt><strong>dry_air_species</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Dry-air species mass-fraction fields keyed by species name.</p>
+</dd>
+<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal grid struct.</p>
+</dd>
+<dt><strong>v_grid</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Vertical grid struct from <code class="xref py py-func docutils literal notranslate"><span class="pre">init_vertical_grid()</span></code>.</p>
+</dd>
+<dt><strong>physics_config</strong><span class="classifier">dict</span></dt><dd><p>Physics configuration dict.</p>
+</dd>
+<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier; static JIT argument.</p>
+</dd>
+<dt><strong>pgf_formulation</strong><span class="classifier">pressure_gradient_options, optional</span></dt><dd><p>Pressure gradient force formulation; defaults to
+<code class="docutils literal notranslate"><span class="pre">corrected_grad_exner</span></code>.  Static JIT argument.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>dynamics_tend</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Dynamics tendency dict (same structure as <code class="docutils literal notranslate"><span class="pre">dynamics</span></code>) with tendencies
+for <code class="docutils literal notranslate"><span class="pre">&quot;horizontal_wind&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;T&quot;</span></code>, and <code class="docutils literal notranslate"><span class="pre">&quot;d_mass&quot;</span></code>.</p>
+</dd>
+<dt><strong>tracer_consistency</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Tracer consistency struct from <code class="xref py py-func docutils literal notranslate"><span class="pre">wrap_tracer_consist_dynamics()</span></code>
+containing the mass-weighted wind flux <code class="docutils literal notranslate"><span class="pre">u_d_mass</span></code>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.cam_se.explicit_terms.eval_pressure_gradient_force_term">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.cam_se.explicit_terms.</span></span><span class="sig-name descname"><span class="pre">eval_pressure_gradient_force_term</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">common_variables</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pgf_formulation</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.cam_se.explicit_terms.eval_pressure_gradient_force_term" title="Link to this definition">¶</a></dt>
+<dd><p>Compute the pressure gradient force for the wind tendency.</p>
+<p>Supports three formulations selected by <code class="docutils literal notranslate"><span class="pre">pgf_formulation</span></code>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">basic</span></code> — <code class="docutils literal notranslate"><span class="pre">-alpha</span> <span class="pre">*</span> <span class="pre">grad(p)</span></code> where <code class="docutils literal notranslate"><span class="pre">alpha</span> <span class="pre">=</span> <span class="pre">1/rho</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">grad_exner</span></code> — <code class="docutils literal notranslate"><span class="pre">-cp_dry</span> <span class="pre">*</span> <span class="pre">theta_v</span> <span class="pre">*</span> <span class="pre">grad(pi)</span></code> using the Exner function.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">corrected_grad_exner</span></code> — Exner formulation with the Simmons &amp; Jiabin (1991)
+reference-profile correction near sigma levels; falls back to <code class="docutils literal notranslate"><span class="pre">basic</span></code> in
+purely pressure-based levels where <code class="docutils literal notranslate"><span class="pre">hybrid_b_m</span> <span class="pre">&lt;=</span> <span class="pre">1e-9</span></code>.</p></li>
+</ul>
+<p>The reference-profile correction uses <code class="docutils literal notranslate"><span class="pre">T_ref</span> <span class="pre">=</span> <span class="pre">288</span> <span class="pre">K</span></code> and a standard
+tropospheric lapse rate of 0.0065 K m^-1.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>common_variables</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Shared intermediate quantities from <a class="reference internal" href="#src.dynamical_cores.cam_se.explicit_terms.init_common_variables" title="src.dynamical_cores.cam_se.explicit_terms.init_common_variables"><code class="xref py py-func docutils literal notranslate"><span class="pre">init_common_variables()</span></code></a>; must
+contain <code class="docutils literal notranslate"><span class="pre">&quot;cp_dry&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;R_dry&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;pressure_midlevel&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;virtual_temperature&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;density_inv&quot;</span></code>, and <code class="docutils literal notranslate"><span class="pre">&quot;grad_pressure&quot;</span></code>.</p>
+</dd>
+<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal grid struct.</p>
+</dd>
+<dt><strong>v_grid</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Vertical grid struct from <code class="xref py py-func docutils literal notranslate"><span class="pre">init_vertical_grid()</span></code>; must contain
+<code class="docutils literal notranslate"><span class="pre">&quot;hybrid_b_m&quot;</span></code> for the corrected formulation.</p>
+</dd>
+<dt><strong>physics_config</strong><span class="classifier">dict</span></dt><dd><p>Physics configuration dict; must contain <code class="docutils literal notranslate"><span class="pre">&quot;cp&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;gravity&quot;</span></code>,
+and <code class="docutils literal notranslate"><span class="pre">&quot;p0&quot;</span></code>.</p>
+</dd>
+<dt><strong>pgf_formulation</strong><span class="classifier">pressure_gradient_options</span></dt><dd><p>Enum selecting the pressure gradient formulation; static JIT argument.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>pgf_tend</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, 2], Float]</span></dt><dd><p>Pressure gradient force wind tendency (m s^-2).</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.cam_se.explicit_terms.eval_temperature_horiz_advection_term">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.cam_se.explicit_terms.</span></span><span class="sig-name descname"><span class="pre">eval_temperature_horiz_advection_term</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">common_variables</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.cam_se.explicit_terms.eval_temperature_horiz_advection_term" title="Link to this definition">¶</a></dt>
+<dd><p>Compute the horizontal advection contribution to the temperature tendency.</p>
+<p>Evaluates <code class="docutils literal notranslate"><span class="pre">-u</span> <span class="pre">·</span> <span class="pre">grad(T)</span></code> using the horizontal wind and the spectral-element
+gradient of temperature.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>common_variables</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Shared intermediate quantities from <a class="reference internal" href="#src.dynamical_cores.cam_se.explicit_terms.init_common_variables" title="src.dynamical_cores.cam_se.explicit_terms.init_common_variables"><code class="xref py py-func docutils literal notranslate"><span class="pre">init_common_variables()</span></code></a>; must
+contain <code class="docutils literal notranslate"><span class="pre">&quot;temperature&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;horizontal_wind&quot;</span></code>.</p>
+</dd>
+<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal grid struct.</p>
+</dd>
+<dt><strong>physics_config</strong><span class="classifier">dict</span></dt><dd><p>Physics configuration dict.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>horiz_advection</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Horizontal temperature advection tendency <code class="docutils literal notranslate"><span class="pre">-u</span> <span class="pre">·</span> <span class="pre">grad(T)</span></code> (K s^-1).</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.cam_se.explicit_terms.eval_temperature_vertical_advection_term">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.cam_se.explicit_terms.</span></span><span class="sig-name descname"><span class="pre">eval_temperature_vertical_advection_term</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">common_variables</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.cam_se.explicit_terms.eval_temperature_vertical_advection_term" title="Link to this definition">¶</a></dt>
+<dd><p>Compute the adiabatic heating contribution to the temperature tendency.</p>
+<p>Estimates the vertical pressure velocity <code class="docutils literal notranslate"><span class="pre">omega</span> <span class="pre">=</span> <span class="pre">dp/dt</span></code> from horizontal
+mass-flux divergence and horizontal pressure advection, then converts to
+a temperature tendency via the ideal-gas adiabatic heating relation:
+<code class="docutils literal notranslate"><span class="pre">dT/dt|_adiab</span> <span class="pre">=</span> <span class="pre">(1</span> <span class="pre">/</span> <span class="pre">(rho</span> <span class="pre">*</span> <span class="pre">cp))</span> <span class="pre">*</span> <span class="pre">omega</span></code>.</p>
+<p>The vertical pressure velocity is approximated as:
+<code class="docutils literal notranslate"><span class="pre">omega</span> <span class="pre">≈</span> <span class="pre">-cumsum(div(dp</span> <span class="pre">*</span> <span class="pre">u))</span> <span class="pre">+</span> <span class="pre">0.5</span> <span class="pre">*</span> <span class="pre">div(dp</span> <span class="pre">*</span> <span class="pre">u)</span> <span class="pre">+</span> <span class="pre">u</span> <span class="pre">·</span> <span class="pre">grad(p)</span></code></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>common_variables</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Shared intermediate quantities from <a class="reference internal" href="#src.dynamical_cores.cam_se.explicit_terms.init_common_variables" title="src.dynamical_cores.cam_se.explicit_terms.init_common_variables"><code class="xref py py-func docutils literal notranslate"><span class="pre">init_common_variables()</span></code></a>; must
+contain <code class="docutils literal notranslate"><span class="pre">&quot;horizontal_wind&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;cp&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;d_pressure&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;grad_pressure&quot;</span></code>, and <code class="docutils literal notranslate"><span class="pre">&quot;density_inv&quot;</span></code>.</p>
+</dd>
+<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal grid struct.</p>
+</dd>
+<dt><strong>physics_config</strong><span class="classifier">dict</span></dt><dd><p>Physics configuration dict.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>adiab_heating</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Adiabatic temperature tendency <code class="docutils literal notranslate"><span class="pre">omega</span> <span class="pre">/</span> <span class="pre">(rho</span> <span class="pre">*</span> <span class="pre">cp)</span></code> (K s^-1).</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.cam_se.explicit_terms.eval_tracer_consistency_term">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.cam_se.explicit_terms.</span></span><span class="sig-name descname"><span class="pre">eval_tracer_consistency_term</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">common_variables</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.cam_se.explicit_terms.eval_tracer_consistency_term" title="Link to this definition">¶</a></dt>
+<dd><p>Compute the mass-weighted wind flux for tracer consistency.</p>
+<p>Returns the horizontal mass flux <code class="docutils literal notranslate"><span class="pre">d_mass</span> <span class="pre">*</span> <span class="pre">u</span></code> used to keep tracer
+advection consistent with the dynamics layer-mass tendency.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>common_variables</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Shared intermediate quantities from <a class="reference internal" href="#src.dynamical_cores.cam_se.explicit_terms.init_common_variables" title="src.dynamical_cores.cam_se.explicit_terms.init_common_variables"><code class="xref py py-func docutils literal notranslate"><span class="pre">init_common_variables()</span></code></a>; must
+contain <code class="docutils literal notranslate"><span class="pre">&quot;d_mass&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;horizontal_wind&quot;</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>d_mass_u</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, 2], Float]</span></dt><dd><p>Horizontal mass flux <code class="docutils literal notranslate"><span class="pre">d_mass</span> <span class="pre">*</span> <span class="pre">u</span></code> (Pa m s^-1).</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.cam_se.explicit_terms.eval_vorticity_term">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.cam_se.explicit_terms.</span></span><span class="sig-name descname"><span class="pre">eval_vorticity_term</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">common_variables</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.cam_se.explicit_terms.eval_vorticity_term" title="Link to this definition">¶</a></dt>
+<dd><p>Compute the absolute-vorticity rotation term for the wind tendency.</p>
+<p>Evaluates <code class="docutils literal notranslate"><span class="pre">(f</span> <span class="pre">+</span> <span class="pre">zeta)</span> <span class="pre">*</span> <span class="pre">u_perp</span></code> in the vector-invariant form of the
+momentum equation, where <code class="docutils literal notranslate"><span class="pre">zeta</span></code> is the relative vorticity and <code class="docutils literal notranslate"><span class="pre">u_perp</span></code>
+rotates the wind 90 degrees: <code class="docutils literal notranslate"><span class="pre">u_perp</span> <span class="pre">=</span> <span class="pre">(v,</span> <span class="pre">-u)</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>common_variables</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Shared intermediate quantities from <a class="reference internal" href="#src.dynamical_cores.cam_se.explicit_terms.init_common_variables" title="src.dynamical_cores.cam_se.explicit_terms.init_common_variables"><code class="xref py py-func docutils literal notranslate"><span class="pre">init_common_variables()</span></code></a>; must
+contain <code class="docutils literal notranslate"><span class="pre">&quot;horizontal_wind&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;coriolis_param&quot;</span></code>.</p>
+</dd>
+<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal grid struct.</p>
+</dd>
+<dt><strong>physics_config</strong><span class="classifier">dict</span></dt><dd><p>Physics configuration dict.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>vorticity_tend</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, 2], Float]</span></dt><dd><p>Wind tendency <code class="docutils literal notranslate"><span class="pre">(f</span> <span class="pre">+</span> <span class="pre">zeta)</span> <span class="pre">*</span> <span class="pre">u_perp</span></code> (m s^-2).</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.cam_se.explicit_terms.init_common_variables">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.cam_se.explicit_terms.</span></span><span class="sig-name descname"><span class="pre">init_common_variables</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dynamics</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">static_forcing</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">moisture_species</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dry_air_species</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.cam_se.explicit_terms.init_common_variables" title="Link to this definition">¶</a></dt>
+<dd><p>Pre-compute intermediate quantities shared across the CAM-SE adiabatic tendency terms.</p>
+<p>Derives effective gas constants, heat capacities, virtual temperature, mid-level
+and interface pressures, geopotential, and the inverse density from the prognostic
+state and tracer fields.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>dynamics</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Dynamics state dict containing <code class="docutils literal notranslate"><span class="pre">&quot;T&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;horizontal_wind&quot;</span></code>, and <code class="docutils literal notranslate"><span class="pre">&quot;d_mass&quot;</span></code>.</p>
+</dd>
+<dt><strong>static_forcing</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Static forcing struct from <code class="xref py py-func docutils literal notranslate"><span class="pre">init_static_forcing()</span></code>; must contain
+<code class="docutils literal notranslate"><span class="pre">&quot;phi_surf&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;coriolis_param&quot;</span></code>.</p>
+</dd>
+<dt><strong>moisture_species</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Moisture mixing-ratio fields (kg moisture / kg dry air) keyed by species name.</p>
+</dd>
+<dt><strong>dry_air_species</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Dry-air species mass-fraction fields keyed by species name.</p>
+</dd>
+<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal grid struct.</p>
+</dd>
+<dt><strong>v_grid</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Vertical grid struct from <code class="xref py py-func docutils literal notranslate"><span class="pre">init_vertical_grid()</span></code>; must contain
+<code class="docutils literal notranslate"><span class="pre">&quot;hybrid_a_i&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;reference_surface_mass&quot;</span></code>.</p>
+</dd>
+<dt><strong>physics_config</strong><span class="classifier">dict</span></dt><dd><p>Physics configuration dict.</p>
+</dd>
+<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier; static JIT argument.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>common_variables</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Dict containing the following keys:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;horizontal_wind&quot;</span></code> — wind vector <code class="docutils literal notranslate"><span class="pre">(u,</span> <span class="pre">v)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;temperature&quot;</span></code> — temperature (K)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;phi&quot;</span></code> — hydrostatically balanced geopotential (m^2 s^-2)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;d_mass&quot;</span></code> — dry-air layer mass (Pa)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;d_pressure&quot;</span></code> — moist layer pressure thickness (Pa)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;virtual_temperature&quot;</span></code> — virtual temperature (K)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;cp&quot;</span></code> — effective moist heat capacity (J kg^-1 K^-1)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;cp_dry&quot;</span></code> — dry-air heat capacity (J kg^-1 K^-1)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;R_dry&quot;</span></code> — effective dry-air gas constant (J kg^-1 K^-1)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;grad_pressure&quot;</span></code> — horizontal gradient of mid-level pressure</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;density_inv&quot;</span></code> — specific volume <code class="docutils literal notranslate"><span class="pre">R_dry</span> <span class="pre">*</span> <span class="pre">T_v</span> <span class="pre">/</span> <span class="pre">p</span></code> (m^3 kg^-1)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;pressure_midlevel&quot;</span></code> — mid-level pressure (Pa)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;phi_surf&quot;</span></code> — surface geopotential (m^2 s^-2)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;coriolis_param&quot;</span></code> — Coriolis parameter (s^-1)</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="src.dynamical_cores.cam_se.explicit_terms.pressure_gradient_options">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.cam_se.explicit_terms.</span></span><span class="sig-name descname"><span class="pre">pressure_gradient_options</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.cam_se.explicit_terms.pressure_gradient_options" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Enum</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.dynamical_cores.cam_se.explicit_terms.pressure_gradient_options.basic">
+<span class="sig-name descname"><span class="pre">basic</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></span><a class="headerlink" href="#src.dynamical_cores.cam_se.explicit_terms.pressure_gradient_options.basic" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.dynamical_cores.cam_se.explicit_terms.pressure_gradient_options.corrected_grad_exner">
+<span class="sig-name descname"><span class="pre">corrected_grad_exner</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">3</span></span><a class="headerlink" href="#src.dynamical_cores.cam_se.explicit_terms.pressure_gradient_options.corrected_grad_exner" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="src.dynamical_cores.cam_se.explicit_terms.pressure_gradient_options.grad_exner">
+<span class="sig-name descname"><span class="pre">grad_exner</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></span><a class="headerlink" href="#src.dynamical_cores.cam_se.explicit_terms.pressure_gradient_options.grad_exner" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">pyses</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation_and_validation.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">How to run the model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_friendly_api.html">The pySEs public API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../anatomy_of_a_model_struct.html">How is the atmospheric state represented in pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">How are horizontal grids generated and read into pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">src</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="src.html">src package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="src.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="src.analytic_initialization.html">src.analytic_initialization package</a></li>
+<li class="toctree-l4 current"><a class="reference internal" href="src.dynamical_cores.html">src.dynamical_cores package</a><ul class="current">
+<li class="toctree-l5 current"><a class="reference internal" href="src.dynamical_cores.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l6 current"><a class="reference internal" href="src.dynamical_cores.cam_se.html">src.dynamical_cores.cam_se package</a><ul class="current">
+<li class="toctree-l7 current"><a class="reference internal" href="src.dynamical_cores.cam_se.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l8 current"><a class="current reference internal" href="#">src.dynamical_cores.cam_se.explicit_terms module</a><ul>
+<li class="toctree-l9"><a class="reference internal" href="#src.dynamical_cores.cam_se.explicit_terms.eval_d_mass_divergence_term"><code class="docutils literal notranslate"><span class="pre">eval_d_mass_divergence_term()</span></code></a></li>
+<li class="toctree-l9"><a class="reference internal" href="#src.dynamical_cores.cam_se.explicit_terms.eval_energy_gradient_term"><code class="docutils literal notranslate"><span class="pre">eval_energy_gradient_term()</span></code></a></li>
+<li class="toctree-l9"><a class="reference internal" href="#src.dynamical_cores.cam_se.explicit_terms.eval_explicit_tendency"><code class="docutils literal notranslate"><span class="pre">eval_explicit_tendency()</span></code></a></li>
+<li class="toctree-l9"><a class="reference internal" href="#src.dynamical_cores.cam_se.explicit_terms.eval_pressure_gradient_force_term"><code class="docutils literal notranslate"><span class="pre">eval_pressure_gradient_force_term()</span></code></a></li>
+<li class="toctree-l9"><a class="reference internal" href="#src.dynamical_cores.cam_se.explicit_terms.eval_temperature_horiz_advection_term"><code class="docutils literal notranslate"><span class="pre">eval_temperature_horiz_advection_term()</span></code></a></li>
+<li class="toctree-l9"><a class="reference internal" href="#src.dynamical_cores.cam_se.explicit_terms.eval_temperature_vertical_advection_term"><code class="docutils literal notranslate"><span class="pre">eval_temperature_vertical_advection_term()</span></code></a></li>
+<li class="toctree-l9"><a class="reference internal" href="#src.dynamical_cores.cam_se.explicit_terms.eval_tracer_consistency_term"><code class="docutils literal notranslate"><span class="pre">eval_tracer_consistency_term()</span></code></a></li>
+<li class="toctree-l9"><a class="reference internal" href="#src.dynamical_cores.cam_se.explicit_terms.eval_vorticity_term"><code class="docutils literal notranslate"><span class="pre">eval_vorticity_term()</span></code></a></li>
+<li class="toctree-l9"><a class="reference internal" href="#src.dynamical_cores.cam_se.explicit_terms.init_common_variables"><code class="docutils literal notranslate"><span class="pre">init_common_variables()</span></code></a></li>
+<li class="toctree-l9"><a class="reference internal" href="#src.dynamical_cores.cam_se.explicit_terms.pressure_gradient_options"><code class="docutils literal notranslate"><span class="pre">pressure_gradient_options</span></code></a><ul>
+<li class="toctree-l10"><a class="reference internal" href="#src.dynamical_cores.cam_se.explicit_terms.pressure_gradient_options.basic"><code class="docutils literal notranslate"><span class="pre">pressure_gradient_options.basic</span></code></a></li>
+<li class="toctree-l10"><a class="reference internal" href="#src.dynamical_cores.cam_se.explicit_terms.pressure_gradient_options.corrected_grad_exner"><code class="docutils literal notranslate"><span class="pre">pressure_gradient_options.corrected_grad_exner</span></code></a></li>
+<li class="toctree-l10"><a class="reference internal" href="#src.dynamical_cores.cam_se.explicit_terms.pressure_gradient_options.grad_exner"><code class="docutils literal notranslate"><span class="pre">pressure_gradient_options.grad_exner</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l8"><a class="reference internal" href="src.dynamical_cores.cam_se.se_state.html">src.dynamical_cores.cam_se.se_state module</a></li>
+<li class="toctree-l8"><a class="reference internal" href="src.dynamical_cores.cam_se.thermodynamics.html">src.dynamical_cores.cam_se.thermodynamics module</a></li>
+</ul>
+</li>
+<li class="toctree-l7"><a class="reference internal" href="src.dynamical_cores.cam_se.html#module-src.dynamical_cores.cam_se">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.homme.html">src.dynamical_cores.homme package</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.tracer_advection.html">src.dynamical_cores.tracer_advection package</a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="src.dynamical_cores.html#submodules">Submodules</a></li>
+<li class="toctree-l5"><a class="reference internal" href="src.dynamical_cores.html#module-src.dynamical_cores">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="src.mesh_generation.html">src.mesh_generation package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.mpi.html">src.mpi package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.operations_2d.html">src.operations_2d package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.shallow_water_models.html">src.shallow_water_models package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.tracer_transport.html">src.tracer_transport package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="src.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="src.html#module-src">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">src</a><ul>
+  <li><a href="src.html">src package</a><ul>
+  <li><a href="src.dynamical_cores.html">src.dynamical_cores package</a><ul>
+  <li><a href="src.dynamical_cores.cam_se.html">src.dynamical_cores.cam_se package</a><ul>
+      <li>Previous: <a href="src.dynamical_cores.cam_se.html" title="previous chapter">src.dynamical_cores.cam_se package</a></li>
+      <li>Next: <a href="src.dynamical_cores.cam_se.se_state.html" title="next chapter">src.dynamical_cores.cam_se.se_state module</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Owen K Hughes.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/api/src.dynamical_cores.cam_se.explicit_terms.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

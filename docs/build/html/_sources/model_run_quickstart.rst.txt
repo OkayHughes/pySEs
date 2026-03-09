@@ -1,0 +1,184 @@
+How to run the model
+====================
+
+This page walks through two complete examples of setting up and running a 3-D
+dynamical-core simulation with pySEs.  Both examples use the base state as described in
+`Ullrich et al. (2014) <https://doi.org/10.1002/qj.2241>`_. The first is a steady state test that
+uses an unperturbed base state. The second example uses the topographic profile described in `Hughes and Jablonowski, (2023) <https://doi.org/10.5194/gmd-16-6805-2023>`_
+to trigger a baroclinic wave.
+
+Imports
+-------
+
+Every simulation needs the following modules::
+
+    from pyses.grids import init
+    from pyses.model_utils import mass_coordinate, model_config, model_info
+    from pyses.initialize import ullrich_baroclinic_wave
+    from pyses.simulate import init_simulator
+
+Vertical grid data (CAM-30 hybrid coefficients)
+------------------------------------------------
+
+The vertical coordinate is a hybrid sigma-pressure coordinate.  The CAM-30
+level set is a common starting point::
+
+    import numpy as np
+
+    hybrid_a_i = np.array([
+        0.00225523952394724, 0.00503169186413288, 0.0101579474285245,
+        0.0185553170740604,  0.0306691229343414,  0.0458674766123295,
+        0.0633234828710556,  0.0807014182209969,  0.0949410423636436,
+        0.11169321089983,    0.131401270627975,   0.154586806893349,
+        0.181863352656364,   0.17459799349308,    0.166050657629967,
+        0.155995160341263,   0.14416541159153,    0.130248308181763,
+        0.113875567913055,   0.0946138575673103,  0.0753444507718086,
+        0.0576589405536652,  0.0427346378564835,  0.0316426791250706,
+        0.0252212174236774,  0.0191967375576496,  0.0136180268600583,
+        0.00853108894079924, 0.00397881818935275, 0.0, 0.0,
+    ])
+    hybrid_b_i = np.array([
+        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        0.0393548272550106, 0.0856537595391273, 0.140122056007385,
+        0.204201176762581,  0.279586911201477,  0.368274360895157,
+        0.47261056303978,   0.576988518238068,  0.672786951065063,
+        0.753628432750702,  0.813710987567902,  0.848494648933411,
+        0.881127893924713,  0.911346435546875,  0.938901245594025,
+        0.963559806346893,  0.985112190246582,  1.0,
+    ])
+    p0 = 1e5  # reference surface pressure (Pa)
+
+Example 1 – Quasi-uniform grid, steady-state check
+----------------------------------------------------
+
+This example runs the hydrostatic HOMME dynamical core on a quasi-uniform
+cubed-sphere grid and verifies that the baroclinic-wave initial state is
+close to steady state after one day.
+
+::
+
+    import numpy as np
+    from pyses.grids import init
+    from pyses.model_utils import mass_coordinate, model_config, model_info
+    from pyses.initialize import ullrich_baroclinic_wave
+    from pyses.simulate import init_simulator
+
+    # Generate horizontal grid
+    npt = 4   # spectral-element polynomial order
+    nx  = 15  # elements per cube face
+
+    h_grid, dims = init.init_quasi_uniform_grid(nx, npt, calc_smooth_tensor=True)
+
+    model = model_info.models.homme_hydrostatic
+    v_grid = mass_coordinate.init_vertical_grid(hybrid_a_i, hybrid_b_i, p0, model)
+
+    # Use good default configuration. This can be customized!
+    physics_config, diffusion_config, timestep_config = model_config.init_default_config(
+        nx, h_grid, v_grid, dims, model,
+        hypervis_type=model_config.hypervis_opts.variable_resolution,
+    )
+    diffusion_config["nu_top"] = 0.0  # disable top-of-atmosphere sponge
+
+    # Generate initial conditions
+    test_config  = ullrich_baroclinic_wave.init_baroclinic_wave_config(
+        model_config=physics_config,
+    )
+    model_state = ullrich_baroclinic_wave.init_baroclinic_wave_state(
+        h_grid, v_grid, physics_config, test_config, dims, model,
+        mountain=False,
+    )
+
+    # initialize generator-based simulator
+    simulator = init_simulator(
+        h_grid, v_grid,
+        physics_config, diffusion_config, timestep_config,
+        dims, model,
+    )
+
+    # Time loop.
+    total_time = 3600.0 * 24.0  # one day in seconds
+    for t, state in simulator(model_state):
+        # User can perform archiving, analysis, etc here.
+        if t > total_time:
+            break
+
+The ``simulator`` object is a callable that returns ``(time, state)`` pairs.
+``state["dynamics"]`` contains the prognostic variables (winds, thermodynamic
+variable, mass).
+
+Example 2 – Stretched grid, baroclinic wave with topography
+------------------------------------------------------------
+
+This example uses an element-local stretched grid that has increased
+resolution over two antipodal points (``axis_dilation=[1.0, 1.5, 1.0]``).
+
+::
+
+    import numpy as np
+    from pyses.grids import init
+    from pyses.model_utils import mass_coordinate, model_config, model_info
+    from pyses.initialize import ullrich_baroclinic_wave
+    from pyses.simulate import init_simulator
+
+    # Horizontal grid
+    npt = 4
+    nx  = 30
+
+    h_grid, dims = init.init_stretched_grid(
+        nx, npt,
+        axis_dilation=np.array([1.0, 1.5, 1.0]),
+        calc_smooth_tensor=True,
+    )
+
+    model = model_info.models.homme_hydrostatic
+    v_grid = mass_coordinate.init_vertical_grid(hybrid_a_i, hybrid_b_i, p0, model)
+
+    # --- model configuration ---
+    physics_config, diffusion_config, timestep_config = model_config.init_default_config(
+        nx, h_grid, v_grid, dims, model,
+        hypervis_type=model_config.hypervis_opts.variable_resolution,
+    )
+
+    # --- initial state (mountain topography, no explicit perturbation) ---
+    test_config  = ullrich_baroclinic_wave.init_baroclinic_wave_config(
+        model_config=physics_config,
+    )
+    model_state = ullrich_baroclinic_wave.init_baroclinic_wave_state(
+        h_grid, v_grid, physics_config, test_config, dims, model,
+        mountain=True,
+        pert_type=ullrich_baroclinic_wave.perturbation_opts.none,
+    )
+
+    # --- simulator ---
+    simulator = init_simulator(
+        h_grid, v_grid,
+        physics_config, diffusion_config, timestep_config,
+        dims, model,
+    )
+
+    # --- time loop ---
+    total_time = 3600.0 * 24.0  # one day in seconds
+    for t, state in simulator(model_state):
+        if t > total_time:
+            break
+
+Key concepts
+------------
+
+``init_quasi_uniform_grid_grid`` vs ``init_stretched_grid``
+    ``init.init_quasi_uniform_grid`` produces an equiangular cubed-sphere with
+    uniform element sizes.  ``init.init_stretched_grid`` allows the element
+    sizes to vary across the sphere by specifying an ``axis_dilation`` vector,
+    which controls the stretching along each Cartesian axis of the sphere.
+
+``hypervis_opts``
+    The hyperviscosity type must match the grid.  Use
+    ``hypervis_opts.variable_resolution`` for stretched grids and
+    ``hypervis_opts.quasi_uniform`` for uniform grids (both work with the
+    variable-resolution option, so it is a safe default).
+
+``perturbation_opts``
+    Controls how the initial velocity perturbation is applied.  Available
+    values are ``perturbation_opts.none`` (no perturbation – wave grows from
+    numerical noise), ``perturbation_opts.exponential`` (DCMIP 2016 style),
+    and ``perturbation_opts.streamfunction``.

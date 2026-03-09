@@ -1,14 +1,15 @@
-from pysces.config import jnp
+from src._config import get_backend as _get_backend
+_be = _get_backend()
+jnp = _be.np
 from ....test_data.mass_coordinate_grids import cam30
 from ....context import get_figdir
-from pysces.analytic_initialization.moist_baroclinic_wave import init_baroclinic_wave_config, perturbation_opts
-from pysces.run_dycore import init_simulator
-from pysces.dynamical_cores.hyperviscosity import diffusion_config_for_tracer_consist
-from pysces.mesh_generation.equiangular_metric import init_quasi_uniform_grid
-from pysces.dynamical_cores.mass_coordinate import init_vertical_grid
-from pysces.model_info import models
-from pysces.dynamical_cores.model_config import init_default_config, hypervis_opts
-from pysces.initialization import init_baroclinic_wave_state
+from src.analytic_initialization.moist_baroclinic_wave import init_baroclinic_wave_config, perturbation_opts, init_baroclinic_wave_state
+from src.dynamical_cores.run_dycore import init_simulator
+from src.dynamical_cores.hyperviscosity import diffusion_config_for_tracer_consist
+from src.mesh_generation.equiangular_metric import init_quasi_uniform_grid
+from src.dynamical_cores.mass_coordinate import init_vertical_grid
+from src.dynamical_cores.model_info import models
+from src.dynamical_cores.model_config import init_default_config, hypervis_opts
 
 
 def test_tracer_consistency():

@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>src.dynamical_cores.operators_3d module &#8212; pyses  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="src.dynamical_cores.physics_config module" href="src.dynamical_cores.physics_config.html" />
+    <link rel="prev" title="src.dynamical_cores.model_state module" href="src.dynamical_cores.model_state.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-src.dynamical_cores.operators_3d">
+<span id="src-dynamical-cores-operators-3d-module"></span><h1>src.dynamical_cores.operators_3d module<a class="headerlink" href="#module-src.dynamical_cores.operators_3d" title="Link to this heading">¶</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.operators_3d.horizontal_divergence_3d">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.operators_3d.</span></span><span class="sig-name descname"><span class="pre">horizontal_divergence_3d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">vector</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.operators_3d.horizontal_divergence_3d" title="Link to this definition">¶</a></dt>
+<dd><p>Compute the horizontal divergence of a 3-D vector field level-by-level.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>vector</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, 2], Float]</span></dt><dd><p>Horizontal vector field (covariant components).</p>
+</dd>
+<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal spectral element grid.</p>
+</dd>
+<dt><strong>physics_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Physical constants; must contain <code class="docutils literal notranslate"><span class="pre">radius_earth</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>div</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Horizontal divergence (s^-1) at each model level.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.operators_3d.horizontal_gradient_3d">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.operators_3d.</span></span><span class="sig-name descname"><span class="pre">horizontal_gradient_3d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scalar</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.operators_3d.horizontal_gradient_3d" title="Link to this definition">¶</a></dt>
+<dd><p>Compute the horizontal gradient of a 3-D scalar field level-by-level.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>scalar</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>3-D scalar field.</p>
+</dd>
+<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal spectral element grid.</p>
+</dd>
+<dt><strong>physics_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Physical constants; must contain <code class="docutils literal notranslate"><span class="pre">radius_earth</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>grad</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, 2], Float]</span></dt><dd><p>Covariant horizontal gradient at each model level.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.operators_3d.horizontal_vorticity_3d">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.operators_3d.</span></span><span class="sig-name descname"><span class="pre">horizontal_vorticity_3d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">vector</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.operators_3d.horizontal_vorticity_3d" title="Link to this definition">¶</a></dt>
+<dd><p>Compute the horizontal (vertical component of) vorticity of a 3-D vector field level-by-level.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>vector</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, 2], Float]</span></dt><dd><p>Horizontal vector field (covariant components).</p>
+</dd>
+<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal spectral element grid.</p>
+</dd>
+<dt><strong>physics_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Physical constants; must contain <code class="docutils literal notranslate"><span class="pre">radius_earth</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>vort</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Relative vorticity (s^-1) at each model level.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.operators_3d.horizontal_weak_laplacian_3d">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.operators_3d.</span></span><span class="sig-name descname"><span class="pre">horizontal_weak_laplacian_3d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scalar</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.operators_3d.horizontal_weak_laplacian_3d" title="Link to this definition">¶</a></dt>
+<dd><p>Compute the weak-form horizontal scalar Laplacian of a 3-D field level-by-level.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>scalar</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>3-D scalar field.</p>
+</dd>
+<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal spectral element grid.</p>
+</dd>
+<dt><strong>physics_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Physical constants; must contain <code class="docutils literal notranslate"><span class="pre">radius_earth</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>lap</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Weak-form Laplacian at each model level.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.operators_3d.horizontal_weak_vector_laplacian_3d">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.operators_3d.</span></span><span class="sig-name descname"><span class="pre">horizontal_weak_vector_laplacian_3d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">vector</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.operators_3d.horizontal_weak_vector_laplacian_3d" title="Link to this definition">¶</a></dt>
+<dd><p>Compute the weak-form horizontal vector Laplacian of a 3-D vector field level-by-level.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>vector</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, 2], Float]</span></dt><dd><p>3-D horizontal vector field.</p>
+</dd>
+<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal spectral element grid.</p>
+</dd>
+<dt><strong>physics_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Physical constants; must contain <code class="docutils literal notranslate"><span class="pre">radius_earth</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>lap_vec</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, 2], Float]</span></dt><dd><p>Weak-form vector Laplacian at each model level.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">pyses</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation_and_validation.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">How to run the model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_friendly_api.html">The pySEs public API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../anatomy_of_a_model_struct.html">How is the atmospheric state represented in pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">How are horizontal grids generated and read into pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">src</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="src.html">src package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="src.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="src.analytic_initialization.html">src.analytic_initialization package</a></li>
+<li class="toctree-l4 current"><a class="reference internal" href="src.dynamical_cores.html">src.dynamical_cores package</a><ul class="current">
+<li class="toctree-l5"><a class="reference internal" href="src.dynamical_cores.html#subpackages">Subpackages</a></li>
+<li class="toctree-l5 current"><a class="reference internal" href="src.dynamical_cores.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.finite_volume_grid.html">src.dynamical_cores.finite_volume_grid module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.hyperviscosity.html">src.dynamical_cores.hyperviscosity module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.initialization.html">src.dynamical_cores.initialization module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.mass_coordinate.html">src.dynamical_cores.mass_coordinate module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.model_config.html">src.dynamical_cores.model_config module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.model_info.html">src.dynamical_cores.model_info module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.model_state.html">src.dynamical_cores.model_state module</a></li>
+<li class="toctree-l6 current"><a class="current reference internal" href="#">src.dynamical_cores.operators_3d module</a><ul>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.operators_3d.horizontal_divergence_3d"><code class="docutils literal notranslate"><span class="pre">horizontal_divergence_3d()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.operators_3d.horizontal_gradient_3d"><code class="docutils literal notranslate"><span class="pre">horizontal_gradient_3d()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.operators_3d.horizontal_vorticity_3d"><code class="docutils literal notranslate"><span class="pre">horizontal_vorticity_3d()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.operators_3d.horizontal_weak_laplacian_3d"><code class="docutils literal notranslate"><span class="pre">horizontal_weak_laplacian_3d()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.operators_3d.horizontal_weak_vector_laplacian_3d"><code class="docutils literal notranslate"><span class="pre">horizontal_weak_vector_laplacian_3d()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.physics_config.html">src.dynamical_cores.physics_config module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.physics_dynamics_coupling.html">src.dynamical_cores.physics_dynamics_coupling module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.run_dycore.html">src.dynamical_cores.run_dycore module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.time_step.html">src.dynamical_cores.time_step module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.time_stepping.html">src.dynamical_cores.time_stepping module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.utils_3d.html">src.dynamical_cores.utils_3d module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.vertical_remap.html">src.dynamical_cores.vertical_remap module</a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="src.dynamical_cores.html#module-src.dynamical_cores">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="src.mesh_generation.html">src.mesh_generation package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.mpi.html">src.mpi package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.operations_2d.html">src.operations_2d package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.shallow_water_models.html">src.shallow_water_models package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.tracer_transport.html">src.tracer_transport package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="src.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="src.html#module-src">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">src</a><ul>
+  <li><a href="src.html">src package</a><ul>
+  <li><a href="src.dynamical_cores.html">src.dynamical_cores package</a><ul>
+      <li>Previous: <a href="src.dynamical_cores.model_state.html" title="previous chapter">src.dynamical_cores.model_state module</a></li>
+      <li>Next: <a href="src.dynamical_cores.physics_config.html" title="next chapter">src.dynamical_cores.physics_config module</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Owen K Hughes.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/api/src.dynamical_cores.operators_3d.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,5 +1,5 @@
 # Overview
-The purpose of this project is to create the a highly readable, well documented, well tested atmospheric dynamical core with support for variable resolution meshes, as well as automatic differentiation for machine learing and data assimilation.
+The purpose of this project is to create a highly readable, well documented, well tested atmospheric dynamical core with support for variable resolution meshes, as well as automatic differentiation for machine learning and data assimilation.
 This project prioritizes code readability and maintainability, in the sense that code that runs 10% slower but is much easier for a second-year graduate student to understand and modify is better than its inaccessible optimized counterpart.
 We want to minimize external dependencies and, insofar as it is possible, create a codebase that is entirely written in python.
 Given the constraints of these design decisions, it is unlikely that the resulting dynamical core will scale to hundreds or thousands of nodes on an HPC computing system. This aligns with our stated goal of making atmospheric modeling accessible.
@@ -7,7 +7,7 @@ Given the constraints of these design decisions, it is unlikely that the resulti
 # Quickstart with `uv`
 
 ## Common steps
-* Run `git clone git@github.com:OkayHughes/pysces.git` and navigate to the `pysces` directory.
+* Run `git clone git@github.com:OkayHughes/pyses.git` and navigate to the `pyses` directory.
 * Install `uv`, e.g. `pip install uv` in your python environment. `uv` is a 
 modern environment manager for Python that we use for development and testing.
 
@@ -24,7 +24,7 @@ If you have a system MPI installed (e.g. on HPC systems), run:
 
 ## Run tests
 * Navigate to the `tests` directory and run `bash run_test.sh`. These should catch if there are problems
-with CPU configurations of `pysces`, and test whether there are issues with your MPI environment.
+with CPU configurations of `pyses`, and test whether there are issues with your MPI environment.
 
 
 # Accelerator support

@@ -4,3 +4,5 @@ __pycache__/
 .vscode/
 tests/_figures
 pysces_config.json
+pyses.egg-info
+dist/

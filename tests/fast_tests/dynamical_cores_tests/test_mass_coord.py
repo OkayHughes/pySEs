@@ -1,12 +1,15 @@
-from pysces.dynamical_cores.mass_coordinate import (init_vertical_grid,
+from src.dynamical_cores.mass_coordinate import (init_vertical_grid,
                                                     surface_mass_to_midlevel_mass,
                                                     surface_mass_to_interface_mass,
                                                     surface_mass_to_d_mass,
                                                     d_mass_to_surface_mass,
                                                     eval_top_interface_mass)
-from pysces.config import jnp, np
+from src._config import get_backend as _get_backend
+_be = _get_backend()
+jnp = _be.np
+import numpy as np
 from ...test_data.mass_coordinate_grids import cam30
-from pysces.model_info import models
+from src.dynamical_cores.model_info import models
 
 
 def test_vcoord():

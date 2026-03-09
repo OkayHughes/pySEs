@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>src.grids module &#8212; pyses  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="src.initialize module" href="src.initialize.html" />
+    <link rel="prev" title="src.config module" href="src.config.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-src.grids">
+<span id="src-grids-module"></span><h1>src.grids module<a class="headerlink" href="#module-src.grids" title="Link to this heading">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="src.grids.init">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">src.grids.</span></span><span class="sig-name descname"><span class="pre">init</span></span><a class="headerlink" href="#src.grids.init" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p class="rubric">Methods</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#src.grids.init.exodus_to_pysces_grid_corners" title="src.grids.init.exodus_to_pysces_grid_corners"><code class="xref py py-obj docutils literal notranslate"><span class="pre">exodus_to_pysces_grid_corners</span></code></a>(connect_map, ...)</p></td>
+<td><p>Convert an Exodus-format mesh to pyses element corner and edge connectivity.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#src.grids.init.init_equiangular_grid" title="src.grids.init.init_equiangular_grid"><code class="xref py py-obj docutils literal notranslate"><span class="pre">init_equiangular_grid</span></code></a>(npt[, wrapped, ...])</p></td>
+<td><p>Generate an equiangular quasi-uniform cubed-sphere SpectralElementGrid.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#src.grids.init.init_periodic_plane_grid" title="src.grids.init.init_periodic_plane_grid"><code class="xref py py-obj docutils literal notranslate"><span class="pre">init_periodic_plane_grid</span></code></a>(ny, npt[, ...])</p></td>
+<td><p>Generate grid topology for an axis-aligned regular grid on a doubly periodic plane.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#src.grids.init.init_quasi_uniform_grid" title="src.grids.init.init_quasi_uniform_grid"><code class="xref py py-obj docutils literal notranslate"><span class="pre">init_quasi_uniform_grid</span></code></a>(npt[, wrapped, ...])</p></td>
+<td><p>Build a quasi-uniform cubed-sphere spectral element grid using element-local bilinear metric.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#src.grids.init.init_stretched_grid" title="src.grids.init.init_stretched_grid"><code class="xref py py-obj docutils literal notranslate"><span class="pre">init_stretched_grid</span></code></a>(npt[, axis_dilation, ...])</p></td>
+<td><p>Build a stretched cubed-sphere spectral element grid using element-local metric.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#src.grids.init.init_unstructured_grid" title="src.grids.init.init_unstructured_grid"><code class="xref py py-obj docutils literal notranslate"><span class="pre">init_unstructured_grid</span></code></a>(...[, wrapped, ...])</p></td>
+<td><p>Build a spectral element grid from an arbitrary unstructured mesh.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py method">
+<dt class="sig sig-object py" id="src.grids.init.exodus_to_pysces_grid_corners">
+<span class="sig-name descname"><span class="pre">exodus_to_pysces_grid_corners</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">connect_map</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">element_permutation</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.grids.init.exodus_to_pysces_grid_corners" title="Link to this definition">¶</a></dt>
+<dd><p>Convert an Exodus-format mesh to pyses element corner and edge connectivity.</p>
+<p>Translates Exodus vertex/element connectivity (which uses a different vertex
+ordering convention) to pyses conventions, builds the face-connectivity
+array describing element-edge adjacency, and extracts Cartesian element
+corner positions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>cart_coords</strong><span class="classifier">Array[tuple[3, node_idx], Float]</span></dt><dd><p>Cartesian coordinates of all mesh nodes, shape <code class="docutils literal notranslate"><span class="pre">(3,</span> <span class="pre">num_nodes)</span></code>.</p>
+</dd>
+<dt><strong>connect_map</strong><span class="classifier">Array[tuple[elem_idx, local_node_idx], Int]</span></dt><dd><p>Exodus element-node connectivity array (1-indexed), shape
+<code class="docutils literal notranslate"><span class="pre">(num_elem,</span> <span class="pre">4)</span></code>.</p>
+</dd>
+<dt><strong>element_permutation</strong><span class="classifier">Array[tuple[elem_idx], Int]</span></dt><dd><p>Permutation mapping Exodus element indices to pyses element indices
+(1-indexed on input).</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>vert_pos</strong><span class="classifier">Array[tuple[elem_idx, vert_idx, 3], Float]</span></dt><dd><p>Cartesian positions of the four element corners in pyses vertex
+ordering, shape <code class="docutils literal notranslate"><span class="pre">(num_elem,</span> <span class="pre">4,</span> <span class="pre">3)</span></code>.</p>
+</dd>
+<dt><strong>edge_info</strong><span class="classifier">Array[tuple[elem_idx, edge_idx, 3], Int]</span></dt><dd><p>Face-connectivity array <code class="docutils literal notranslate"><span class="pre">(remote_elem_idx,</span> <span class="pre">remote_edge_idx,</span>
+<span class="pre">same_direction)</span></code> for each element edge, shape <code class="docutils literal notranslate"><span class="pre">(num_elem,</span> <span class="pre">4,</span> <span class="pre">3)</span></code>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.grids.init.init_equiangular_grid">
+<span class="sig-name descname"><span class="pre">init_equiangular_grid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">npt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wrapped</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calc_smooth_tensor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.grids.init.init_equiangular_grid" title="Link to this definition">¶</a></dt>
+<dd><p>Generate an equiangular quasi-uniform cubed-sphere
+SpectralElementGrid.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>nx</strong><span class="classifier"><cite>int</cite></span></dt><dd><p>Number of elements per edge of a cubed sphere face</p>
+</dd>
+<dt><strong>npt</strong><span class="classifier"><cite>int</cite></span></dt><dd><p>Number of 1D gll points to use within reference elements.</p>
+</dd>
+<dt><strong>wrapped: `bool`, default=use_wrapper</strong></dt><dd><p>Flag that determines whether returned grid
+will use accelerator framework arrays
+or numpy arrays.</p>
+</dd>
+<dt><strong>Returns</strong></dt><dd></dd>
+<dt><strong>——-</strong></dt><dd></dd>
+<dt><strong>SpectralElementGrid</strong></dt><dd><p>Global spectral element grid.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.grids.init.init_periodic_plane_grid">
+<span class="sig-name descname"><span class="pre">init_periodic_plane_grid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ny</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">npt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">length_x</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">length_y</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.grids.init.init_periodic_plane_grid" title="Link to this definition">¶</a></dt>
+<dd><p>Generate grid topology for an axis-aligned
+regular grid on a doubly periodic plane.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>nx</strong><span class="classifier"><cite>int</cite></span></dt><dd><p>Number of grid cells in the horizontal direction</p>
+</dd>
+<dt><strong>ny</strong><span class="classifier"><cite>int</cite></span></dt><dd><p>Number of grid cells in the vertical direction</p>
+</dd>
+<dt><strong>npt</strong><span class="classifier"><cite>int</cite></span></dt><dd><p>Number of Gauss-Lobatto-Legendre points per dimension in reference element.</p>
+</dd>
+<dt><strong>length_x</strong><span class="classifier"><cite>float</cite>, default=2.0</span></dt><dd><p>Length of grid in the horizontal direction</p>
+</dd>
+<dt><strong>length_y</strong><span class="classifier"><cite>float</cite>, default=2.0</span></dt><dd><p>Length of grid in the vertical direction</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl>
+<dt><strong>physical_coords</strong><span class="classifier"><cite>Array[tuple[elem_idx, gll_idx, gll_idx, xy], Float]</cite></span></dt><dd><p>Position of GLL gridpoints in the plane.</p>
+</dd>
+<dt><strong>ref_to_planar</strong><span class="classifier"><cite>Array[tuple[elem_idx, gll_idx, gll_idx, xy, ab], Float]</cite></span></dt><dd><p>Jacobian of bilinear mapping from the reference element to cartesian space
+for the GLL mesh.</p>
+</dd>
+<dt><strong>vert_redundancy_gll</strong><span class="classifier"><cite>dict[elem_idx, dict[tuple(gll_idx, gll_idx),                                             set[tuple[elem_idx, gll_idx, gll_idx]]]]</cite></span></dt><dd><p><cite>dict[elem_idx][(gll_idx,gll_idx)]</cite> is a set
+of redundant DOFs on the global GLL grid.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>KeyError</dt><dd><p>when a key error</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.grids.init.init_quasi_uniform_grid">
+<span class="sig-name descname"><span class="pre">init_quasi_uniform_grid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">npt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wrapped</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calc_smooth_tensor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rotate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.grids.init.init_quasi_uniform_grid" title="Link to this definition">¶</a></dt>
+<dd><p>Build a quasi-uniform cubed-sphere spectral element grid using element-local bilinear metric.</p>
+<p>Generates the cubed-sphere topology for an <code class="docutils literal notranslate"><span class="pre">nx</span></code>-element-per-face grid,
+computes element-corner latitudes/longitudes from the equiangular projection,
+then uses <code class="xref py py-func docutils literal notranslate"><span class="pre">eval_metric_terms_elem_local()</span></code> to produce the GLL metric.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>nx</strong><span class="classifier">int</span></dt><dd><p>Number of elements along one edge of a cubed-sphere face.</p>
+</dd>
+<dt><strong>npt</strong><span class="classifier">int</span></dt><dd><p>Number of GLL points per element edge.</p>
+</dd>
+<dt><strong>wrapped</strong><span class="classifier">bool, optional</span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, arrays are moved onto the configured device after assembly.
+Defaults to <code class="docutils literal notranslate"><span class="pre">use_wrapper</span></code>.</p>
+</dd>
+<dt><strong>calc_smooth_tensor</strong><span class="classifier">bool, optional</span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, smooth the hyperviscosity tensor after grid assembly.
+Defaults to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+</dd>
+<dt><strong>rotate</strong><span class="classifier">bool, optional</span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, apply a small rotation to break element symmetry.
+Defaults to <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Assembled spectral element grid struct.</p>
+</dd>
+<dt><strong>dims</strong><span class="classifier">frozendict[str, int]</span></dt><dd><p>Grid dimension metadata <code class="docutils literal notranslate"><span class="pre">{&quot;N&quot;,</span> <span class="pre">&quot;shape&quot;,</span> <span class="pre">&quot;npt&quot;,</span> <span class="pre">&quot;num_elem&quot;}</span></code>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.grids.init.init_stretched_grid">
+<span class="sig-name descname"><span class="pre">init_stretched_grid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">npt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis_dilation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">orthogonal_transform</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wrapped</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calc_smooth_tensor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rotate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.grids.init.init_stretched_grid" title="Link to this definition">¶</a></dt>
+<dd><p>Build a stretched cubed-sphere spectral element grid using element-local metric.</p>
+<p>Applies an affine transformation <code class="docutils literal notranslate"><span class="pre">x'</span> <span class="pre">=</span> <span class="pre">Q</span> <span class="pre">diag(s)</span> <span class="pre">x</span> <span class="pre">+</span> <span class="pre">c</span></code> (followed by
+re-projection onto the unit sphere) to the equiangular cubed-sphere corners
+before computing the element-local bilinear metric.  This allows the grid
+to be concentrated toward a chosen region.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>nx</strong><span class="classifier">int</span></dt><dd><p>Number of elements along one edge of a cubed-sphere face.</p>
+</dd>
+<dt><strong>npt</strong><span class="classifier">int</span></dt><dd><p>Number of GLL points per element edge.</p>
+</dd>
+<dt><strong>axis_dilation</strong><span class="classifier">Array[3] or None, optional</span></dt><dd><p>Per-axis scaling factors <code class="docutils literal notranslate"><span class="pre">s</span></code> for the affine map.  Defaults to ones
+(no stretching).</p>
+</dd>
+<dt><strong>orthogonal_transform</strong><span class="classifier">Array[3, 3] or None, optional</span></dt><dd><p>Orthogonal rotation matrix <code class="docutils literal notranslate"><span class="pre">Q</span></code> applied before axis dilation.
+Defaults to the identity.</p>
+</dd>
+<dt><strong>offset</strong><span class="classifier">Array[3] or None, optional</span></dt><dd><p>Translation vector <code class="docutils literal notranslate"><span class="pre">c</span></code> added after dilation.  Must satisfy
+<code class="docutils literal notranslate"><span class="pre">‖Q^T</span> <span class="pre">s^{-1}</span> <span class="pre">c‖</span> <span class="pre">&lt;</span> <span class="pre">1</span></code> so the mapping is bijective.  Defaults to
+zero.</p>
+</dd>
+<dt><strong>wrapped</strong><span class="classifier">bool, optional</span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, arrays are moved onto the configured device after assembly.
+Defaults to <code class="docutils literal notranslate"><span class="pre">use_wrapper</span></code>.</p>
+</dd>
+<dt><strong>calc_smooth_tensor</strong><span class="classifier">bool, optional</span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, smooth the hyperviscosity tensor after grid assembly.
+Defaults to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+</dd>
+<dt><strong>rotate</strong><span class="classifier">bool, optional</span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, apply a small rotation to break element symmetry.
+Defaults to <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Assembled spectral element grid struct.</p>
+</dd>
+<dt><strong>dims</strong><span class="classifier">frozendict[str, int]</span></dt><dd><p>Grid dimension metadata <code class="docutils literal notranslate"><span class="pre">{&quot;N&quot;,</span> <span class="pre">&quot;shape&quot;,</span> <span class="pre">&quot;npt&quot;,</span> <span class="pre">&quot;num_elem&quot;}</span></code>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.grids.init.init_unstructured_grid">
+<span class="sig-name descname"><span class="pre">init_unstructured_grid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">corner_cart_positions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">npt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wrapped</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calc_smooth_tensor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rotate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.grids.init.init_unstructured_grid" title="Link to this definition">¶</a></dt>
+<dd><p>Build a spectral element grid from an arbitrary unstructured mesh.</p>
+<p>Accepts pre-computed element corner Cartesian positions and a
+face-connectivity array, projects the corners onto the unit sphere,
+then uses <code class="xref py py-func docutils literal notranslate"><span class="pre">eval_metric_terms_elem_local()</span></code> to produce the GLL metric.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>face_connectivity</strong><span class="classifier">Array[tuple[elem_idx, edge_idx, 3], Int]</span></dt><dd><p>Topological connectivity array; each entry contains
+<code class="docutils literal notranslate"><span class="pre">(remote_elem_idx,</span> <span class="pre">remote_edge_idx,</span> <span class="pre">same_direction)</span></code> for the
+element edge at <code class="docutils literal notranslate"><span class="pre">(elem_idx,</span> <span class="pre">edge_idx)</span></code>.</p>
+</dd>
+<dt><strong>corner_cart_positions</strong><span class="classifier">Array[tuple[elem_idx, vert_idx, 3], Float]</span></dt><dd><p>Cartesian positions of the four element corners in pyses vertex
+ordering.  Will be projected onto the unit sphere internally.</p>
+</dd>
+<dt><strong>npt</strong><span class="classifier">int</span></dt><dd><p>Number of GLL points per element edge.</p>
+</dd>
+<dt><strong>wrapped</strong><span class="classifier">bool, optional</span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, arrays are moved onto the configured device after
+assembly.  Defaults to <code class="docutils literal notranslate"><span class="pre">use_wrapper</span></code>.</p>
+</dd>
+<dt><strong>calc_smooth_tensor</strong><span class="classifier">bool, optional</span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, smooth the hyperviscosity tensor after grid assembly.
+Defaults to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+</dd>
+<dt><strong>rotate</strong><span class="classifier">bool, optional</span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, apply a small rotation to break element symmetry.
+Defaults to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Assembled spectral element grid struct.</p>
+</dd>
+<dt><strong>dims</strong><span class="classifier">frozendict[str, int]</span></dt><dd><p>Grid dimension metadata <code class="docutils literal notranslate"><span class="pre">{&quot;N&quot;,</span> <span class="pre">&quot;shape&quot;,</span> <span class="pre">&quot;npt&quot;,</span> <span class="pre">&quot;num_elem&quot;}</span></code>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="src.grids.parallelism">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">src.grids.</span></span><span class="sig-name descname"><span class="pre">parallelism</span></span><a class="headerlink" href="#src.grids.parallelism" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p class="rubric">Methods</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#src.grids.parallelism.get_global_grid" title="src.grids.parallelism.get_global_grid"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_global_grid</span></code></a>(dims)</p></td>
+<td><p>Gather all sharded element arrays back into a single global grid.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#src.grids.parallelism.make_grid_mpi_ready" title="src.grids.parallelism.make_grid_mpi_ready"><code class="xref py py-obj docutils literal notranslate"><span class="pre">make_grid_mpi_ready</span></code></a>(dims, proc_idx[, ...])</p></td>
+<td><p>Partition a global grid into a processor-local grid for MPI parallelism.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#src.grids.parallelism.shard_grid" title="src.grids.parallelism.shard_grid"><code class="xref py py-obj docutils literal notranslate"><span class="pre">shard_grid</span></code></a>(dims)</p></td>
+<td><p>Pad and shard the grid arrays across multiple JAX devices.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py method">
+<dt class="sig sig-object py" id="src.grids.parallelism.get_global_grid">
+<span class="sig-name descname"><span class="pre">get_global_grid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dims</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.grids.parallelism.get_global_grid" title="Link to this definition">¶</a></dt>
+<dd><p>Gather all sharded element arrays back into a single global grid.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>grid</strong><span class="classifier"><cite>SpectralElementGrid</cite></span></dt><dd><p>A sharded or device-wrapped spectral element grid struct.</p>
+</dd>
+<dt><strong>dims</strong><span class="classifier"><cite>frozendict</cite></span></dt><dd><p>Grid dimension metadata (must contain <code class="docutils literal notranslate"><span class="pre">&quot;num_elem&quot;</span></code>).
+Used to strip padding from sharded arrays.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl>
+<dt><strong>global_grid</strong><span class="classifier"><cite>dict[str, Array]</cite></span></dt><dd><p>A grid struct where all element arrays have been moved to host
+memory and trimmed to <code class="docutils literal notranslate"><span class="pre">dims[&quot;num_elem&quot;]</span></code> elements.
+Non-element fields are copied through unchanged.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.grids.parallelism.make_grid_mpi_ready">
+<span class="sig-name descname"><span class="pre">make_grid_mpi_ready</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dims</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">proc_idx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decomp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wrapped</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.grids.parallelism.make_grid_mpi_ready" title="Link to this definition">¶</a></dt>
+<dd><p>Partition a global grid into a processor-local grid for MPI parallelism.</p>
+<p>Splits the global element arrays along the element axis according to
+a 1-D domain decomposition, and partitions the DSS assembly triples
+into local, send, and receive components for halo exchanges.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>grid</strong><span class="classifier"><cite>SpectralElementGrid</cite></span></dt><dd><p>Global spectral element grid struct (assembled on rank 0 or
+broadcast to all ranks).</p>
+</dd>
+<dt><strong>dims</strong><span class="classifier"><cite>frozendict</cite></span></dt><dd><p>Global grid dimension metadata.</p>
+</dd>
+<dt><strong>proc_idx</strong><span class="classifier"><cite>int</cite></span></dt><dd><p>MPI rank of the calling processor.</p>
+</dd>
+<dt><strong>decomp</strong><span class="classifier">sequence of tuple[int, int]`, optional</span></dt><dd><p>Element-range decomposition.  If <code class="docutils literal notranslate"><span class="pre">None</span></code>, a uniform
+decomposition over <code class="docutils literal notranslate"><span class="pre">mpi_size</span></code> ranks is computed via
+<code class="docutils literal notranslate"><span class="pre">init_decomp</span></code>.</p>
+</dd>
+<dt><strong>wrapped</strong><span class="classifier"><cite>bool</cite>, default=use_wrapper</span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, local arrays are moved onto the configured device.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl>
+<dt><strong>local_grid</strong><span class="classifier"><cite>dict[str, Array]</cite></span></dt><dd><p>Processor-local grid struct containing sliced element arrays,
+local/send/receive DSS assembly triples, and ghost masks.</p>
+</dd>
+<dt><strong>local_dims</strong><span class="classifier"><cite>frozendict</cite></span></dt><dd><p>Updated dimension metadata for the local grid, including
+<code class="docutils literal notranslate"><span class="pre">&quot;num_elem&quot;</span></code> set to the local element count and per-rank
+send buffer sizes.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>NotImplementedError</dt><dd><p>If called with both MPI communication and multi-device
+JAX sharding enabled outside of debug mode.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.grids.parallelism.shard_grid">
+<span class="sig-name descname"><span class="pre">shard_grid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dims</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.grids.parallelism.shard_grid" title="Link to this definition">¶</a></dt>
+<dd><p>Pad and shard the grid arrays across multiple JAX devices.</p>
+<p>Arrays whose element-axis length is not divisible by the number
+of devices are zero-padded (or NaN-padded in debug mode) before
+sharding.  A ghost mask is also added to the grid so that
+padded elements can be excluded from reductions.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>grid</strong><span class="classifier"><cite>SpectralElementGrid</cite></span></dt><dd><p>Global spectral element grid struct to be sharded.</p>
+</dd>
+<dt><strong>dims</strong><span class="classifier"><cite>frozendict</cite></span></dt><dd><p>Grid dimension metadata (must contain <code class="docutils literal notranslate"><span class="pre">&quot;num_elem&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;npt&quot;</span></code>).</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl>
+<dt><strong>grid</strong><span class="classifier"><cite>SpectralElementGrid</cite></span></dt><dd><p>Updated grid struct with all element arrays sharded across
+JAX devices and a <code class="docutils literal notranslate"><span class="pre">&quot;shard_extraction_map&quot;</span></code> and
+<code class="docutils literal notranslate"><span class="pre">&quot;ghost_mask&quot;</span></code> field added.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>NotImplementedError</dt><dd><p>If called in an MPI environment outside of debug mode.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>This function is only relevant when using JAX multi-device sharding
+(<code class="docutils literal notranslate"><span class="pre">num_jax_devices</span> <span class="pre">&gt;</span> <span class="pre">1</span></code>).  For MPI parallelism, use
+<code class="docutils literal notranslate"><span class="pre">make_grid_mpi_ready</span></code> instead.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">pyses</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation_and_validation.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">How to run the model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_friendly_api.html">The pySEs public API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../anatomy_of_a_model_struct.html">How is the atmospheric state represented in pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">How are horizontal grids generated and read into pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">src</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="src.html">src package</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="src.html#subpackages">Subpackages</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="src.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="src.config.html">src.config module</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">src.grids module</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="#src.grids.init"><code class="docutils literal notranslate"><span class="pre">init</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="#src.grids.init.exodus_to_pysces_grid_corners"><code class="docutils literal notranslate"><span class="pre">init.exodus_to_pysces_grid_corners()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="#src.grids.init.init_equiangular_grid"><code class="docutils literal notranslate"><span class="pre">init.init_equiangular_grid()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="#src.grids.init.init_periodic_plane_grid"><code class="docutils literal notranslate"><span class="pre">init.init_periodic_plane_grid()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="#src.grids.init.init_quasi_uniform_grid"><code class="docutils literal notranslate"><span class="pre">init.init_quasi_uniform_grid()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="#src.grids.init.init_stretched_grid"><code class="docutils literal notranslate"><span class="pre">init.init_stretched_grid()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="#src.grids.init.init_unstructured_grid"><code class="docutils literal notranslate"><span class="pre">init.init_unstructured_grid()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="#src.grids.parallelism"><code class="docutils literal notranslate"><span class="pre">parallelism</span></code></a><ul>
+<li class="toctree-l6"><a class="reference internal" href="#src.grids.parallelism.get_global_grid"><code class="docutils literal notranslate"><span class="pre">parallelism.get_global_grid()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="#src.grids.parallelism.make_grid_mpi_ready"><code class="docutils literal notranslate"><span class="pre">parallelism.make_grid_mpi_ready()</span></code></a></li>
+<li class="toctree-l6"><a class="reference internal" href="#src.grids.parallelism.shard_grid"><code class="docutils literal notranslate"><span class="pre">parallelism.shard_grid()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="src.initialize.html">src.initialize module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.model_utils.html">src.model_utils module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.set_config.html">src.set_config module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.shallow_water.html">src.shallow_water module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.simulate.html">src.simulate module</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="src.html#module-src">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">src</a><ul>
+  <li><a href="src.html">src package</a><ul>
+      <li>Previous: <a href="src.config.html" title="previous chapter">src.config module</a></li>
+      <li>Next: <a href="src.initialize.html" title="next chapter">src.initialize module</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Owen K Hughes.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/api/src.grids.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

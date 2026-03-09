@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>src.dynamical_cores package &#8212; pyses  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="src.dynamical_cores.cam_se package" href="src.dynamical_cores.cam_se.html" />
+    <link rel="prev" title="src.analytic_initialization.moist_baroclinic_wave module" href="src.analytic_initialization.moist_baroclinic_wave.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="src-dynamical-cores-package">
+<h1>src.dynamical_cores package<a class="headerlink" href="#src-dynamical-cores-package" title="Link to this heading">¶</a></h1>
+<section id="subpackages">
+<h2>Subpackages<a class="headerlink" href="#subpackages" title="Link to this heading">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="src.dynamical_cores.cam_se.html">src.dynamical_cores.cam_se package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.cam_se.html#submodules">Submodules</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="src.dynamical_cores.cam_se.explicit_terms.html">src.dynamical_cores.cam_se.explicit_terms module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.cam_se.explicit_terms.html#src.dynamical_cores.cam_se.explicit_terms.eval_d_mass_divergence_term"><code class="docutils literal notranslate"><span class="pre">eval_d_mass_divergence_term()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.cam_se.explicit_terms.html#src.dynamical_cores.cam_se.explicit_terms.eval_energy_gradient_term"><code class="docutils literal notranslate"><span class="pre">eval_energy_gradient_term()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.cam_se.explicit_terms.html#src.dynamical_cores.cam_se.explicit_terms.eval_explicit_tendency"><code class="docutils literal notranslate"><span class="pre">eval_explicit_tendency()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.cam_se.explicit_terms.html#src.dynamical_cores.cam_se.explicit_terms.eval_pressure_gradient_force_term"><code class="docutils literal notranslate"><span class="pre">eval_pressure_gradient_force_term()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.cam_se.explicit_terms.html#src.dynamical_cores.cam_se.explicit_terms.eval_temperature_horiz_advection_term"><code class="docutils literal notranslate"><span class="pre">eval_temperature_horiz_advection_term()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.cam_se.explicit_terms.html#src.dynamical_cores.cam_se.explicit_terms.eval_temperature_vertical_advection_term"><code class="docutils literal notranslate"><span class="pre">eval_temperature_vertical_advection_term()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.cam_se.explicit_terms.html#src.dynamical_cores.cam_se.explicit_terms.eval_tracer_consistency_term"><code class="docutils literal notranslate"><span class="pre">eval_tracer_consistency_term()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.cam_se.explicit_terms.html#src.dynamical_cores.cam_se.explicit_terms.eval_vorticity_term"><code class="docutils literal notranslate"><span class="pre">eval_vorticity_term()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.cam_se.explicit_terms.html#src.dynamical_cores.cam_se.explicit_terms.init_common_variables"><code class="docutils literal notranslate"><span class="pre">init_common_variables()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.cam_se.explicit_terms.html#src.dynamical_cores.cam_se.explicit_terms.pressure_gradient_options"><code class="docutils literal notranslate"><span class="pre">pressure_gradient_options</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="src.dynamical_cores.cam_se.se_state.html">src.dynamical_cores.cam_se.se_state module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.cam_se.se_state.html#src.dynamical_cores.cam_se.se_state.init_model_struct"><code class="docutils literal notranslate"><span class="pre">init_model_struct()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="src.dynamical_cores.cam_se.thermodynamics.html">src.dynamical_cores.cam_se.thermodynamics module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.cam_se.thermodynamics.html#src.dynamical_cores.cam_se.thermodynamics.eval_Rgas_dry"><code class="docutils literal notranslate"><span class="pre">eval_Rgas_dry()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.cam_se.thermodynamics.html#src.dynamical_cores.cam_se.thermodynamics.eval_balanced_geopotential"><code class="docutils literal notranslate"><span class="pre">eval_balanced_geopotential()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.cam_se.thermodynamics.html#src.dynamical_cores.cam_se.thermodynamics.eval_cp_dry"><code class="docutils literal notranslate"><span class="pre">eval_cp_dry()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.cam_se.thermodynamics.html#src.dynamical_cores.cam_se.thermodynamics.eval_cp_moist"><code class="docutils literal notranslate"><span class="pre">eval_cp_moist()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.cam_se.thermodynamics.html#src.dynamical_cores.cam_se.thermodynamics.eval_d_pressure"><code class="docutils literal notranslate"><span class="pre">eval_d_pressure()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.cam_se.thermodynamics.html#src.dynamical_cores.cam_se.thermodynamics.eval_exner_function"><code class="docutils literal notranslate"><span class="pre">eval_exner_function()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.cam_se.thermodynamics.html#src.dynamical_cores.cam_se.thermodynamics.eval_interface_pressure"><code class="docutils literal notranslate"><span class="pre">eval_interface_pressure()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.cam_se.thermodynamics.html#src.dynamical_cores.cam_se.thermodynamics.eval_midlevel_pressure"><code class="docutils literal notranslate"><span class="pre">eval_midlevel_pressure()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.cam_se.thermodynamics.html#src.dynamical_cores.cam_se.thermodynamics.eval_sum_species"><code class="docutils literal notranslate"><span class="pre">eval_sum_species()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.cam_se.thermodynamics.html#src.dynamical_cores.cam_se.thermodynamics.eval_surface_pressure"><code class="docutils literal notranslate"><span class="pre">eval_surface_pressure()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.cam_se.thermodynamics.html#src.dynamical_cores.cam_se.thermodynamics.eval_virtual_temperature"><code class="docutils literal notranslate"><span class="pre">eval_virtual_temperature()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.cam_se.html#module-src.dynamical_cores.cam_se">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="src.dynamical_cores.homme.html">src.dynamical_cores.homme package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.homme.html#submodules">Submodules</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="src.dynamical_cores.homme.explicit_terms.html">src.dynamical_cores.homme.explicit_terms module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.homme.explicit_terms.html#src.dynamical_cores.homme.explicit_terms.correct_state"><code class="docutils literal notranslate"><span class="pre">correct_state()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.homme.explicit_terms.html#src.dynamical_cores.homme.explicit_terms.eval_d_mass_divergence_term"><code class="docutils literal notranslate"><span class="pre">eval_d_mass_divergence_term()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.homme.explicit_terms.html#src.dynamical_cores.homme.explicit_terms.eval_energy_quantities"><code class="docutils literal notranslate"><span class="pre">eval_energy_quantities()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.homme.explicit_terms.html#src.dynamical_cores.homme.explicit_terms.eval_explicit_tendency"><code class="docutils literal notranslate"><span class="pre">eval_explicit_tendency()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.homme.explicit_terms.html#src.dynamical_cores.homme.explicit_terms.eval_grad_kinetic_energy_h_term"><code class="docutils literal notranslate"><span class="pre">eval_grad_kinetic_energy_h_term()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.homme.explicit_terms.html#src.dynamical_cores.homme.explicit_terms.eval_grad_kinetic_energy_v_term"><code class="docutils literal notranslate"><span class="pre">eval_grad_kinetic_energy_v_term()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.homme.explicit_terms.html#src.dynamical_cores.homme.explicit_terms.eval_lower_boundary_correction"><code class="docutils literal notranslate"><span class="pre">eval_lower_boundary_correction()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.homme.explicit_terms.html#src.dynamical_cores.homme.explicit_terms.eval_pgrad_phi_term"><code class="docutils literal notranslate"><span class="pre">eval_pgrad_phi_term()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.homme.explicit_terms.html#src.dynamical_cores.homme.explicit_terms.eval_pgrad_pressure_term"><code class="docutils literal notranslate"><span class="pre">eval_pgrad_pressure_term()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.homme.explicit_terms.html#src.dynamical_cores.homme.explicit_terms.eval_phi_acceleration_v_term"><code class="docutils literal notranslate"><span class="pre">eval_phi_acceleration_v_term()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.homme.explicit_terms.html#src.dynamical_cores.homme.explicit_terms.eval_phi_advection_term"><code class="docutils literal notranslate"><span class="pre">eval_phi_advection_term()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.homme.explicit_terms.html#src.dynamical_cores.homme.explicit_terms.eval_theta_v_divergence_term"><code class="docutils literal notranslate"><span class="pre">eval_theta_v_divergence_term()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.homme.explicit_terms.html#src.dynamical_cores.homme.explicit_terms.eval_tracer_velocity_term"><code class="docutils literal notranslate"><span class="pre">eval_tracer_velocity_term()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.homme.explicit_terms.html#src.dynamical_cores.homme.explicit_terms.eval_u_metric_term"><code class="docutils literal notranslate"><span class="pre">eval_u_metric_term()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.homme.explicit_terms.html#src.dynamical_cores.homme.explicit_terms.eval_u_nct_term"><code class="docutils literal notranslate"><span class="pre">eval_u_nct_term()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.homme.explicit_terms.html#src.dynamical_cores.homme.explicit_terms.eval_vorticity_term"><code class="docutils literal notranslate"><span class="pre">eval_vorticity_term()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.homme.explicit_terms.html#src.dynamical_cores.homme.explicit_terms.eval_w_advection_term"><code class="docutils literal notranslate"><span class="pre">eval_w_advection_term()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.homme.explicit_terms.html#src.dynamical_cores.homme.explicit_terms.eval_w_buoyancy_term"><code class="docutils literal notranslate"><span class="pre">eval_w_buoyancy_term()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.homme.explicit_terms.html#src.dynamical_cores.homme.explicit_terms.eval_w_metric_term"><code class="docutils literal notranslate"><span class="pre">eval_w_metric_term()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.homme.explicit_terms.html#src.dynamical_cores.homme.explicit_terms.eval_w_nct_term"><code class="docutils literal notranslate"><span class="pre">eval_w_nct_term()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.homme.explicit_terms.html#src.dynamical_cores.homme.explicit_terms.eval_w_vorticity_correction_term"><code class="docutils literal notranslate"><span class="pre">eval_w_vorticity_correction_term()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.homme.explicit_terms.html#src.dynamical_cores.homme.explicit_terms.init_common_variables"><code class="docutils literal notranslate"><span class="pre">init_common_variables()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="src.dynamical_cores.homme.homme_state.html">src.dynamical_cores.homme.homme_state module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.homme.homme_state.html#src.dynamical_cores.homme.homme_state.init_model_struct"><code class="docutils literal notranslate"><span class="pre">init_model_struct()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="src.dynamical_cores.homme.thermodynamics.html">src.dynamical_cores.homme.thermodynamics module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.homme.thermodynamics.html#src.dynamical_cores.homme.thermodynamics.eval_balanced_geopotential"><code class="docutils literal notranslate"><span class="pre">eval_balanced_geopotential()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.homme.thermodynamics.html#src.dynamical_cores.homme.thermodynamics.eval_midlevel_pressure"><code class="docutils literal notranslate"><span class="pre">eval_midlevel_pressure()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.homme.thermodynamics.html#src.dynamical_cores.homme.thermodynamics.eval_mu"><code class="docutils literal notranslate"><span class="pre">eval_mu()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.homme.thermodynamics.html#src.dynamical_cores.homme.thermodynamics.eval_pressure_exner_nonhydrostatic"><code class="docutils literal notranslate"><span class="pre">eval_pressure_exner_nonhydrostatic()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.homme.thermodynamics.html#src.dynamical_cores.homme.thermodynamics.eval_r_hat_sq_avg"><code class="docutils literal notranslate"><span class="pre">eval_r_hat_sq_avg()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.homme.html#module-src.dynamical_cores.homme">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="src.dynamical_cores.tracer_advection.html">src.dynamical_cores.tracer_advection package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.tracer_advection.html#submodules">Submodules</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="src.dynamical_cores.tracer_advection.eulerian_spectral.html">src.dynamical_cores.tracer_advection.eulerian_spectral module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.tracer_advection.eulerian_spectral.html#src.dynamical_cores.tracer_advection.eulerian_spectral.advance_tracers"><code class="docutils literal notranslate"><span class="pre">advance_tracers()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.tracer_advection.eulerian_spectral.html#src.dynamical_cores.tracer_advection.eulerian_spectral.flatten_tracers"><code class="docutils literal notranslate"><span class="pre">flatten_tracers()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.tracer_advection.eulerian_spectral.html#src.dynamical_cores.tracer_advection.eulerian_spectral.ravel_tracers"><code class="docutils literal notranslate"><span class="pre">ravel_tracers()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.tracer_advection.html#module-src.dynamical_cores.tracer_advection">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="src.dynamical_cores.finite_volume_grid.html">src.dynamical_cores.finite_volume_grid module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="src.dynamical_cores.hyperviscosity.html">src.dynamical_cores.hyperviscosity module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.hyperviscosity.html#src.dynamical_cores.hyperviscosity.advance_sponge_layer"><code class="docutils literal notranslate"><span class="pre">advance_sponge_layer()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.hyperviscosity.html#src.dynamical_cores.hyperviscosity.diffusion_config_for_tracer_consist"><code class="docutils literal notranslate"><span class="pre">diffusion_config_for_tracer_consist()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.hyperviscosity.html#src.dynamical_cores.hyperviscosity.eval_hypervis_harmonic"><code class="docutils literal notranslate"><span class="pre">eval_hypervis_harmonic()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.hyperviscosity.html#src.dynamical_cores.hyperviscosity.eval_hypervis_terms"><code class="docutils literal notranslate"><span class="pre">eval_hypervis_terms()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.hyperviscosity.html#src.dynamical_cores.hyperviscosity.eval_nu_ramp"><code class="docutils literal notranslate"><span class="pre">eval_nu_ramp()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.hyperviscosity.html#src.dynamical_cores.hyperviscosity.eval_ref_state"><code class="docutils literal notranslate"><span class="pre">eval_ref_state()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.hyperviscosity.html#src.dynamical_cores.hyperviscosity.init_hypervis_config_const"><code class="docutils literal notranslate"><span class="pre">init_hypervis_config_const()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.hyperviscosity.html#src.dynamical_cores.hyperviscosity.init_hypervis_config_stub"><code class="docutils literal notranslate"><span class="pre">init_hypervis_config_stub()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.hyperviscosity.html#src.dynamical_cores.hyperviscosity.init_hypervis_config_tensor"><code class="docutils literal notranslate"><span class="pre">init_hypervis_config_tensor()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.hyperviscosity.html#src.dynamical_cores.hyperviscosity.scalar_harmonic_3d"><code class="docutils literal notranslate"><span class="pre">scalar_harmonic_3d()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.hyperviscosity.html#src.dynamical_cores.hyperviscosity.vector_harmonic_3d"><code class="docutils literal notranslate"><span class="pre">vector_harmonic_3d()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="src.dynamical_cores.initialization.html">src.dynamical_cores.initialization module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.initialization.html#src.dynamical_cores.initialization.init_model_pressure"><code class="docutils literal notranslate"><span class="pre">init_model_pressure()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.initialization.html#src.dynamical_cores.initialization.integrate_weight_of_vapor"><code class="docutils literal notranslate"><span class="pre">integrate_weight_of_vapor()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.initialization.html#src.dynamical_cores.initialization.z_from_p_monotonic_dry"><code class="docutils literal notranslate"><span class="pre">z_from_p_monotonic_dry()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.initialization.html#src.dynamical_cores.initialization.z_from_p_monotonic_moist"><code class="docutils literal notranslate"><span class="pre">z_from_p_monotonic_moist()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="src.dynamical_cores.mass_coordinate.html">src.dynamical_cores.mass_coordinate module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.mass_coordinate.html#src.dynamical_cores.mass_coordinate.d_mass_to_surface_mass"><code class="docutils literal notranslate"><span class="pre">d_mass_to_surface_mass()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.mass_coordinate.html#src.dynamical_cores.mass_coordinate.eval_top_interface_mass"><code class="docutils literal notranslate"><span class="pre">eval_top_interface_mass()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.mass_coordinate.html#src.dynamical_cores.mass_coordinate.init_vertical_grid"><code class="docutils literal notranslate"><span class="pre">init_vertical_grid()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.mass_coordinate.html#src.dynamical_cores.mass_coordinate.surface_mass_to_d_mass"><code class="docutils literal notranslate"><span class="pre">surface_mass_to_d_mass()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.mass_coordinate.html#src.dynamical_cores.mass_coordinate.surface_mass_to_interface_mass"><code class="docutils literal notranslate"><span class="pre">surface_mass_to_interface_mass()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.mass_coordinate.html#src.dynamical_cores.mass_coordinate.surface_mass_to_midlevel_mass"><code class="docutils literal notranslate"><span class="pre">surface_mass_to_midlevel_mass()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="src.dynamical_cores.model_config.html">src.dynamical_cores.model_config module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.model_config.html#src.dynamical_cores.model_config.hypervis_opts"><code class="docutils literal notranslate"><span class="pre">hypervis_opts</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.model_config.html#src.dynamical_cores.model_config.init_default_config"><code class="docutils literal notranslate"><span class="pre">init_default_config()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="src.dynamical_cores.model_info.html">src.dynamical_cores.model_info module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.model_info.html#src.dynamical_cores.model_info.models"><code class="docutils literal notranslate"><span class="pre">models</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.model_info.html#src.dynamical_cores.model_info.tracer_schemes"><code class="docutils literal notranslate"><span class="pre">tracer_schemes</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="src.dynamical_cores.model_info.html#src.dynamical_cores.model_info.tracer_schemes.eulerian_spectral"><code class="docutils literal notranslate"><span class="pre">tracer_schemes.eulerian_spectral</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="src.dynamical_cores.model_state.html">src.dynamical_cores.model_state module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.model_state.html#src.dynamical_cores.model_state.advance_tracers"><code class="docutils literal notranslate"><span class="pre">advance_tracers()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.model_state.html#src.dynamical_cores.model_state.apply_mask"><code class="docutils literal notranslate"><span class="pre">apply_mask()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.model_state.html#src.dynamical_cores.model_state.check_dynamics_nan"><code class="docutils literal notranslate"><span class="pre">check_dynamics_nan()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.model_state.html#src.dynamical_cores.model_state.check_tracers_nan"><code class="docutils literal notranslate"><span class="pre">check_tracers_nan()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.model_state.html#src.dynamical_cores.model_state.copy_dynamics"><code class="docutils literal notranslate"><span class="pre">copy_dynamics()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.model_state.html#src.dynamical_cores.model_state.copy_model_state"><code class="docutils literal notranslate"><span class="pre">copy_model_state()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.model_state.html#src.dynamical_cores.model_state.copy_tracers"><code class="docutils literal notranslate"><span class="pre">copy_tracers()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.model_state.html#src.dynamical_cores.model_state.dynamics_to_surface_mass"><code class="docutils literal notranslate"><span class="pre">dynamics_to_surface_mass()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.model_state.html#src.dynamical_cores.model_state.init_static_forcing"><code class="docutils literal notranslate"><span class="pre">init_static_forcing()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.model_state.html#src.dynamical_cores.model_state.project_dynamics"><code class="docutils literal notranslate"><span class="pre">project_dynamics()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.model_state.html#src.dynamical_cores.model_state.project_scalar_3d"><code class="docutils literal notranslate"><span class="pre">project_scalar_3d()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.model_state.html#src.dynamical_cores.model_state.remap_dynamics"><code class="docutils literal notranslate"><span class="pre">remap_dynamics()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.model_state.html#src.dynamical_cores.model_state.remap_tracers"><code class="docutils literal notranslate"><span class="pre">remap_tracers()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.model_state.html#src.dynamical_cores.model_state.sum_consistency_struct"><code class="docutils literal notranslate"><span class="pre">sum_consistency_struct()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.model_state.html#src.dynamical_cores.model_state.sum_dynamics"><code class="docutils literal notranslate"><span class="pre">sum_dynamics()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.model_state.html#src.dynamical_cores.model_state.sum_dynamics_series"><code class="docutils literal notranslate"><span class="pre">sum_dynamics_series()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.model_state.html#src.dynamical_cores.model_state.sum_tracers"><code class="docutils literal notranslate"><span class="pre">sum_tracers()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.model_state.html#src.dynamical_cores.model_state.wrap_dynamics"><code class="docutils literal notranslate"><span class="pre">wrap_dynamics()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.model_state.html#src.dynamical_cores.model_state.wrap_model_state"><code class="docutils literal notranslate"><span class="pre">wrap_model_state()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.model_state.html#src.dynamical_cores.model_state.wrap_static_forcing"><code class="docutils literal notranslate"><span class="pre">wrap_static_forcing()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.model_state.html#src.dynamical_cores.model_state.wrap_tracer_consist_dynamics"><code class="docutils literal notranslate"><span class="pre">wrap_tracer_consist_dynamics()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.model_state.html#src.dynamical_cores.model_state.wrap_tracer_consist_hypervis"><code class="docutils literal notranslate"><span class="pre">wrap_tracer_consist_hypervis()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.model_state.html#src.dynamical_cores.model_state.wrap_tracer_mass"><code class="docutils literal notranslate"><span class="pre">wrap_tracer_mass()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.model_state.html#src.dynamical_cores.model_state.wrap_tracers"><code class="docutils literal notranslate"><span class="pre">wrap_tracers()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="src.dynamical_cores.operators_3d.html">src.dynamical_cores.operators_3d module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.operators_3d.html#src.dynamical_cores.operators_3d.horizontal_divergence_3d"><code class="docutils literal notranslate"><span class="pre">horizontal_divergence_3d()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.operators_3d.html#src.dynamical_cores.operators_3d.horizontal_gradient_3d"><code class="docutils literal notranslate"><span class="pre">horizontal_gradient_3d()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.operators_3d.html#src.dynamical_cores.operators_3d.horizontal_vorticity_3d"><code class="docutils literal notranslate"><span class="pre">horizontal_vorticity_3d()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.operators_3d.html#src.dynamical_cores.operators_3d.horizontal_weak_laplacian_3d"><code class="docutils literal notranslate"><span class="pre">horizontal_weak_laplacian_3d()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.operators_3d.html#src.dynamical_cores.operators_3d.horizontal_weak_vector_laplacian_3d"><code class="docutils literal notranslate"><span class="pre">horizontal_weak_vector_laplacian_3d()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="src.dynamical_cores.physics_config.html">src.dynamical_cores.physics_config module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.physics_config.html#src.dynamical_cores.physics_config.cp_base"><code class="docutils literal notranslate"><span class="pre">cp_base()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.physics_config.html#src.dynamical_cores.physics_config.init_physics_config"><code class="docutils literal notranslate"><span class="pre">init_physics_config()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="src.dynamical_cores.physics_dynamics_coupling.html">src.dynamical_cores.physics_dynamics_coupling module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.physics_dynamics_coupling.html#src.dynamical_cores.physics_dynamics_coupling.coupling_types"><code class="docutils literal notranslate"><span class="pre">coupling_types</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="src.dynamical_cores.run_dycore.html">src.dynamical_cores.run_dycore module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.run_dycore.html#src.dynamical_cores.run_dycore.advance_coupling_step"><code class="docutils literal notranslate"><span class="pre">advance_coupling_step()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.run_dycore.html#src.dynamical_cores.run_dycore.init_simulator"><code class="docutils literal notranslate"><span class="pre">init_simulator()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.run_dycore.html#src.dynamical_cores.run_dycore.validate_custom_configuration"><code class="docutils literal notranslate"><span class="pre">validate_custom_configuration()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="src.dynamical_cores.time_step.html">src.dynamical_cores.time_step module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.time_step.html#src.dynamical_cores.time_step.time_step_options"><code class="docutils literal notranslate"><span class="pre">time_step_options</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="src.dynamical_cores.time_stepping.html">src.dynamical_cores.time_stepping module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.time_stepping.html#src.dynamical_cores.time_stepping.advance_dynamics_euler"><code class="docutils literal notranslate"><span class="pre">advance_dynamics_euler()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.time_stepping.html#src.dynamical_cores.time_stepping.advance_dynamics_ullrich_5stage"><code class="docutils literal notranslate"><span class="pre">advance_dynamics_ullrich_5stage()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.time_stepping.html#src.dynamical_cores.time_stepping.advance_hypervis_euler"><code class="docutils literal notranslate"><span class="pre">advance_hypervis_euler()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.time_stepping.html#src.dynamical_cores.time_stepping.advance_sponge_euler"><code class="docutils literal notranslate"><span class="pre">advance_sponge_euler()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.time_stepping.html#src.dynamical_cores.time_stepping.dynamics_tendency"><code class="docutils literal notranslate"><span class="pre">dynamics_tendency()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.time_stepping.html#src.dynamical_cores.time_stepping.enforce_conservation"><code class="docutils literal notranslate"><span class="pre">enforce_conservation()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.time_stepping.html#src.dynamical_cores.time_stepping.eval_cfl_3d"><code class="docutils literal notranslate"><span class="pre">eval_cfl_3d()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.time_stepping.html#src.dynamical_cores.time_stepping.init_timestep_config"><code class="docutils literal notranslate"><span class="pre">init_timestep_config()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="src.dynamical_cores.utils_3d.html">src.dynamical_cores.utils_3d module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.utils_3d.html#src.dynamical_cores.utils_3d.cumulative_sum"><code class="docutils literal notranslate"><span class="pre">cumulative_sum()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.utils_3d.html#src.dynamical_cores.utils_3d.interface_to_delta"><code class="docutils literal notranslate"><span class="pre">interface_to_delta()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.utils_3d.html#src.dynamical_cores.utils_3d.interface_to_midlevel"><code class="docutils literal notranslate"><span class="pre">interface_to_midlevel()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.utils_3d.html#src.dynamical_cores.utils_3d.interface_to_midlevel_vec"><code class="docutils literal notranslate"><span class="pre">interface_to_midlevel_vec()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.utils_3d.html#src.dynamical_cores.utils_3d.midlevel_to_interface"><code class="docutils literal notranslate"><span class="pre">midlevel_to_interface()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.utils_3d.html#src.dynamical_cores.utils_3d.midlevel_to_interface_vel"><code class="docutils literal notranslate"><span class="pre">midlevel_to_interface_vel()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.utils_3d.html#src.dynamical_cores.utils_3d.phi_to_g"><code class="docutils literal notranslate"><span class="pre">phi_to_g()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.utils_3d.html#src.dynamical_cores.utils_3d.phi_to_r_hat"><code class="docutils literal notranslate"><span class="pre">phi_to_r_hat()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.utils_3d.html#src.dynamical_cores.utils_3d.phi_to_z"><code class="docutils literal notranslate"><span class="pre">phi_to_z()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.utils_3d.html#src.dynamical_cores.utils_3d.physical_dot_product"><code class="docutils literal notranslate"><span class="pre">physical_dot_product()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.utils_3d.html#src.dynamical_cores.utils_3d.z_to_g"><code class="docutils literal notranslate"><span class="pre">z_to_g()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="src.dynamical_cores.vertical_remap.html">src.dynamical_cores.vertical_remap module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="src.dynamical_cores.vertical_remap.html#src.dynamical_cores.vertical_remap.zerroukat_remap"><code class="docutils literal notranslate"><span class="pre">zerroukat_remap()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="module-src.dynamical_cores">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-src.dynamical_cores" title="Link to this heading">¶</a></h2>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">pyses</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation_and_validation.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">How to run the model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_friendly_api.html">The pySEs public API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../anatomy_of_a_model_struct.html">How is the atmospheric state represented in pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">How are horizontal grids generated and read into pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">src</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="src.html">src package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="src.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="src.analytic_initialization.html">src.analytic_initialization package</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">src.dynamical_cores package</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="#subpackages">Subpackages</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.cam_se.html">src.dynamical_cores.cam_se package</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.homme.html">src.dynamical_cores.homme package</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.tracer_advection.html">src.dynamical_cores.tracer_advection package</a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="#submodules">Submodules</a><ul>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.finite_volume_grid.html">src.dynamical_cores.finite_volume_grid module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.hyperviscosity.html">src.dynamical_cores.hyperviscosity module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.initialization.html">src.dynamical_cores.initialization module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.mass_coordinate.html">src.dynamical_cores.mass_coordinate module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.model_config.html">src.dynamical_cores.model_config module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.model_info.html">src.dynamical_cores.model_info module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.model_state.html">src.dynamical_cores.model_state module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.operators_3d.html">src.dynamical_cores.operators_3d module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.physics_config.html">src.dynamical_cores.physics_config module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.physics_dynamics_coupling.html">src.dynamical_cores.physics_dynamics_coupling module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.run_dycore.html">src.dynamical_cores.run_dycore module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.time_step.html">src.dynamical_cores.time_step module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.time_stepping.html">src.dynamical_cores.time_stepping module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.utils_3d.html">src.dynamical_cores.utils_3d module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.vertical_remap.html">src.dynamical_cores.vertical_remap module</a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="#module-src.dynamical_cores">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="src.mesh_generation.html">src.mesh_generation package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.mpi.html">src.mpi package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.operations_2d.html">src.operations_2d package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.shallow_water_models.html">src.shallow_water_models package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.tracer_transport.html">src.tracer_transport package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="src.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="src.html#module-src">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">src</a><ul>
+  <li><a href="src.html">src package</a><ul>
+      <li>Previous: <a href="src.analytic_initialization.moist_baroclinic_wave.html" title="previous chapter">src.analytic_initialization.moist_baroclinic_wave module</a></li>
+      <li>Next: <a href="src.dynamical_cores.cam_se.html" title="next chapter">src.dynamical_cores.cam_se package</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Owen K Hughes.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/api/src.dynamical_cores.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

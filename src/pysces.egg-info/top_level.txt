@@ -1,0 +1,7 @@
+analytic_initialization
+dynamical_cores
+mesh_generation
+mpi
+operations_2d
+shallow_water_models
+tracer_transport

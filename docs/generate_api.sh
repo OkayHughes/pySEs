@@ -1,1 +1,1 @@
-uv run sphinx-apidoc -o source/api ../pysces --force --separate
+uv run sphinx-apidoc -o source/api ../src --force --separate

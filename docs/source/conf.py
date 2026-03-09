@@ -1,6 +1,6 @@
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../..'))  # Adjust path to your project root
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 # Configuration file for the Sphinx documentation builder.
 #
 # For the full list of built-in configuration values, see the documentation:
@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.abspath('../..'))  # Adjust path to your project root
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'pysces'
+project = 'pyses'
 copyright = '2026, Owen K Hughes'
 author = 'Owen K Hughes'
 
@@ -18,7 +18,8 @@ author = 'Owen K Hughes'
 
 extensions = ["numpydoc",
               'sphinx.ext.autodoc',
-              'sphinx.ext.napoleon']
+              'sphinx.ext.napoleon',
+              'sphinx.ext.autosummary']
 
 
 # Autosummary
@@ -50,7 +51,3 @@ html_theme = 'alabaster'
 html_static_path = ['_static']
 
 
-def setup(app):
-    """Generate API docs automatically."""
-    import subprocess
-    subprocess.run(['python', 'generate_docs.py'], cwd='.')

@@ -1,3 +1,0 @@
-.. Whee
-pysces API
-==========

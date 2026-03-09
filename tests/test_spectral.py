@@ -1,5 +1,7 @@
-from pysces.config import np
-from pysces.spectral import init_spectral, _gll_points
+from src._config import get_backend as _get_backend
+_be = _get_backend()
+import numpy as np
+from src.mesh_generation.spectral import init_spectral, _gll_points
 
 
 def test_quadrature():

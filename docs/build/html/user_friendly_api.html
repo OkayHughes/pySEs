@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>The pySEs public API &#8212; pyses  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="How is the atmospheric state represented in pySEs?" href="anatomy_of_a_model_struct.html" />
+    <link rel="prev" title="How to run the model" href="model_run_quickstart.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="the-pyses-public-api">
+<h1>The pySEs public API<a class="headerlink" href="#the-pyses-public-api" title="Link to this heading">¶</a></h1>
+<p>All user-facing functionality is exposed through a small set of Python
+modules in the <code class="docutils literal notranslate"><span class="pre">src/</span></code> directory.  They are imported as, e.g.,
+<code class="docutils literal notranslate"><span class="pre">from</span> <span class="pre">pyses.grids</span> <span class="pre">import</span> <span class="pre">init</span></code>.  Internal implementation details live
+in the sub-packages below <code class="docutils literal notranslate"><span class="pre">src/</span></code> and are not part of the stable API.</p>
+<nav class="contents local" id="modules">
+<p class="topic-title">Modules</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#pyses-grids-horizontal-grid-generation" id="id1"><code class="docutils literal notranslate"><span class="pre">pyses.grids</span></code> — Horizontal grid generation</a></p></li>
+<li><p><a class="reference internal" href="#pyses-initialize-initial-conditions" id="id2"><code class="docutils literal notranslate"><span class="pre">pyses.initialize</span></code> — Initial conditions</a></p></li>
+<li><p><a class="reference internal" href="#pyses-model-utils-model-configuration-and-utilities" id="id3"><code class="docutils literal notranslate"><span class="pre">pyses.model_utils</span></code> — Model configuration and utilities</a></p></li>
+<li><p><a class="reference internal" href="#pyses-simulate-running-the-dynamical-core" id="id4"><code class="docutils literal notranslate"><span class="pre">pyses.simulate</span></code> — Running the dynamical core</a></p></li>
+<li><p><a class="reference internal" href="#pyses-shallow-water-shallow-water-models" id="id5"><code class="docutils literal notranslate"><span class="pre">pyses.shallow_water</span></code> — Shallow-water models</a></p></li>
+</ul>
+</nav>
+<hr class="docutils" />
+<section id="pyses-grids-horizontal-grid-generation">
+<h2><a class="toc-backref" href="#id1" role="doc-backlink"><code class="docutils literal notranslate"><span class="pre">pyses.grids</span></code> — Horizontal grid generation</a><a class="headerlink" href="#pyses-grids-horizontal-grid-generation" title="Link to this heading">¶</a></h2>
+<p>Provides two namespaces for building and manipulating the spectral-element
+horizontal grid.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pyses.grids</span><span class="w"> </span><span class="kn">import</span> <span class="n">init</span><span class="p">,</span> <span class="n">parallelism</span>
+</pre></div>
+</div>
+<section id="init-grid-constructors">
+<h3><code class="docutils literal notranslate"><span class="pre">init</span></code> — grid constructors<a class="headerlink" href="#init-grid-constructors" title="Link to this heading">¶</a></h3>
+<p>All constructors return <code class="docutils literal notranslate"><span class="pre">(h_grid,</span> <span class="pre">dims)</span></code>, where <code class="docutils literal notranslate"><span class="pre">h_grid</span></code> is the
+spectral-element grid struct and <code class="docutils literal notranslate"><span class="pre">dims</span></code> is a metadata dict used throughout
+the rest of the API.</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">init.init_quasi_uniform_grid(nx,</span> <span class="pre">npt,</span> <span class="pre">...)</span></code></dt><dd><p>Element-local quasi-uniform cubed-sphere.  This is the recommended
+constructor for most production runs; it avoids the coordinate singularities
+of the equiangular metric.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">init.init_equiangular_grid(nx,</span> <span class="pre">npt,</span> <span class="pre">...)</span></code></dt><dd><p>Equiangular cubed-sphere using a global metric tensor.  Useful when the
+equiangular property is desirable (e.g. certain convergence tests).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">init.init_stretched_grid(nx,</span> <span class="pre">npt,</span> <span class="pre">axis_dilation,</span> <span class="pre">...)</span></code></dt><dd><p>Element-local stretched cubed-sphere.  <code class="docutils literal notranslate"><span class="pre">axis_dilation</span></code> is a length-3
+array that dilates the cube along each Cartesian axis, concentrating
+resolution near the two antipodal points where the axis intersects the
+sphere.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">init.init_unstructured_grid(...)</span></code></dt><dd><p>Build a grid from an externally supplied unstructured mesh (e.g. one
+generated by SCRIP or Exodus).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">init.init_periodic_plane_grid(nx,</span> <span class="pre">npt,</span> <span class="pre">...)</span></code></dt><dd><p>Doubly-periodic flat-plane grid for idealised channel experiments.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">init.exodus_to_pyses_grid_corners(filepath)</span></code></dt><dd><p>Read an Exodus II mesh file and convert its corner-node coordinates into
+the format expected by <code class="docutils literal notranslate"><span class="pre">init_unstructured_grid</span></code>.</p>
+</dd>
+</dl>
+</section>
+<section id="parallelism-distributed-memory-helpers">
+<h3><code class="docutils literal notranslate"><span class="pre">parallelism</span></code> — distributed-memory helpers<a class="headerlink" href="#parallelism-distributed-memory-helpers" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">parallelism.shard_grid(h_grid,</span> <span class="pre">dims)</span></code></dt><dd><p>Distribute <code class="docutils literal notranslate"><span class="pre">h_grid</span></code> across MPI ranks or JAX devices.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">parallelism.get_global_grid(h_grid,</span> <span class="pre">dims)</span></code></dt><dd><p>Gather a sharded grid back onto the root rank/device.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">parallelism.make_grid_mpi_ready(h_grid,</span> <span class="pre">dims)</span></code></dt><dd><p>Prepare a locally-built grid for use in an MPI run (adds halo metadata).</p>
+</dd>
+</dl>
+</section>
+</section>
+<hr class="docutils" />
+<section id="pyses-initialize-initial-conditions">
+<h2><a class="toc-backref" href="#id2" role="doc-backlink"><code class="docutils literal notranslate"><span class="pre">pyses.initialize</span></code> — Initial conditions</a><a class="headerlink" href="#pyses-initialize-initial-conditions" title="Link to this heading">¶</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pyses.initialize</span><span class="w"> </span><span class="kn">import</span> <span class="n">ullrich_baroclinic_wave</span><span class="p">,</span> <span class="n">custom_init</span>
+</pre></div>
+</div>
+<section id="ullrich-baroclinic-wave-dcmip-2016-moist-baroclinic-wave">
+<h3><code class="docutils literal notranslate"><span class="pre">ullrich_baroclinic_wave</span></code> — DCMIP 2016 moist baroclinic wave<a class="headerlink" href="#ullrich-baroclinic-wave-dcmip-2016-moist-baroclinic-wave" title="Link to this heading">¶</a></h3>
+<p>Implements the Ullrich–Waite–Jablonowski moist baroclinic-wave test case
+(<a class="reference external" href="https://doi.org/10.1002/qj.2241">Ullrich et al. 2014</a>), which is the
+standard benchmark for 3-D dynamical cores in pySEs.</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">ullrich_baroclinic_wave.init_baroclinic_wave_config(model_config)</span></code></dt><dd><p>Derive the test-case configuration (analytic profiles, planetary constants)
+from the physics config dict.  Returns a <code class="docutils literal notranslate"><span class="pre">test_config</span></code> dict consumed by
+<code class="docutils literal notranslate"><span class="pre">init_baroclinic_wave_state</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ullrich_baroclinic_wave.init_baroclinic_wave_state(h_grid,</span> <span class="pre">v_grid,</span> <span class="pre">physics_config,</span> <span class="pre">test_config,</span> <span class="pre">dims,</span> <span class="pre">model,</span> <span class="pre">mountain=False,</span> <span class="pre">pert_type=...)</span></code></dt><dd><p>Evaluate the analytic initial state on the grid and return a full model
+state dict.  Key options:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">mountain</span></code> — add an Agnesi-profile mountain to trigger orographic wave
+growth.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pert_type</span></code> — one of <code class="docutils literal notranslate"><span class="pre">ullrich_baroclinic_wave.perturbation_opts</span></code>:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">perturbation_opts.streamfunction</span></code> — the perturbation form from the
+original paper (default).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">perturbation_opts.exponential</span></code> — DCMIP 2016 exponential form.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">perturbation_opts.none</span></code> — no explicit perturbation; the wave grows
+from numerical noise (useful with topography).</p></li>
+</ul>
+</li>
+</ul>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ullrich_baroclinic_wave.perturbation_opts</span></code></dt><dd><p>Enum of perturbation types described above.</p>
+</dd>
+</dl>
+</section>
+<section id="custom-init-low-level-initialisation-primitives">
+<h3><code class="docutils literal notranslate"><span class="pre">custom_init</span></code> — low-level initialisation primitives<a class="headerlink" href="#custom-init-low-level-initialisation-primitives" title="Link to this heading">¶</a></h3>
+<p>For users building custom initial conditions rather than using an analytic
+test case.</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">custom_init.init_model_pressure(...)</span></code></dt><dd><p>Compute the initial pressure profile given a surface-pressure field.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">custom_init.init_static_forcing(phi_surf,</span> <span class="pre">h_grid,</span> <span class="pre">physics_config,</span> <span class="pre">dims,</span> <span class="pre">model)</span></code></dt><dd><p>Compute the time-invariant <code class="docutils literal notranslate"><span class="pre">static_forcing</span></code> dict (surface geopotential
+gradient, Coriolis parameter) from a surface geopotential array.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">custom_init.init_model_struct_homme(wind,</span> <span class="pre">theta_v_d_mass,</span> <span class="pre">d_mass,</span> <span class="pre">phi_surf,</span> <span class="pre">moisture_species,</span> <span class="pre">tracers,</span> <span class="pre">h_grid,</span> <span class="pre">dims,</span> <span class="pre">config,</span> <span class="pre">model,</span> <span class="pre">...)</span></code></dt><dd><p>Assemble a complete model state for HOMME-family dynamical cores.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">custom_init.init_model_struct_cam_se(wind,</span> <span class="pre">T,</span> <span class="pre">d_mass,</span> <span class="pre">phi_surf,</span> <span class="pre">moisture_species,</span> <span class="pre">tracers,</span> <span class="pre">h_grid,</span> <span class="pre">dims,</span> <span class="pre">config,</span> <span class="pre">model,</span> <span class="pre">...)</span></code></dt><dd><p>Assemble a complete model state for CAM-SE-family dynamical cores.</p>
+</dd>
+</dl>
+</section>
+</section>
+<hr class="docutils" />
+<section id="pyses-model-utils-model-configuration-and-utilities">
+<h2><a class="toc-backref" href="#id3" role="doc-backlink"><code class="docutils literal notranslate"><span class="pre">pyses.model_utils</span></code> — Model configuration and utilities</a><a class="headerlink" href="#pyses-model-utils-model-configuration-and-utilities" title="Link to this heading">¶</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pyses.model_utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">mass_coordinate</span><span class="p">,</span> <span class="n">model_config</span><span class="p">,</span> <span class="n">model_info</span><span class="p">,</span>
+    <span class="n">model_state</span><span class="p">,</span> <span class="n">parallel_utils</span><span class="p">,</span> <span class="n">operators</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<section id="model-info-model-identifiers">
+<h3><code class="docutils literal notranslate"><span class="pre">model_info</span></code> — model identifiers<a class="headerlink" href="#model-info-model-identifiers" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">model_info.models</span></code></dt><dd><p>Enum of all available dynamical cores:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">models.homme_hydrostatic</span></code> — hydrostatic HOMME (spherical)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">models.homme_nonhydrostatic</span></code> — non-hydrostatic HOMME (spherical)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">models.homme_nonhydrostatic_deep</span></code> — non-hydrostatic HOMME, deep
+atmosphere (full Coriolis vector)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">models.homme_hydrostatic_f_plane</span></code> — hydrostatic HOMME, f-plane</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">models.homme_nonhydrostatic_f_plane</span></code> — non-hydrostatic HOMME, f-plane</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">models.cam_se</span></code> — CAM-SE hydrostatic</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">models.cam_se_whole_atmosphere</span></code> — CAM-SE with variable gas constant
+for whole-atmosphere runs</p></li>
+</ul>
+</dd>
+</dl>
+</section>
+<section id="model-config-physics-and-numerics-configuration">
+<h3><code class="docutils literal notranslate"><span class="pre">model_config</span></code> — physics and numerics configuration<a class="headerlink" href="#model-config-physics-and-numerics-configuration" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">model_config.init_default_config(nx,</span> <span class="pre">h_grid,</span> <span class="pre">v_grid,</span> <span class="pre">dims,</span> <span class="pre">model,</span> <span class="pre">hypervis_type=...)</span></code></dt><dd><p>Convenience function that returns sensible defaults for all three
+configuration dicts needed by the simulator:
+<code class="docutils literal notranslate"><span class="pre">(physics_config,</span> <span class="pre">diffusion_config,</span> <span class="pre">timestep_config)</span></code>.
+The returned dicts are plain Python dicts and can be modified in-place
+before being passed to the simulator.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">model_config.hypervis_opts</span></code></dt><dd><p>Enum controlling the hyperviscosity scaling law:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">hypervis_opts.variable_resolution</span></code> — scales with local element size;
+correct for stretched and unstructured grids.  Safe to use on uniform
+grids too.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">hypervis_opts.quasi_uniform</span></code> — assumes all elements are the same size;
+slightly cheaper on uniform grids.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">hypervis_opts.none</span></code> — no hyperviscosity (unstable without another
+stabilisation mechanism).</p></li>
+</ul>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">model_config.init_physics_config(...)</span></code></dt><dd><p>Build the physics config dict directly, with full control over planetary
+constants, gas constants, and moisture species parameters.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">model_config.init_timestep_config(...)</span></code></dt><dd><p>Build the timestep config dict, setting physics and dynamics timesteps,
+subcycle counts, and hyperviscosity substep counts independently.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">model_config.init_diffusion_config(...)</span></code></dt><dd><p>Build the diffusion (hyperviscosity + sponge-layer) config dict.</p>
+</dd>
+</dl>
+</section>
+<section id="mass-coordinate-vertical-grid-utilities">
+<h3><code class="docutils literal notranslate"><span class="pre">mass_coordinate</span></code> — vertical grid utilities<a class="headerlink" href="#mass-coordinate-vertical-grid-utilities" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">mass_coordinate.init_vertical_grid(hybrid_a_i,</span> <span class="pre">hybrid_b_i,</span> <span class="pre">p0,</span> <span class="pre">model)</span></code></dt><dd><p>Construct the vertical grid struct from hybrid sigma-pressure interface
+coefficients.  <code class="docutils literal notranslate"><span class="pre">p0</span></code> is the reference surface pressure in Pa.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">mass_coordinate.surface_mass_to_interface_mass(ps,</span> <span class="pre">v_grid)</span></code></dt><dd><p>Convert surface pressure to interface-level pressure.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">mass_coordinate.surface_mass_to_midlevel_mass(ps,</span> <span class="pre">v_grid)</span></code></dt><dd><p>Convert surface pressure to mid-level pressure.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">mass_coordinate.d_mass_to_surface_mass(d_mass,</span> <span class="pre">v_grid)</span></code></dt><dd><p>Recover surface pressure from a <code class="docutils literal notranslate"><span class="pre">d_mass</span></code> array by summing over levels.</p>
+</dd>
+</dl>
+</section>
+<section id="model-state-state-arithmetic-and-remapping">
+<h3><code class="docutils literal notranslate"><span class="pre">model_state</span></code> — state arithmetic and remapping<a class="headerlink" href="#model-state-state-arithmetic-and-remapping" title="Link to this heading">¶</a></h3>
+<p>These functions operate on the model state dicts described in
+<a class="reference internal" href="anatomy_of_a_model_struct.html"><span class="doc">How is the atmospheric state represented in pySEs?</span></a>.</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">model_state.advance_dynamics(states,</span> <span class="pre">coeffs,</span> <span class="pre">model)</span></code></dt><dd><p>Weighted linear combination of a list of dynamics state dicts (used by
+the Runge–Kutta integrator).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">model_state.advance_tracers(tracer_states,</span> <span class="pre">coeffs,</span> <span class="pre">model)</span></code></dt><dd><p>Same weighted combination for tracer state dicts.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">model_state.remap_dynamics(dynamics,</span> <span class="pre">static_forcing,</span> <span class="pre">v_grid,</span> <span class="pre">physics_config,</span> <span class="pre">num_lev,</span> <span class="pre">model)</span></code></dt><dd><p>Conservatively remap all dynamics fields onto the reference hybrid-
+coordinate levels using the Zerroukat monotone remapper.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">model_state.remap_tracers(dynamics,</span> <span class="pre">tracers,</span> <span class="pre">v_grid,</span> <span class="pre">num_lev,</span> <span class="pre">model)</span></code></dt><dd><p>Same conservative remap for tracer fields.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">model_state.wrap_dynamics</span> <span class="pre">/</span> <span class="pre">wrap_tracers</span> <span class="pre">/</span> <span class="pre">wrap_static_forcing</span> <span class="pre">/</span> <span class="pre">wrap_model_state</span></code></dt><dd><p>Low-level constructors that assemble the sub-dicts of a model state.
+Prefer <code class="docutils literal notranslate"><span class="pre">custom_init.init_model_struct_*</span></code> for full initialisation.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">model_state.copy_dynamics</span> <span class="pre">/</span> <span class="pre">copy_tracers</span> <span class="pre">/</span> <span class="pre">copy_model_state</span></code></dt><dd><p>Deep-copy helpers that allocate independent arrays (needed before
+in-place modification).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">model_state.check_dynamics_nan</span> <span class="pre">/</span> <span class="pre">check_tracers_nan</span></code></dt><dd><p>Return <code class="docutils literal notranslate"><span class="pre">True</span></code> if any field contains a NaN; ghost/halo nodes are excluded
+before the check, and the result is reduced across all MPI ranks.</p>
+</dd>
+</dl>
+</section>
+<section id="parallel-utils-array-device-helpers">
+<h3><code class="docutils literal notranslate"><span class="pre">parallel_utils</span></code> — array device helpers<a class="headerlink" href="#parallel-utils-array-device-helpers" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">parallel_utils.device_wrapper(x)</span></code></dt><dd><p>Move a NumPy array onto the compute device (no-op for NumPy back-end;
+creates a JAX array for the JAX back-end).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">parallel_utils.device_unwrapper(x)</span></code></dt><dd><p>Retrieve a device array as a NumPy array.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">parallel_utils.get_global_array(x,</span> <span class="pre">dims)</span></code></dt><dd><p>Gather a (potentially sharded) array and strip padding elements,
+returning a plain NumPy array with shape <code class="docutils literal notranslate"><span class="pre">(n_elem,</span> <span class="pre">npt,</span> <span class="pre">npt,</span> <span class="pre">...)</span></code>.</p>
+</dd>
+</dl>
+</section>
+<section id="operators-3-d-differential-operators">
+<h3><code class="docutils literal notranslate"><span class="pre">operators</span></code> — 3-D differential operators<a class="headerlink" href="#operators-3-d-differential-operators" title="Link to this heading">¶</a></h3>
+<p>All operators accept a field of shape <code class="docutils literal notranslate"><span class="pre">(n_elem,</span> <span class="pre">npt,</span> <span class="pre">npt,</span> <span class="pre">n_lev)</span></code> and
+return the expected output shape.</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">operators.horizontal_gradient_3d(scalar,</span> <span class="pre">h_grid,</span> <span class="pre">dims)</span></code></dt><dd><p>Horizontal gradient of a scalar; returns shape <code class="docutils literal notranslate"><span class="pre">(n_elem,</span> <span class="pre">npt,</span> <span class="pre">npt,</span> <span class="pre">n_lev,</span> <span class="pre">2)</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">operators.horizontal_divergence_3d(vector,</span> <span class="pre">h_grid,</span> <span class="pre">dims)</span></code></dt><dd><p>Horizontal divergence of a vector field.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">operators.horizontal_vorticity_3d(vector,</span> <span class="pre">h_grid,</span> <span class="pre">dims)</span></code></dt><dd><p>Horizontal vorticity (curl) of a vector field.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">operators.horizontal_weak_laplacian_3d(scalar,</span> <span class="pre">h_grid,</span> <span class="pre">dims)</span></code></dt><dd><p>Weak-form scalar Laplacian.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">operators.horizontal_weak_vector_laplacian_3d(vector,</span> <span class="pre">h_grid,</span> <span class="pre">dims)</span></code></dt><dd><p>Weak-form vector Laplacian.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">operators.project_scalar_3d(scalar,</span> <span class="pre">h_grid,</span> <span class="pre">dims)</span></code></dt><dd><p>DSS (Direct Stiffness Summation) projection to enforce C0
+continuity across element boundaries.</p>
+</dd>
+</dl>
+</section>
+</section>
+<hr class="docutils" />
+<section id="pyses-simulate-running-the-dynamical-core">
+<h2><a class="toc-backref" href="#id4" role="doc-backlink"><code class="docutils literal notranslate"><span class="pre">pyses.simulate</span></code> — Running the dynamical core</a><a class="headerlink" href="#pyses-simulate-running-the-dynamical-core" title="Link to this heading">¶</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pyses.simulate</span><span class="w"> </span><span class="kn">import</span> <span class="n">init_simulator</span><span class="p">,</span> <span class="n">advance_coupling_step</span>
+</pre></div>
+</div>
+<dl>
+<dt><code class="docutils literal notranslate"><span class="pre">init_simulator(h_grid,</span> <span class="pre">v_grid,</span> <span class="pre">physics_config,</span> <span class="pre">diffusion_config,</span> <span class="pre">timestep_config,</span> <span class="pre">dims,</span> <span class="pre">model)</span></code></dt><dd><p>Build a Python generator that advances the model forward in time
+indefinitely.  Call it with an initial state to obtain a generator
+object, then iterate:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">simulator</span> <span class="o">=</span> <span class="n">init_simulator</span><span class="p">(</span><span class="n">h_grid</span><span class="p">,</span> <span class="n">v_grid</span><span class="p">,</span> <span class="n">physics_config</span><span class="p">,</span>
+                           <span class="n">diffusion_config</span><span class="p">,</span> <span class="n">timestep_config</span><span class="p">,</span>
+                           <span class="n">dims</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">t</span><span class="p">,</span> <span class="n">state</span> <span class="ow">in</span> <span class="n">simulator</span><span class="p">(</span><span class="n">initial_state</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">t</span> <span class="o">&gt;</span> <span class="n">end_time</span><span class="p">:</span>
+        <span class="k">break</span>
+</pre></div>
+</div>
+<p>To inject physics tendencies, use <code class="docutils literal notranslate"><span class="pre">generator.send(physics_forcing)</span></code>
+instead of iterating directly.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">advance_coupling_step(state_in,</span> <span class="pre">h_grid,</span> <span class="pre">v_grid,</span> <span class="pre">physics_config,</span> <span class="pre">diffusion_config,</span> <span class="pre">timestep_config,</span> <span class="pre">dims,</span> <span class="pre">model,</span> <span class="pre">physics_forcing=None)</span></code></dt><dd><p>Advance the model by exactly <strong>one physics timestep</strong>.  This is the
+lower-level counterpart of the generator loop: it performs subcycled
+dynamics, tracer advection with consistency corrections, sponge-layer
+damping, and vertical remapping, then returns the updated state dict.</p>
+<p>Use this directly when you need explicit control over the time loop
+(e.g. coupling to an external physics package that manages its own
+outer loop).</p>
+</dd>
+</dl>
+</section>
+<hr class="docutils" />
+<section id="pyses-shallow-water-shallow-water-models">
+<h2><a class="toc-backref" href="#id5" role="doc-backlink"><code class="docutils literal notranslate"><span class="pre">pyses.shallow_water</span></code> — Shallow-water models</a><a class="headerlink" href="#pyses-shallow-water-shallow-water-models" title="Link to this heading">¶</a></h2>
+<p>A self-contained set of 2-D shallow-water solvers on the sphere, useful for
+testing the horizontal discretisation in isolation.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pyses.shallow_water</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">simulate_shallow_water</span><span class="p">,</span>
+    <span class="n">configure</span><span class="p">,</span>
+    <span class="n">model_state</span><span class="p">,</span>
+    <span class="n">galewsky_init</span><span class="p">,</span>
+    <span class="n">williamson_init</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">simulate_shallow_water(h_grid,</span> <span class="pre">model_state,</span> <span class="pre">config,</span> <span class="pre">hv_config,</span> <span class="pre">timestep_config,</span> <span class="pre">dims,</span> <span class="pre">...)</span></code></dt><dd><p>Run the shallow-water model for a prescribed number of steps and return
+the final state.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">configure</span></code></dt><dd><p>Configuration helpers analogous to those in <code class="docutils literal notranslate"><span class="pre">model_utils.model_config</span></code>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">configure.init_hypervis_config_quasi_uniform(...)</span></code> — constant-coefficient hyperviscosity for uniform grids.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">configure.init_hypervis_config_variable_res(...)</span></code> — tensor hyperviscosity scaled by local element size for stretched grids.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">configure.init_timestep_config(...)</span></code> — timestep and subcycle counts.</p></li>
+</ul>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">model_state</span></code></dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">model_state.wrap_model_state(height,</span> <span class="pre">wind)</span></code> — assemble a shallow-water state dict.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">model_state.project_model_state(state,</span> <span class="pre">h_grid,</span> <span class="pre">dims)</span></code> — DSS-project all fields.</p></li>
+</ul>
+</dd>
+</dl>
+<section id="williamson-init-williamson-test-cases">
+<h3><code class="docutils literal notranslate"><span class="pre">williamson_init</span></code> — Williamson test cases<a class="headerlink" href="#williamson-init-williamson-test-cases" title="Link to this heading">¶</a></h3>
+<p>Standard shallow-water test suite (<a class="reference external" href="https://doi.org/10.1016/S0021-9991(05)80016-6">Williamson et al. 1992</a>).</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">williamson_init.init_williamson_steady_config(...)</span></code> — planetary constants for Williamson Test Case 2.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">williamson_init.init_williamson_tc2_wind(lat,</span> <span class="pre">lon,</span> <span class="pre">config)</span></code> — analytic wind field.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">williamson_init.init_williamson_tc2_h(lat,</span> <span class="pre">lon,</span> <span class="pre">config)</span></code> — analytic height field.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">williamson_init.init_williamson_tc2_hs(lat,</span> <span class="pre">lon,</span> <span class="pre">config)</span></code> — analytic surface geopotential.</p></li>
+</ul>
+</section>
+<section id="galewsky-init-galewsky-jet-test-case">
+<h3><code class="docutils literal notranslate"><span class="pre">galewsky_init</span></code> — Galewsky jet test case<a class="headerlink" href="#galewsky-init-galewsky-jet-test-case" title="Link to this heading">¶</a></h3>
+<p>Mid-latitude jet instability test (<a class="reference external" href="https://doi.org/10.3402/tellusa.v56i5.14436">Galewsky et al. 2004</a>).</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">galewsky_init.init_galewsky_config(...)</span></code> — planetary constants and jet parameters.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">galewsky_init.eval_galewky_wind(lat,</span> <span class="pre">config)</span></code> — analytic zonal wind.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">galewsky_init.eval_galewky_h(lat,</span> <span class="pre">config)</span></code> — analytic height field.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">galewsky_init.eval_galewky_hs(lat,</span> <span class="pre">config)</span></code> — analytic surface height.</p></li>
+</ul>
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">pyses</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation_and_validation.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_run_quickstart.html">How to run the model</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">The pySEs public API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#pyses-grids-horizontal-grid-generation"><code class="docutils literal notranslate"><span class="pre">pyses.grids</span></code> — Horizontal grid generation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#init-grid-constructors"><code class="docutils literal notranslate"><span class="pre">init</span></code> — grid constructors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#parallelism-distributed-memory-helpers"><code class="docutils literal notranslate"><span class="pre">parallelism</span></code> — distributed-memory helpers</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#pyses-initialize-initial-conditions"><code class="docutils literal notranslate"><span class="pre">pyses.initialize</span></code> — Initial conditions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#ullrich-baroclinic-wave-dcmip-2016-moist-baroclinic-wave"><code class="docutils literal notranslate"><span class="pre">ullrich_baroclinic_wave</span></code> — DCMIP 2016 moist baroclinic wave</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#custom-init-low-level-initialisation-primitives"><code class="docutils literal notranslate"><span class="pre">custom_init</span></code> — low-level initialisation primitives</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#pyses-model-utils-model-configuration-and-utilities"><code class="docutils literal notranslate"><span class="pre">pyses.model_utils</span></code> — Model configuration and utilities</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#model-info-model-identifiers"><code class="docutils literal notranslate"><span class="pre">model_info</span></code> — model identifiers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#model-config-physics-and-numerics-configuration"><code class="docutils literal notranslate"><span class="pre">model_config</span></code> — physics and numerics configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mass-coordinate-vertical-grid-utilities"><code class="docutils literal notranslate"><span class="pre">mass_coordinate</span></code> — vertical grid utilities</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#model-state-state-arithmetic-and-remapping"><code class="docutils literal notranslate"><span class="pre">model_state</span></code> — state arithmetic and remapping</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#parallel-utils-array-device-helpers"><code class="docutils literal notranslate"><span class="pre">parallel_utils</span></code> — array device helpers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#operators-3-d-differential-operators"><code class="docutils literal notranslate"><span class="pre">operators</span></code> — 3-D differential operators</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#pyses-simulate-running-the-dynamical-core"><code class="docutils literal notranslate"><span class="pre">pyses.simulate</span></code> — Running the dynamical core</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#pyses-shallow-water-shallow-water-models"><code class="docutils literal notranslate"><span class="pre">pyses.shallow_water</span></code> — Shallow-water models</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#williamson-init-williamson-test-cases"><code class="docutils literal notranslate"><span class="pre">williamson_init</span></code> — Williamson test cases</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#galewsky-init-galewsky-jet-test-case"><code class="docutils literal notranslate"><span class="pre">galewsky_init</span></code> — Galewsky jet test case</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="anatomy_of_a_model_struct.html">How is the atmospheric state represented in pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="grid_generation.html">How are horizontal grids generated and read into pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/modules.html">src</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="model_run_quickstart.html" title="previous chapter">How to run the model</a></li>
+      <li>Next: <a href="anatomy_of_a_model_struct.html" title="next chapter">How is the atmospheric state represented in pySEs?</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Owen K Hughes.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/user_friendly_api.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

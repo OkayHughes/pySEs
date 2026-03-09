@@ -1,10 +1,16 @@
-from pysces.config import np, device_wrapper, use_wrapper, jnp, get_global_array
-from pysces.mesh_generation.cubed_sphere import init_cube_topo
-from pysces.mesh_generation.mesh import init_element_corner_vert_redundancy
-from pysces.horizontal_grid import shard_grid
-from pysces.mesh_generation.equiangular_metric import init_grid_from_topo
-from pysces.mesh_generation.mesh import vert_red_flat_to_hierarchy
-from pysces.operations_2d.local_assembly import (project_scalar_wrapper,
+from src._config import get_backend as _get_backend
+_be = _get_backend()
+jnp = _be.np
+device_wrapper = _be.array
+use_wrapper = _be.use_wrapper
+get_global_array = _be.get_global_array
+import numpy as np
+from src.mesh_generation.cubed_sphere import init_cube_topo
+from src.mesh_generation.mesh import init_element_corner_vert_redundancy
+from src.operations_2d.horizontal_grid import shard_grid
+from src.mesh_generation.equiangular_metric import init_grid_from_topo
+from src.mesh_generation.mesh import vert_red_flat_to_hierarchy
+from src.operations_2d.local_assembly import (project_scalar_wrapper,
                                                  project_scalar,
                                                  init_shard_extraction_map,
                                                  minmax_scalar)

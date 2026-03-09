@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>src.dynamical_cores.time_stepping module &#8212; pyses  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="src.dynamical_cores.utils_3d module" href="src.dynamical_cores.utils_3d.html" />
+    <link rel="prev" title="src.dynamical_cores.time_step module" href="src.dynamical_cores.time_step.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-src.dynamical_cores.time_stepping">
+<span id="src-dynamical-cores-time-stepping-module"></span><h1>src.dynamical_cores.time_stepping module<a class="headerlink" href="#module-src.dynamical_cores.time_stepping" title="Link to this heading">¶</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.time_stepping.advance_dynamics_euler">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.time_stepping.</span></span><span class="sig-name descname"><span class="pre">advance_dynamics_euler</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dynamics_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">static_forcing</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestep_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">moisture_species</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dry_air_species</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.time_stepping.advance_dynamics_euler" title="Link to this definition">¶</a></dt>
+<dd><p>Advance the dynamics state by one forward-Euler step.</p>
+<p>Evaluates the explicit adiabatic tendency via <a class="reference internal" href="#src.dynamical_cores.time_stepping.dynamics_tendency" title="src.dynamical_cores.time_stepping.dynamics_tendency"><code class="xref py py-func docutils literal notranslate"><span class="pre">dynamics_tendency()</span></code></a>,
+applies a forward-Euler update, enforces conservation, and scales the
+tracer-consistency struct by the dynamics subcycle fraction.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>dynamics_in</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Dynamics state at the start of the step.</p>
+</dd>
+<dt><strong>static_forcing</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Time-invariant forcing.</p>
+</dd>
+<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal grid struct.</p>
+</dd>
+<dt><strong>v_grid</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Vertical grid struct.</p>
+</dd>
+<dt><strong>physics_config</strong><span class="classifier">dict</span></dt><dd><p>Physics configuration dict.</p>
+</dd>
+<dt><strong>timestep_config</strong><span class="classifier">frozendict</span></dt><dd><p>Time-stepping configuration from <a class="reference internal" href="#src.dynamical_cores.time_stepping.init_timestep_config" title="src.dynamical_cores.time_stepping.init_timestep_config"><code class="xref py py-func docutils literal notranslate"><span class="pre">init_timestep_config()</span></code></a>; static
+JIT argument.</p>
+</dd>
+<dt><strong>dims</strong><span class="classifier">frozendict[str, int]</span></dt><dd><p>Grid dimension tuple; static JIT argument.</p>
+</dd>
+<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier; static JIT argument.</p>
+</dd>
+<dt><strong>moisture_species</strong><span class="classifier">dict[str, Array] or None, optional</span></dt><dd><p>Moisture mixing-ratio fields (CAM-SE models).</p>
+</dd>
+<dt><strong>dry_air_species</strong><span class="classifier">dict[str, Array] or None, optional</span></dt><dd><p>Dry-air species fields (CAM-SE models).</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>dynamics_out</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Updated dynamics state after the Euler step.</p>
+</dd>
+<dt><strong>tracer_consist</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Scaled tracer-consistency struct for this dynamics sub-step.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.time_stepping.advance_dynamics_ullrich_5stage">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.time_stepping.</span></span><span class="sig-name descname"><span class="pre">advance_dynamics_ullrich_5stage</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dynamics_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">static_forcing</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestep_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">moisture_species</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dry_air_species</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.time_stepping.advance_dynamics_ullrich_5stage" title="Link to this definition">¶</a></dt>
+<dd><p>Advance the dynamics state by one step of the Ullrich 5-stage RK3 scheme.</p>
+<p>Implements the low-storage 5-stage third-order Runge–Kutta method of
+Ullrich et al. with five explicit tendency evaluations and a final
+weighted combination using only two stored states.  The tracer-consistency
+struct is accumulated from stage 1 and stage 5 with weights 1/4 and 3/4.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>dynamics_in</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Dynamics state at the start of the step.</p>
+</dd>
+<dt><strong>static_forcing</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Time-invariant forcing.</p>
+</dd>
+<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal grid struct.</p>
+</dd>
+<dt><strong>v_grid</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Vertical grid struct.</p>
+</dd>
+<dt><strong>physics_config</strong><span class="classifier">dict</span></dt><dd><p>Physics configuration dict.</p>
+</dd>
+<dt><strong>timestep_config</strong><span class="classifier">frozendict</span></dt><dd><p>Time-stepping configuration from <a class="reference internal" href="#src.dynamical_cores.time_stepping.init_timestep_config" title="src.dynamical_cores.time_stepping.init_timestep_config"><code class="xref py py-func docutils literal notranslate"><span class="pre">init_timestep_config()</span></code></a>; static
+JIT argument.</p>
+</dd>
+<dt><strong>dims</strong><span class="classifier">frozendict[str, int]</span></dt><dd><p>Grid dimension tuple; static JIT argument.</p>
+</dd>
+<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier; static JIT argument.</p>
+</dd>
+<dt><strong>moisture_species</strong><span class="classifier">dict[str, Array] or None, optional</span></dt><dd><p>Moisture mixing-ratio fields (CAM-SE models).</p>
+</dd>
+<dt><strong>dry_air_species</strong><span class="classifier">dict[str, Array] or None, optional</span></dt><dd><p>Dry-air species fields (CAM-SE models).</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>final_state</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Updated dynamics state after the 5-stage step.</p>
+</dd>
+<dt><strong>tracer_consist_total</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Tracer-consistency struct accumulated from stages 1 and 5, scaled by
+the dynamics subcycle fraction.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.time_stepping.advance_hypervis_euler">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.time_stepping.</span></span><span class="sig-name descname"><span class="pre">advance_hypervis_euler</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dynamics</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">static_forcing</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">diffusion_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestep_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.time_stepping.advance_hypervis_euler" title="Link to this definition">¶</a></dt>
+<dd><p>Advance the dynamics state through all hyperviscosity sub-steps.</p>
+<p>Applies <code class="docutils literal notranslate"><span class="pre">timestep_config[&quot;hypervis_subcycle&quot;]</span></code> forward-Euler steps of
+biharmonic hyperviscosity via <code class="xref py py-func docutils literal notranslate"><span class="pre">eval_hypervis_terms()</span></code>, accumulating the
+scaled tracer-consistency struct across sub-steps.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>dynamics</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Dynamics state at the start of the hyperviscosity pass.</p>
+</dd>
+<dt><strong>static_forcing</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Time-invariant forcing.</p>
+</dd>
+<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal grid struct.</p>
+</dd>
+<dt><strong>v_grid</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Vertical grid struct.</p>
+</dd>
+<dt><strong>physics_config</strong><span class="classifier">dict</span></dt><dd><p>Physics configuration dict.</p>
+</dd>
+<dt><strong>diffusion_config</strong><span class="classifier">dict</span></dt><dd><p>Hyperviscosity configuration from <code class="xref py py-func docutils literal notranslate"><span class="pre">init_hypervis_config_const()</span></code> or
+<code class="xref py py-func docutils literal notranslate"><span class="pre">init_hypervis_config_tensor()</span></code>.</p>
+</dd>
+<dt><strong>timestep_config</strong><span class="classifier">frozendict</span></dt><dd><p>Time-stepping configuration; static JIT argument.</p>
+</dd>
+<dt><strong>dims</strong><span class="classifier">frozendict[str, int]</span></dt><dd><p>Grid dimension tuple; static JIT argument.</p>
+</dd>
+<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier; static JIT argument.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>state_out</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Dynamics state after all hyperviscosity sub-steps.</p>
+</dd>
+<dt><strong>tracer_consist_total</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Accumulated tracer-consistency struct scaled by the joint
+dynamics–hypervis subcycle fraction.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.time_stepping.advance_sponge_euler">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.time_stepping.</span></span><span class="sig-name descname"><span class="pre">advance_sponge_euler</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dynamics</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">diffusion_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestep_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.time_stepping.advance_sponge_euler" title="Link to this definition">¶</a></dt>
+<dd><p>Advance the dynamics state through all sponge-layer sub-steps.</p>
+<p>Applies <code class="docutils literal notranslate"><span class="pre">timestep_config[&quot;sponge_subcycle&quot;]</span></code> forward-Euler steps of the
+top-of-model sponge damping via <code class="xref py py-func docutils literal notranslate"><span class="pre">advance_sponge_layer()</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>dynamics</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Dynamics state at the start of the sponge pass.</p>
+</dd>
+<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal grid struct.</p>
+</dd>
+<dt><strong>physics_config</strong><span class="classifier">dict</span></dt><dd><p>Physics configuration dict.</p>
+</dd>
+<dt><strong>diffusion_config</strong><span class="classifier">dict</span></dt><dd><p>Diffusion configuration containing sponge-layer parameters.</p>
+</dd>
+<dt><strong>timestep_config</strong><span class="classifier">frozendict</span></dt><dd><p>Time-stepping configuration; static JIT argument.</p>
+</dd>
+<dt><strong>dims</strong><span class="classifier">frozendict[str, int]</span></dt><dd><p>Grid dimension tuple; static JIT argument.</p>
+</dd>
+<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier; static JIT argument.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>dynamics_out</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Dynamics state after all sponge-layer sub-steps.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.time_stepping.dynamics_tendency">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.time_stepping.</span></span><span class="sig-name descname"><span class="pre">dynamics_tendency</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dynamics</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">static_forcing</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">moisture_species</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dry_air_species</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.time_stepping.dynamics_tendency" title="Link to this definition">¶</a></dt>
+<dd><p>Evaluate the explicit adiabatic tendency and apply DSS projection.</p>
+<p>Dispatches to the appropriate model’s <code class="docutils literal notranslate"><span class="pre">eval_explicit_tendency</span></code> function
+(CAM-SE or HOMME) and then projects the raw discontinuous tendency onto
+the C0-continuous space via <code class="xref py py-func docutils literal notranslate"><span class="pre">project_dynamics()</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>dynamics</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Current dynamics state from <code class="xref py py-func docutils literal notranslate"><span class="pre">wrap_dynamics()</span></code>.</p>
+</dd>
+<dt><strong>static_forcing</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Time-invariant forcing from <code class="xref py py-func docutils literal notranslate"><span class="pre">init_static_forcing()</span></code>.</p>
+</dd>
+<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal grid struct.</p>
+</dd>
+<dt><strong>v_grid</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Vertical grid struct from <code class="xref py py-func docutils literal notranslate"><span class="pre">init_vertical_grid()</span></code>.</p>
+</dd>
+<dt><strong>physics_config</strong><span class="classifier">dict</span></dt><dd><p>Physics configuration dict.</p>
+</dd>
+<dt><strong>dims</strong><span class="classifier">frozendict[str, int]</span></dt><dd><p>Grid dimension tuple; static JIT argument.</p>
+</dd>
+<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier; selects HOMME or CAM-SE explicit tendency.</p>
+</dd>
+<dt><strong>moisture_species</strong><span class="classifier">dict[str, Array] or None, optional</span></dt><dd><p>Moisture mixing-ratio fields (required for CAM-SE models).</p>
+</dd>
+<dt><strong>dry_air_species</strong><span class="classifier">dict[str, Array] or None, optional</span></dt><dd><p>Dry-air species fields (required for CAM-SE models).</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>dynamics_tend_c0</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>DSS-projected dynamics tendency.</p>
+</dd>
+<dt><strong>tracer_consist</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Tracer-consistency flux struct from <code class="xref py py-func docutils literal notranslate"><span class="pre">wrap_tracer_consist_dynamics()</span></code>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.time_stepping.enforce_conservation">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.time_stepping.</span></span><span class="sig-name descname"><span class="pre">enforce_conservation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dynamics</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">static_forcing</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.time_stepping.enforce_conservation" title="Link to this definition">¶</a></dt>
+<dd><p>Apply model-specific energy/mass conservation corrections after a dynamics step.</p>
+<p>For HOMME models this calls <code class="xref py py-func docutils literal notranslate"><span class="pre">correct_state()</span></code> to enforce discrete energy
+conservation.  For CAM-SE models no correction is applied and the state is
+returned unchanged.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>dynamics</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Dynamics state after an explicit time step.</p>
+</dd>
+<dt><strong>static_forcing</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Time-invariant forcing from <code class="xref py py-func docutils literal notranslate"><span class="pre">init_static_forcing()</span></code>.</p>
+</dd>
+<dt><strong>dt</strong><span class="classifier">float</span></dt><dd><p>Timestep size (s) used in the correction.</p>
+</dd>
+<dt><strong>physics_config</strong><span class="classifier">dict</span></dt><dd><p>Physics configuration dict.</p>
+</dd>
+<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>dynamics_conserve</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Dynamics state with conservation correction applied.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.time_stepping.eval_cfl_3d">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.time_stepping.</span></span><span class="sig-name descname"><span class="pre">eval_cfl_3d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">diffusion_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.time_stepping.eval_cfl_3d" title="Link to this definition">¶</a></dt>
+<dd><p>Compute CFL-based stability time-step estimates for the 3-D dynamical core.</p>
+<p>Wraps <code class="xref py py-func docutils literal notranslate"><span class="pre">eval_cfl()</span></code> and appends a sponge-layer stability estimate when
+<code class="docutils literal notranslate"><span class="pre">&quot;sponge_layer&quot;</span></code> is present in <code class="docutils literal notranslate"><span class="pre">diffusion_config</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal grid struct.</p>
+</dd>
+<dt><strong>physics_config</strong><span class="classifier">dict</span></dt><dd><p>Physics configuration dict; <code class="docutils literal notranslate"><span class="pre">&quot;radius_earth&quot;</span></code> is forwarded to
+<code class="xref py py-func docutils literal notranslate"><span class="pre">eval_cfl()</span></code>.</p>
+</dd>
+<dt><strong>diffusion_config</strong><span class="classifier">dict</span></dt><dd><p>Diffusion/hyperviscosity configuration dict; may contain
+<code class="docutils literal notranslate"><span class="pre">&quot;nu_ramp&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;nu_top&quot;</span></code> for sponge-layer estimates.</p>
+</dd>
+<dt><strong>dims</strong><span class="classifier">frozendict[str, int]</span></dt><dd><p>Grid dimension tuple.</p>
+</dd>
+<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier forwarded to <code class="xref py py-func docutils literal notranslate"><span class="pre">eval_cfl()</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>cfl_info</strong><span class="classifier">dict[str, float]</span></dt><dd><p>Stability time-step estimates including <code class="docutils literal notranslate"><span class="pre">&quot;dt_rk2_tracer&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;dt_gravity_wave&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;dt_hypervis_scalar&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;dt_hypervis_vort&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;dt_hypervis_div&quot;</span></code>, and <code class="docutils literal notranslate"><span class="pre">&quot;dt_sponge_layer&quot;</span></code>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.time_stepping.init_timestep_config">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.time_stepping.</span></span><span class="sig-name descname"><span class="pre">init_timestep_config</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dt_coupling</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">diffusion_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tracer_tstep_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">time_step.RK2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hypervis_tstep_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">time_step.Euler</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dynamics_tstep_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">time_step.RK3_5STAGE</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sponge_tstep_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">time_step.Euler</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tracer_steps_per_coupling_interval</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dyn_steps_per_tracer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hypervis_steps_per_dyn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sponge_steps_per_dyn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_dynamics_coupling</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">phys_dyn_couple_opts.none</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">print_cfl</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.time_stepping.init_timestep_config" title="Link to this definition">¶</a></dt>
+<dd><p>Build the time-stepping configuration dict for the 3-D dynamical core.</p>
+<p>Computes subcycle counts for tracer advection, dynamics, hyperviscosity, and
+the sponge layer from CFL stability estimates.  Each subcycle count is the
+maximum of the CFL-derived minimum and any user-supplied floor value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>dt_coupling</strong><span class="classifier">float</span></dt><dd><p>Physics–dynamics coupling interval (s); the outer time step.</p>
+</dd>
+<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal grid struct; forwarded to <a class="reference internal" href="#src.dynamical_cores.time_stepping.eval_cfl_3d" title="src.dynamical_cores.time_stepping.eval_cfl_3d"><code class="xref py py-func docutils literal notranslate"><span class="pre">eval_cfl_3d()</span></code></a>.</p>
+</dd>
+<dt><strong>physics_config</strong><span class="classifier">dict</span></dt><dd><p>Physics configuration dict.</p>
+</dd>
+<dt><strong>diffusion_config</strong><span class="classifier">dict</span></dt><dd><p>Diffusion/hyperviscosity configuration dict.</p>
+</dd>
+<dt><strong>dims</strong><span class="classifier">frozendict[str, int]</span></dt><dd><p>Grid dimension tuple.</p>
+</dd>
+<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier.</p>
+</dd>
+<dt><strong>tracer_tstep_type</strong><span class="classifier">time_step_options, optional</span></dt><dd><p>Time-stepping scheme for tracer advection (default: <code class="docutils literal notranslate"><span class="pre">RK2</span></code>).</p>
+</dd>
+<dt><strong>hypervis_tstep_type</strong><span class="classifier">time_step_options, optional</span></dt><dd><p>Time-stepping scheme for hyperviscosity (default: <code class="docutils literal notranslate"><span class="pre">Euler</span></code>).</p>
+</dd>
+<dt><strong>dynamics_tstep_type</strong><span class="classifier">time_step_options, optional</span></dt><dd><p>Time-stepping scheme for dynamics (default: <code class="docutils literal notranslate"><span class="pre">RK3_5STAGE</span></code>).</p>
+</dd>
+<dt><strong>sponge_tstep_type</strong><span class="classifier">time_step_options, optional</span></dt><dd><p>Time-stepping scheme for the sponge layer (default: <code class="docutils literal notranslate"><span class="pre">Euler</span></code>).</p>
+</dd>
+<dt><strong>tracer_steps_per_coupling_interval</strong><span class="classifier">int, optional</span></dt><dd><p>Minimum tracer subcycles per coupling interval; <code class="docutils literal notranslate"><span class="pre">-1</span></code> means CFL only.</p>
+</dd>
+<dt><strong>dyn_steps_per_tracer</strong><span class="classifier">int, optional</span></dt><dd><p>Minimum dynamics subcycles per tracer step; <code class="docutils literal notranslate"><span class="pre">-1</span></code> means CFL only.</p>
+</dd>
+<dt><strong>hypervis_steps_per_dyn</strong><span class="classifier">int, optional</span></dt><dd><p>Minimum hyperviscosity subcycles per dynamics step; <code class="docutils literal notranslate"><span class="pre">-1</span></code> means CFL only.</p>
+</dd>
+<dt><strong>sponge_steps_per_dyn</strong><span class="classifier">int, optional</span></dt><dd><p>Minimum sponge-layer subcycles per dynamics step; <code class="docutils literal notranslate"><span class="pre">-1</span></code> means CFL only.</p>
+</dd>
+<dt><strong>physics_dynamics_coupling</strong><span class="classifier">coupling_types, optional</span></dt><dd><p>Physics–dynamics coupling strategy (default: <code class="docutils literal notranslate"><span class="pre">coupling_types.none</span></code>).</p>
+</dd>
+<dt><strong>print_cfl</strong><span class="classifier">bool, optional</span></dt><dd><p>Currently unused; reserved for printing CFL diagnostics.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>timestep_config</strong><span class="classifier">frozendict</span></dt><dd><p>Nested frozen dict with sub-dicts <code class="docutils literal notranslate"><span class="pre">&quot;tracer_advection&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;dynamics&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;hyperviscosity&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;sponge&quot;</span></code> (each containing <code class="docutils literal notranslate"><span class="pre">&quot;step_type&quot;</span></code> and
+<code class="docutils literal notranslate"><span class="pre">&quot;dt&quot;</span></code>), plus integer subcycle counts and <code class="docutils literal notranslate"><span class="pre">&quot;physics_dt&quot;</span></code>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">pyses</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation_and_validation.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">How to run the model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_friendly_api.html">The pySEs public API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../anatomy_of_a_model_struct.html">How is the atmospheric state represented in pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">How are horizontal grids generated and read into pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">src</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="src.html">src package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="src.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="src.analytic_initialization.html">src.analytic_initialization package</a></li>
+<li class="toctree-l4 current"><a class="reference internal" href="src.dynamical_cores.html">src.dynamical_cores package</a><ul class="current">
+<li class="toctree-l5"><a class="reference internal" href="src.dynamical_cores.html#subpackages">Subpackages</a></li>
+<li class="toctree-l5 current"><a class="reference internal" href="src.dynamical_cores.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.finite_volume_grid.html">src.dynamical_cores.finite_volume_grid module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.hyperviscosity.html">src.dynamical_cores.hyperviscosity module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.initialization.html">src.dynamical_cores.initialization module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.mass_coordinate.html">src.dynamical_cores.mass_coordinate module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.model_config.html">src.dynamical_cores.model_config module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.model_info.html">src.dynamical_cores.model_info module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.model_state.html">src.dynamical_cores.model_state module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.operators_3d.html">src.dynamical_cores.operators_3d module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.physics_config.html">src.dynamical_cores.physics_config module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.physics_dynamics_coupling.html">src.dynamical_cores.physics_dynamics_coupling module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.run_dycore.html">src.dynamical_cores.run_dycore module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.time_step.html">src.dynamical_cores.time_step module</a></li>
+<li class="toctree-l6 current"><a class="current reference internal" href="#">src.dynamical_cores.time_stepping module</a><ul>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.time_stepping.advance_dynamics_euler"><code class="docutils literal notranslate"><span class="pre">advance_dynamics_euler()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.time_stepping.advance_dynamics_ullrich_5stage"><code class="docutils literal notranslate"><span class="pre">advance_dynamics_ullrich_5stage()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.time_stepping.advance_hypervis_euler"><code class="docutils literal notranslate"><span class="pre">advance_hypervis_euler()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.time_stepping.advance_sponge_euler"><code class="docutils literal notranslate"><span class="pre">advance_sponge_euler()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.time_stepping.dynamics_tendency"><code class="docutils literal notranslate"><span class="pre">dynamics_tendency()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.time_stepping.enforce_conservation"><code class="docutils literal notranslate"><span class="pre">enforce_conservation()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.time_stepping.eval_cfl_3d"><code class="docutils literal notranslate"><span class="pre">eval_cfl_3d()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.time_stepping.init_timestep_config"><code class="docutils literal notranslate"><span class="pre">init_timestep_config()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.utils_3d.html">src.dynamical_cores.utils_3d module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.vertical_remap.html">src.dynamical_cores.vertical_remap module</a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="src.dynamical_cores.html#module-src.dynamical_cores">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="src.mesh_generation.html">src.mesh_generation package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.mpi.html">src.mpi package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.operations_2d.html">src.operations_2d package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.shallow_water_models.html">src.shallow_water_models package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.tracer_transport.html">src.tracer_transport package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="src.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="src.html#module-src">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">src</a><ul>
+  <li><a href="src.html">src package</a><ul>
+  <li><a href="src.dynamical_cores.html">src.dynamical_cores package</a><ul>
+      <li>Previous: <a href="src.dynamical_cores.time_step.html" title="previous chapter">src.dynamical_cores.time_step module</a></li>
+      <li>Next: <a href="src.dynamical_cores.utils_3d.html" title="next chapter">src.dynamical_cores.utils_3d module</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Owen K Hughes.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/api/src.dynamical_cores.time_stepping.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

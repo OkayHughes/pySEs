@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>src.mpi.global_assembly module &#8212; pyses  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="src.mpi.global_communication module" href="src.mpi.global_communication.html" />
+    <link rel="prev" title="src.mpi package" href="src.mpi.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-src.mpi.global_assembly">
+<span id="src-mpi-global-assembly-module"></span><h1>src.mpi.global_assembly module<a class="headerlink" href="#module-src.mpi.global_assembly" title="Link to this heading">¶</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="src.mpi.global_assembly.accumulate_fields">
+<span class="sig-prename descclassname"><span class="pre">src.mpi.global_assembly.</span></span><span class="sig-name descname"><span class="pre">accumulate_fields</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fijk_fields</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">buffers</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">triples_receive</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.mpi.global_assembly.accumulate_fields" title="Link to this definition">¶</a></dt>
+<dd><p>Sum non-processor-local redundant DOFs into a list of processor-local 3D fields after
+inter-process communication using assembly triples.</p>
+<p><em>Can be used in performance code.</em></p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>fijk_fields</strong><span class="classifier"><cite>list[Array[tuple[elem_idx, gll_idx, gll_idx, level_idx], Float]]</cite></span></dt><dd><p>List of fields from which to extract redundant dofs to ship off
+to remote processors.</p>
+</dd>
+<dt><strong>buffers: `dict[remote_proc_idx, [Array[tuple[point_idx, level_idx], Float]]]`</strong></dt><dd><p>a mapping from <cite>remote_proc_idx</cite> to a list
+of buffers of redundant DOFs, preserving the number of levels in each field.</p>
+</dd>
+<dt><strong>triples_receive: `dict[remote_proc_idx, tuple[Array[tuple[point_idx], Float],                                               Array[tuple[point_idx], Int],                                               Array[tuple[point_idx], Int]]`</strong></dt><dd><p>Mapping from remote_proc_idx to a list of tuples of processor-local indexes into which
+redundant DOFs will be summed.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl>
+<dt><strong>fijk_fields</strong><span class="classifier"><cite>list[Array[tuple[elem_idx, gll_idx, gll_idx, level_idx], Float]]</cite></span></dt><dd><p>List of fields into which non-processor-local redundant dofs have been summed.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The number of levels in <cite>fijk_fields[field_idx]</cite> may vary across <cite>field_idx</cite>.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.mpi.global_assembly.extract_fields">
+<span class="sig-prename descclassname"><span class="pre">src.mpi.global_assembly.</span></span><span class="sig-name descname"><span class="pre">extract_fields</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fijk_fields</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">triples_send</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.mpi.global_assembly.extract_fields" title="Link to this definition">¶</a></dt>
+<dd><p>Extract values from a list of processor-local 3D fields before
+inter-process communication using assembly triples.</p>
+<p><em>This can be used in performance code.</em></p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>fijk_fields</strong><span class="classifier"><cite>list[Array[tuple[elem_idx, gll_idx, gll_idx, level_idx], Float]]</cite></span></dt><dd><p>List of fields from which to extract redundant dofs to ship off
+to remote processors.</p>
+</dd>
+<dt><strong>triples_send</strong><span class="classifier"><cite>dict[remote_proc_idx, tuple[Array[tuple[point_idx], Float],                                            Array[tuple[point_idx], Int],                                            Array[tuple[point_idx], Int]]</cite></span></dt><dd><p>Mapping from <cite>remote_proc_idx</cite> to an assembly triple describing info
+to ship off to <cite>remote_proc_idx</cite>.</p>
+<p>Values are extracted as <cite>fijk_fields[field_idx][elem_idx, i_idx, j_idx, :]</cite></p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><cite>dict[remote_proc_idx, list[Array[tuple[point_idx, level_idx], Float]]]</cite></dt><dd><p>A mapping from <cite>remote_proc_idx</cite> to a list
+of buffers of redundant DOFs, preserving the number of levels in each field.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The number of levels in <cite>fijk_fields[field_idx]</cite> may vary across <cite>field_idx</cite>.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.mpi.global_assembly.pack_scalar">
+<span class="sig-prename descclassname"><span class="pre">src.mpi.global_assembly.</span></span><span class="sig-name descname"><span class="pre">pack_scalar</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fs_local</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.mpi.global_assembly.pack_scalar" title="Link to this definition">¶</a></dt>
+<dd><p>Extract processor-local list of scalars before
+inter-process communication using assembly triples.</p>
+<p>Assembly triples are designed for use in wrapped code, and
+have the best shot of being compatible with automatic differentiation.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>fs_local</strong><span class="classifier"><cite>list[Array[tuple[elem_idx, gll_idx, gll_idx, level_idx], Float]]</cite></span></dt><dd><p>List of 2D scalar fields to extract for communication</p>
+</dd>
+<dt><strong>grid</strong><span class="classifier"><cite>dict[str, Any]</cite></span></dt><dd><p>Processor-local Spectral Element Grid struct.
+Contains “triples_send” key, which
+has type <cite>dict[remote_proc_idx, tuple[Array[tuple[point_idx], Float],                                           Array[tuple[point_idx], Int],                                           Array[tuple[point_idx], Int]]]</cite></p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><cite>dict[proc_idx, list[Array[tuple[local_point_idx, 1], Float]]</cite></dt><dd><p>Mapping from the destination processor idx to an array
+of values where <cite>buffer[remote_proc_idx][pt_idx, 1]</cite> is being sent to
+<cite>remote_proc_idx</cite> and summed into
+<cite>point_idx = triples_receive[local_proc_idx][1][pt_idx]</cite></p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>See <cite>se_grid.create_spectral_element_grid</cite>
+for an example of what the grid struct looks like.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.mpi.global_assembly.project_scalar_global">
+<span class="sig-prename descclassname"><span class="pre">src.mpi.global_assembly.</span></span><span class="sig-name descname"><span class="pre">project_scalar_global</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fs_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">two_d</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.mpi.global_assembly.project_scalar_global" title="Link to this definition">¶</a></dt>
+<dd><p>Perform continuity projection on a list of processor-local scalars using projection triples.</p>
+<p>Can be used for performance code.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>fs</strong><span class="classifier"><cite>list[Array[tuple[elem_idx, gll_idx, gll_idx], Float]]</cite></span></dt><dd><p>List of processor-local 2D scalars to perform continuity projection on.</p>
+</dd>
+<dt><strong>grids</strong><span class="classifier"><cite>list[dict[str, Any]]</cite></span></dt><dd><p>List of grids, each of which contains
+“triples_send”, “triples_receive”, and “assembly_triple”</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><cite>list[Array[tuple[elem_idx, gll_idx, gll_idx], Float]]</cite></dt><dd><p>List of continuous processor-local scalars on which continuity projection was performed.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt>Error</dt><dd><p>Raises any error that can be raised by exchange_buffers_mpi function.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>See <cite>se_grid.create_spectral_element_grid</cite> with <cite>proc_idx=local_proc_idx</cite>
+for how to create the <cite>grids[proc_idx]</cite> entries.</p></li>
+<li><p>To create your own dummy grid, see <cite>se_grid.vert_redundancy_triage</cite>
+for how to create “vert_redundancy_send”, “vert_redundancy_receive”,
+and “vert_redundancy_local”, then see
+<cite>se_grid.init_assembly_global</cite> and <cite>se_grid.init_assembly_local</cite> for how to generate
+(“triples_send”, “triples_receive”), and “assembly_triple”, respectively.</p></li>
+</ul>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.mpi.global_assembly.sum_into">
+<span class="sig-prename descclassname"><span class="pre">src.mpi.global_assembly.</span></span><span class="sig-name descname"><span class="pre">sum_into</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fijk_field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">buffer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rows</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.mpi.global_assembly.sum_into" title="Link to this definition">¶</a></dt>
+<dd><p>Sum redundant dofs into a 3D field using assembly triples.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>fijk_field: `Array[tuple[elem_idx, gll_idx, gll_idx, level_idx], Float]`</strong></dt><dd><p>Field values into which the values in buffer will be summed</p>
+</dd>
+<dt><strong>buffer: `Array[tuple[point_idx, level_idx], Float]`</strong></dt><dd><p>Redundant DOFs</p>
+</dd>
+<dt><strong>rows: `Array[tuple[point_idx], Int]`</strong></dt><dd><p>Indexes of redundant dofs, namely
+<cite>fijk_field[:, :, :, k_idx].flatten()[row[point_idx]]</cite> corresponds to
+buffer[point_idx, k_idx].</p>
+</dd>
+<dt><strong>dims: `frozendict[str, Any]`</strong></dt><dd><p>Hashable dictionary containing key “shape”, which is the shape of <cite>fijk_field</cite>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>fijk_field: <cite>Array[tuple[elem_idx, gll_idx, gll_idx, level_idx], Float]</cite></dt><dd><p>Field values into which the values in buffer have been summed</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The implementation of this function is allowed to depend on wrapper_type.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.mpi.global_assembly.unpack_scalar">
+<span class="sig-prename descclassname"><span class="pre">src.mpi.global_assembly.</span></span><span class="sig-name descname"><span class="pre">unpack_scalar</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fs_local</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">buffers</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.mpi.global_assembly.unpack_scalar" title="Link to this definition">¶</a></dt>
+<dd><p>Sum non-processor-local redundancies into list of scalars
+after inter-process communication using assembly triples.</p>
+<p>Assembly triples are designed for use in wrapped code, and
+have the best shot of being compatible with automatic differentiation.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>fs_local</strong><span class="classifier"><cite>list[Array[tuple[elem_idx, gll_idx, gll_idx, level_idx], Float]]</cite></span></dt><dd><p>List of scalar fields to extract for communication</p>
+</dd>
+<dt><strong>buffers: `dict[proc_idx, list[Array[tuple[local_point_idx, 1], Float]]`</strong></dt><dd><p>Mapping from the (remote) source processor idx to an array
+of values where <cite>buffer[remote_proc_idx][pt_idx, 1]</cite> is being sent to
+<cite>proc_idx</cite> and summed on <cite>proc_idx</cite> into
+<cite>point_idx = triples_receive[proc_idx][1][pt_idx]</cite></p>
+</dd>
+<dt><strong>grid</strong><span class="classifier"><cite>dict[str, Any]</cite></span></dt><dd><p>Processor-local Spectral Element Grid struct.
+Contains “triples_receive” key, which
+has type <cite>dict[remote_proc_idx, tuple[Array[tuple[point_idx], Float],                                           Array[tuple[point_idx], Int],                                           Array[tuple[point_idx], Int]]]</cite></p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><cite>list[Array[tuple[elem_idx, gll_idx, gll_idx, level_idx], Float]]</cite></dt><dd><p>List of scalar fields into which redundant DOFS have been summed.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>See <cite>se_grid.create_spectral_element_grid</cite>
+for an example of what this struct looks like.</p>
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">pyses</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation_and_validation.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">How to run the model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_friendly_api.html">The pySEs public API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../anatomy_of_a_model_struct.html">How is the atmospheric state represented in pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">How are horizontal grids generated and read into pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">src</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="src.html">src package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="src.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="src.analytic_initialization.html">src.analytic_initialization package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.html">src.dynamical_cores package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.mesh_generation.html">src.mesh_generation package</a></li>
+<li class="toctree-l4 current"><a class="reference internal" href="src.mpi.html">src.mpi package</a><ul class="current">
+<li class="toctree-l5 current"><a class="reference internal" href="src.mpi.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l6 current"><a class="current reference internal" href="#">src.mpi.global_assembly module</a><ul>
+<li class="toctree-l7"><a class="reference internal" href="#src.mpi.global_assembly.accumulate_fields"><code class="docutils literal notranslate"><span class="pre">accumulate_fields()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.mpi.global_assembly.extract_fields"><code class="docutils literal notranslate"><span class="pre">extract_fields()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.mpi.global_assembly.pack_scalar"><code class="docutils literal notranslate"><span class="pre">pack_scalar()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.mpi.global_assembly.project_scalar_global"><code class="docutils literal notranslate"><span class="pre">project_scalar_global()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.mpi.global_assembly.sum_into"><code class="docutils literal notranslate"><span class="pre">sum_into()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.mpi.global_assembly.unpack_scalar"><code class="docutils literal notranslate"><span class="pre">unpack_scalar()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="src.mpi.global_communication.html">src.mpi.global_communication module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.mpi.processor_decomposition.html">src.mpi.processor_decomposition module</a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="src.mpi.html#module-src.mpi">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="src.operations_2d.html">src.operations_2d package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.shallow_water_models.html">src.shallow_water_models package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.tracer_transport.html">src.tracer_transport package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="src.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="src.html#module-src">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">src</a><ul>
+  <li><a href="src.html">src package</a><ul>
+  <li><a href="src.mpi.html">src.mpi package</a><ul>
+      <li>Previous: <a href="src.mpi.html" title="previous chapter">src.mpi package</a></li>
+      <li>Next: <a href="src.mpi.global_communication.html" title="next chapter">src.mpi.global_communication module</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Owen K Hughes.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/api/src.mpi.global_assembly.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

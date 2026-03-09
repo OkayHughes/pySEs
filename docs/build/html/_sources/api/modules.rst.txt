@@ -1,7 +1,7 @@
-pysces
-======
+src
+===
 
 .. toctree::
    :maxdepth: 4
 
-   pysces
+   src

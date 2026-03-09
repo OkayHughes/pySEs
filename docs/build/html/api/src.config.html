@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>src.config module &#8212; pyses  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="src.grids module" href="src.grids.html" />
+    <link rel="prev" title="src.tracer_transport.eulerian_spectral module" href="src.tracer_transport.eulerian_spectral.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-src.config">
+<span id="src-config-module"></span><h1>src.config module<a class="headerlink" href="#module-src.config" title="Link to this heading">¶</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="src.config.cast_type">
+<span class="sig-prename descclassname"><span class="pre">src.config.</span></span><span class="sig-name descname"><span class="pre">cast_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.config.cast_type" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.config.device_unwrapper">
+<span class="sig-prename descclassname"><span class="pre">src.config.</span></span><span class="sig-name descname"><span class="pre">device_unwrapper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.config.device_unwrapper" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.config.device_wrapper">
+<span class="sig-prename descclassname"><span class="pre">src.config.</span></span><span class="sig-name descname"><span class="pre">device_wrapper</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dtype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">&lt;class</span> <span class="pre">'numpy.float64'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">elem_sharding_axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.config.device_wrapper" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.config.flip">
+<span class="sig-prename descclassname"><span class="pre">src.config.</span></span><span class="sig-name descname"><span class="pre">flip</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.config.flip" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.config.get_config_filepath">
+<span class="sig-prename descclassname"><span class="pre">src.config.</span></span><span class="sig-name descname"><span class="pre">get_config_filepath</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.config.get_config_filepath" title="Link to this definition">¶</a></dt>
+<dd><p>Return the path to the pysces configuration JSON file.</p>
+<p>The configuration file is located in the current working directory
+so that each run directory can have its own computational settings.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><cite>str</cite></dt><dd><p>Absolute path to <code class="docutils literal notranslate"><span class="pre">pysces_config.json</span></code> in the current
+working directory.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.config.get_global_array">
+<span class="sig-prename descclassname"><span class="pre">src.config.</span></span><span class="sig-name descname"><span class="pre">get_global_array</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">elem_sharding_axis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.config.get_global_array" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="src.config.grid_info">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">src.config.</span></span><span class="sig-name descname"><span class="pre">grid_info</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.config.grid_info" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.config.jit">
+<span class="sig-prename descclassname"><span class="pre">src.config.</span></span><span class="sig-name descname"><span class="pre">jit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">_</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">__</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.config.jit" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.config.parse_config_file">
+<span class="sig-prename descclassname"><span class="pre">src.config.</span></span><span class="sig-name descname"><span class="pre">parse_config_file</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.config.parse_config_file" title="Link to this definition">¶</a></dt>
+<dd><p>Read the pysces configuration JSON file and return it as a dict.</p>
+<p>If no configuration file exists, a default serial NumPy configuration
+is written and the process is asked to restart.</p>
+<dl class="field-list">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>config_vars</strong><span class="classifier"><cite>dict</cite></span></dt><dd><p>Configuration dictionary with keys <code class="docutils literal notranslate"><span class="pre">&quot;debug&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;use_mpi&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;use_wrapper&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;wrapper_type&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;use_cpu&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;use_double&quot;</span></code>, and <code class="docutils literal notranslate"><span class="pre">&quot;shard_cpu_count&quot;</span></code>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.config.remainder">
+<span class="sig-prename descclassname"><span class="pre">src.config.</span></span><span class="sig-name descname"><span class="pre">remainder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">divisor</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.config.remainder" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.config.shard_map">
+<span class="sig-prename descclassname"><span class="pre">src.config.</span></span><span class="sig-name descname"><span class="pre">shard_map</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">_</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">__</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.config.shard_map" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.config.take_along_axis">
+<span class="sig-prename descclassname"><span class="pre">src.config.</span></span><span class="sig-name descname"><span class="pre">take_along_axis</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">idxs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.config.take_along_axis" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.config.versatile_assert">
+<span class="sig-prename descclassname"><span class="pre">src.config.</span></span><span class="sig-name descname"><span class="pre">versatile_assert</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">should_be_true</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.config.versatile_assert" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.config.vmap_1d_apply">
+<span class="sig-prename descclassname"><span class="pre">src.config.</span></span><span class="sig-name descname"><span class="pre">vmap_1d_apply</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scalar</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">in_axis</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_axis</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.config.vmap_1d_apply" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.config.write_config">
+<span class="sig-prename descclassname"><span class="pre">src.config.</span></span><span class="sig-name descname"><span class="pre">write_config</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">debug</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_mpi</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_wrapper</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wrapper_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'none'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_cpu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_double</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shard_cpu_count</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.config.write_config" title="Link to this definition">¶</a></dt>
+<dd><p>Write a pysces computational configuration to <code class="docutils literal notranslate"><span class="pre">pysces_config.json</span></code>
+in the current working directory.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>debug</strong><span class="classifier"><cite>bool</cite>, default=True</span></dt><dd><p>Enable debug mode (extra runtime checks and verbose output).</p>
+</dd>
+<dt><strong>use_mpi</strong><span class="classifier"><cite>bool</cite>, default=False</span></dt><dd><p>Enable MPI distributed-memory parallelism.</p>
+</dd>
+<dt><strong>use_wrapper</strong><span class="classifier"><cite>bool</cite>, default=False</span></dt><dd><p>Wrap arrays in the device library specified by <code class="docutils literal notranslate"><span class="pre">wrapper_type</span></code>.</p>
+</dd>
+<dt><strong>wrapper_type</strong><span class="classifier"><cite>str</cite>, default=”none”</span></dt><dd><p>Device wrapper library to use.  Must be one of
+<code class="docutils literal notranslate"><span class="pre">&quot;none&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;jax&quot;</span></code>, or <code class="docutils literal notranslate"><span class="pre">&quot;torch&quot;</span></code>.</p>
+</dd>
+<dt><strong>use_cpu</strong><span class="classifier"><cite>bool</cite>, default=True</span></dt><dd><p>Force computation on CPU even when a GPU is available.</p>
+</dd>
+<dt><strong>use_double</strong><span class="classifier"><cite>bool</cite>, default=True</span></dt><dd><p>Use double-precision (64-bit) floating point.</p>
+</dd>
+<dt><strong>shard_cpu_count</strong><span class="classifier"><cite>int</cite>, default=1</span></dt><dd><p>Number of virtual CPU devices to shard across when using
+JAX CPU sharding.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The configuration is written as a JSON file and read back at
+import time by <code class="docutils literal notranslate"><span class="pre">parse_config_file</span></code>.  Re-import (or restart)
+the Python process after calling this function for the new
+settings to take effect.</p>
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">pyses</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation_and_validation.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">How to run the model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_friendly_api.html">The pySEs public API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../anatomy_of_a_model_struct.html">How is the atmospheric state represented in pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">How are horizontal grids generated and read into pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">src</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="src.html">src package</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="src.html#subpackages">Subpackages</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="src.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l4 current"><a class="current reference internal" href="#">src.config module</a><ul>
+<li class="toctree-l5"><a class="reference internal" href="#src.config.cast_type"><code class="docutils literal notranslate"><span class="pre">cast_type()</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="#src.config.device_unwrapper"><code class="docutils literal notranslate"><span class="pre">device_unwrapper()</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="#src.config.device_wrapper"><code class="docutils literal notranslate"><span class="pre">device_wrapper()</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="#src.config.flip"><code class="docutils literal notranslate"><span class="pre">flip()</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="#src.config.get_config_filepath"><code class="docutils literal notranslate"><span class="pre">get_config_filepath()</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="#src.config.get_global_array"><code class="docutils literal notranslate"><span class="pre">get_global_array()</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="#src.config.grid_info"><code class="docutils literal notranslate"><span class="pre">grid_info</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="#src.config.jit"><code class="docutils literal notranslate"><span class="pre">jit()</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="#src.config.parse_config_file"><code class="docutils literal notranslate"><span class="pre">parse_config_file()</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="#src.config.remainder"><code class="docutils literal notranslate"><span class="pre">remainder()</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="#src.config.shard_map"><code class="docutils literal notranslate"><span class="pre">shard_map()</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="#src.config.take_along_axis"><code class="docutils literal notranslate"><span class="pre">take_along_axis()</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="#src.config.versatile_assert"><code class="docutils literal notranslate"><span class="pre">versatile_assert()</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="#src.config.vmap_1d_apply"><code class="docutils literal notranslate"><span class="pre">vmap_1d_apply()</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="#src.config.write_config"><code class="docutils literal notranslate"><span class="pre">write_config()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="src.grids.html">src.grids module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.initialize.html">src.initialize module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.model_utils.html">src.model_utils module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.set_config.html">src.set_config module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.shallow_water.html">src.shallow_water module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.simulate.html">src.simulate module</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="src.html#module-src">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">src</a><ul>
+  <li><a href="src.html">src package</a><ul>
+      <li>Previous: <a href="src.tracer_transport.eulerian_spectral.html" title="previous chapter">src.tracer_transport.eulerian_spectral module</a></li>
+      <li>Next: <a href="src.grids.html" title="next chapter">src.grids module</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Owen K Hughes.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/api/src.config.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

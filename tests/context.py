@@ -43,9 +43,10 @@ seed = 0
 
 
 def allclose_global(sharded_array_1, sharded_array_2, dims):
-  from pysces.config import jnp, get_global_array
-  return jnp.allclose(get_global_array(sharded_array_1, dims),
-                      get_global_array(sharded_array_2, dims))
+  from src._config import get_backend as _get_backend
+  _be = _get_backend()
+  return _be.np.allclose(_be.get_global_array(sharded_array_1, dims),
+                         _be.get_global_array(sharded_array_2, dims))
 
 
 def pretty_print_scalar(array, digits=5):

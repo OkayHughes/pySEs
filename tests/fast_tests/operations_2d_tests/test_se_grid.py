@@ -1,16 +1,19 @@
-from pysces.mesh_generation.equiangular_metric import init_grid_from_topo, init_quasi_uniform_grid
-from pysces.mesh_generation.cubed_sphere import init_cube_topo
-from pysces.mesh_generation.mesh import init_element_corner_vert_redundancy
-from pysces.mesh_generation.mesh import vert_red_flat_to_hierarchy, vert_red_hierarchy_to_flat
-from pysces.mpi.processor_decomposition import init_decomp, local_to_global
-from pysces.horizontal_grid import (triage_vert_redundancy_flat, init_assembly_global,
+from src.mesh_generation.equiangular_metric import init_grid_from_topo, init_quasi_uniform_grid
+from src.mesh_generation.cubed_sphere import init_cube_topo
+from src.mesh_generation.mesh import init_element_corner_vert_redundancy
+from src.mesh_generation.mesh import vert_red_flat_to_hierarchy, vert_red_hierarchy_to_flat
+from src.mpi.processor_decomposition import init_decomp, local_to_global
+from src.operations_2d.horizontal_grid import (triage_vert_redundancy_flat, init_assembly_global,
                                     init_assembly_local, make_grid_mpi_ready)
 from ...test_data.handmade_grids import (vert_locals_ref,
                                          vert_recvs_ref,
                                          vert_sends_ref,
                                          vert_redundancy_gll,
                                          init_test_grid)
-from pysces.config import np, do_sharding
+from src._config import get_backend as _get_backend
+_be = _get_backend()
+do_sharding = _be.do_sharding
+import numpy as np
 from ...context import test_npts
 
 

@@ -1,13 +1,17 @@
 from ...test_data.mass_coordinate_grids import cam30
-from pysces.config import device_unwrapper, np, mpi_rank, is_main_proc
-from pysces.analytic_initialization.moist_baroclinic_wave import init_baroclinic_wave_config, perturbation_opts
-from pysces.run_dycore import init_simulator
-from pysces.mesh_generation.equiangular_metric import init_quasi_uniform_grid
-from pysces.dynamical_cores.mass_coordinate import init_vertical_grid
-from pysces.horizontal_grid import make_grid_mpi_ready
-from pysces.model_info import models
-from pysces.dynamical_cores.model_config import init_default_config, hypervis_opts
-from pysces.initialization import init_baroclinic_wave_state
+from src._config import get_backend as _get_backend
+_be = _get_backend()
+device_unwrapper = _be.unwrap
+mpi_rank = _be.mpi_rank
+is_main_proc = _be.is_main_proc
+import numpy as np
+from src.analytic_initialization.moist_baroclinic_wave import init_baroclinic_wave_config, perturbation_opts, init_baroclinic_wave_state
+from src.dynamical_cores.run_dycore import init_simulator
+from src.mesh_generation.equiangular_metric import init_quasi_uniform_grid
+from src.dynamical_cores.mass_coordinate import init_vertical_grid
+from src.operations_2d.horizontal_grid import make_grid_mpi_ready
+from src.dynamical_cores.model_info import models
+from src.dynamical_cores.model_config import init_default_config, hypervis_opts
 from sys import stdout
 
 

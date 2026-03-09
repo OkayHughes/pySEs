@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>src.dynamical_cores.model_state module &#8212; pyses  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="src.dynamical_cores.operators_3d module" href="src.dynamical_cores.operators_3d.html" />
+    <link rel="prev" title="src.dynamical_cores.model_info module" href="src.dynamical_cores.model_info.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-src.dynamical_cores.model_state">
+<span id="src-dynamical-cores-model-state-module"></span><h1>src.dynamical_cores.model_state module<a class="headerlink" href="#module-src.dynamical_cores.model_state" title="Link to this heading">¶</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.model_state.advance_tracers">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.model_state.</span></span><span class="sig-name descname"><span class="pre">advance_tracers</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tracer_states</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coeffs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.model_state.advance_tracers" title="Link to this definition">¶</a></dt>
+<dd><p>Compute a weighted linear combination of a list of tracer states.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>tracer_states</strong><span class="classifier">list[dict]</span></dt><dd><p>List of tracer state dicts, each containing <code class="docutils literal notranslate"><span class="pre">&quot;moisture_species&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;tracers&quot;</span></code>, and (for CAM-SE models) <code class="docutils literal notranslate"><span class="pre">&quot;dry_air_species&quot;</span></code> sub-dicts.</p>
+</dd>
+<dt><strong>coeffs</strong><span class="classifier">sequence[float]</span></dt><dd><p>Scalar weights, one per element of <code class="docutils literal notranslate"><span class="pre">tracer_states</span></code>.  The first two
+states are combined with <code class="docutils literal notranslate"><span class="pre">coeffs[0]</span></code> and <code class="docutils literal notranslate"><span class="pre">coeffs[1]</span></code>; subsequent
+states are folded in with their corresponding coefficient.</p>
+</dd>
+<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier; determines whether <code class="docutils literal notranslate"><span class="pre">&quot;dry_air_species&quot;</span></code> is handled.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>tracers</strong><span class="classifier">dict</span></dt><dd><p>Assembled tracer state dict produced by <a class="reference internal" href="#src.dynamical_cores.model_state.wrap_tracers" title="src.dynamical_cores.model_state.wrap_tracers"><code class="xref py py-func docutils literal notranslate"><span class="pre">wrap_tracers()</span></code></a> containing
+the field-wise weighted sum across all input states.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.model_state.apply_mask">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.model_state.</span></span><span class="sig-name descname"><span class="pre">apply_mask</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.model_state.apply_mask" title="Link to this definition">¶</a></dt>
+<dd><p>Zero out ghost/halo GLL nodes using the grid mask.</p>
+<p>Broadcasts <code class="docutils literal notranslate"><span class="pre">h_grid[&quot;ghost_mask&quot;]</span></code> to match <code class="docutils literal notranslate"><span class="pre">field</span></code>’s rank and sets
+nodes where the mask is <code class="docutils literal notranslate"><span class="pre">&lt;=</span> <span class="pre">0.5</span></code> (ghost nodes) to zero.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>field</strong><span class="classifier">Array</span></dt><dd><p>Field array whose leading dimensions match <code class="docutils literal notranslate"><span class="pre">(elem_idx,</span> <span class="pre">gll_idx,</span> <span class="pre">gll_idx)</span></code>.</p>
+</dd>
+<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal grid struct containing <code class="docutils literal notranslate"><span class="pre">&quot;ghost_mask&quot;</span></code> of shape
+<code class="docutils literal notranslate"><span class="pre">(elem_idx,</span> <span class="pre">gll_idx,</span> <span class="pre">gll_idx)</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>masked_field</strong><span class="classifier">Array</span></dt><dd><p>Field with ghost-node values replaced by zero.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.model_state.check_dynamics_nan">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.model_state.</span></span><span class="sig-name descname"><span class="pre">check_dynamics_nan</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dynamics</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.model_state.check_dynamics_nan" title="Link to this definition">¶</a></dt>
+<dd><p>Check whether any dynamics field contains a NaN on any MPI rank.</p>
+<p>Ghost nodes are excluded via <a class="reference internal" href="#src.dynamical_cores.model_state.apply_mask" title="src.dynamical_cores.model_state.apply_mask"><code class="xref py py-func docutils literal notranslate"><span class="pre">apply_mask()</span></code></a> before the NaN check.
+The per-rank boolean is reduced across all ranks via <code class="xref py py-func docutils literal notranslate"><span class="pre">global_sum()</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>dynamics</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Dynamics state dict from <a class="reference internal" href="#src.dynamical_cores.model_state.wrap_dynamics" title="src.dynamical_cores.model_state.wrap_dynamics"><code class="xref py py-func docutils literal notranslate"><span class="pre">wrap_dynamics()</span></code></a>.</p>
+</dd>
+<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal grid struct containing <code class="docutils literal notranslate"><span class="pre">&quot;ghost_mask&quot;</span></code>.</p>
+</dd>
+<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier; determines which fields (including non-hydrostatic
+ones) are checked.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>has_nan</strong><span class="classifier">bool</span></dt><dd><p><code class="docutils literal notranslate"><span class="pre">True</span></code> if any NaN is found in any dynamics field on any MPI rank.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.model_state.check_tracers_nan">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.model_state.</span></span><span class="sig-name descname"><span class="pre">check_tracers_nan</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tracers</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.model_state.check_tracers_nan" title="Link to this definition">¶</a></dt>
+<dd><p>Check whether any tracer field contains a NaN on any MPI rank.</p>
+<p>Ghost nodes are excluded via <a class="reference internal" href="#src.dynamical_cores.model_state.apply_mask" title="src.dynamical_cores.model_state.apply_mask"><code class="xref py py-func docutils literal notranslate"><span class="pre">apply_mask()</span></code></a> before the NaN check.
+The per-rank boolean is reduced across all ranks via <code class="xref py py-func docutils literal notranslate"><span class="pre">global_sum()</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>tracers</strong><span class="classifier">dict</span></dt><dd><p>Tracer state dict from <a class="reference internal" href="#src.dynamical_cores.model_state.wrap_tracers" title="src.dynamical_cores.model_state.wrap_tracers"><code class="xref py py-func docutils literal notranslate"><span class="pre">wrap_tracers()</span></code></a> with sub-dicts
+<code class="docutils literal notranslate"><span class="pre">&quot;moisture_species&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;tracers&quot;</span></code>, and optionally
+<code class="docutils literal notranslate"><span class="pre">&quot;dry_air_species&quot;</span></code> (CAM-SE models).</p>
+</dd>
+<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal grid struct containing <code class="docutils literal notranslate"><span class="pre">&quot;ghost_mask&quot;</span></code>.</p>
+</dd>
+<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier; determines whether <code class="docutils literal notranslate"><span class="pre">&quot;dry_air_species&quot;</span></code> is checked.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>has_nan</strong><span class="classifier">bool</span></dt><dd><p><code class="docutils literal notranslate"><span class="pre">True</span></code> if any NaN is found in any tracer field on any MPI rank.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.model_state.copy_dynamics">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.model_state.</span></span><span class="sig-name descname"><span class="pre">copy_dynamics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dynamics</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.model_state.copy_dynamics" title="Link to this definition">¶</a></dt>
+<dd><p>Deep-copy a dynamics state dict, allocating new arrays for each field.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>dynamics</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Dynamics state from <a class="reference internal" href="#src.dynamical_cores.model_state.wrap_dynamics" title="src.dynamical_cores.model_state.wrap_dynamics"><code class="xref py py-func docutils literal notranslate"><span class="pre">wrap_dynamics()</span></code></a>.</p>
+</dd>
+<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier; determines whether <code class="docutils literal notranslate"><span class="pre">&quot;phi_i&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;w_i&quot;</span></code> are copied.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>dynamics_copy</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>New dynamics dict with independent copies of all arrays.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.model_state.copy_model_state">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.model_state.</span></span><span class="sig-name descname"><span class="pre">copy_model_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.model_state.copy_model_state" title="Link to this definition">¶</a></dt>
+<dd><p>Deep-copy the full model state (dynamics + static forcing + tracers).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>state</strong><span class="classifier">dict</span></dt><dd><p>Top-level model state from <a class="reference internal" href="#src.dynamical_cores.model_state.wrap_model_state" title="src.dynamical_cores.model_state.wrap_model_state"><code class="xref py py-func docutils literal notranslate"><span class="pre">wrap_model_state()</span></code></a>.</p>
+</dd>
+<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier forwarded to <a class="reference internal" href="#src.dynamical_cores.model_state.copy_dynamics" title="src.dynamical_cores.model_state.copy_dynamics"><code class="xref py py-func docutils literal notranslate"><span class="pre">copy_dynamics()</span></code></a> and
+<a class="reference internal" href="#src.dynamical_cores.model_state.copy_tracers" title="src.dynamical_cores.model_state.copy_tracers"><code class="xref py py-func docutils literal notranslate"><span class="pre">copy_tracers()</span></code></a>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>state_copy</strong><span class="classifier">dict</span></dt><dd><p>New model state dict with independent copies of dynamics and tracers.
+The <code class="docutils literal notranslate"><span class="pre">&quot;static_forcing&quot;</span></code> sub-dict is shared (not copied) since it is
+time-invariant.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.model_state.copy_tracers">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.model_state.</span></span><span class="sig-name descname"><span class="pre">copy_tracers</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tracers</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.model_state.copy_tracers" title="Link to this definition">¶</a></dt>
+<dd><p>Deep-copy a tracer state dict, allocating new arrays for each species.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>tracers</strong><span class="classifier">dict</span></dt><dd><p>Tracer state from <a class="reference internal" href="#src.dynamical_cores.model_state.wrap_tracers" title="src.dynamical_cores.model_state.wrap_tracers"><code class="xref py py-func docutils literal notranslate"><span class="pre">wrap_tracers()</span></code></a> with sub-dicts
+<code class="docutils literal notranslate"><span class="pre">&quot;moisture_species&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;tracers&quot;</span></code>, and optionally
+<code class="docutils literal notranslate"><span class="pre">&quot;dry_air_species&quot;</span></code> (CAM-SE models).</p>
+</dd>
+<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier; determines whether <code class="docutils literal notranslate"><span class="pre">&quot;dry_air_species&quot;</span></code> is copied.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>tracers_copy</strong><span class="classifier">dict</span></dt><dd><p>New tracer state dict with independent copies of all species arrays.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.model_state.dynamics_to_surface_mass">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.model_state.</span></span><span class="sig-name descname"><span class="pre">dynamics_to_surface_mass</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v_grid</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.model_state.dynamics_to_surface_mass" title="Link to this definition">¶</a></dt>
+<dd><p>Recover the surface pressure from the dynamics <code class="docutils literal notranslate"><span class="pre">d_mass</span></code> field.</p>
+<p>Sums the layer masses over all vertical levels and adds the model-top
+pressure <code class="docutils literal notranslate"><span class="pre">p_top</span> <span class="pre">=</span> <span class="pre">hybrid_a_i[0]</span> <span class="pre">*</span> <span class="pre">reference_surface_mass</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>state_in</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Dynamics state dict containing <code class="docutils literal notranslate"><span class="pre">&quot;d_mass&quot;</span></code> with shape
+<code class="docutils literal notranslate"><span class="pre">(elem,</span> <span class="pre">gll,</span> <span class="pre">gll,</span> <span class="pre">lev)</span></code>.</p>
+</dd>
+<dt><strong>v_grid</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Vertical grid struct from <code class="xref py py-func docutils literal notranslate"><span class="pre">init_vertical_grid()</span></code> containing
+<code class="docutils literal notranslate"><span class="pre">&quot;hybrid_a_i&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;reference_surface_mass&quot;</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>ps</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx], Float]</span></dt><dd><p>Surface pressure (Pa).</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.model_state.init_static_forcing">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.model_state.</span></span><span class="sig-name descname"><span class="pre">init_static_forcing</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">phi_surf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">f_plane_center</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.7853981633974483</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.model_state.init_static_forcing" title="Link to this definition">¶</a></dt>
+<dd><p>Compute and assemble the time-invariant static forcing fields.</p>
+<p>Computes the DSS-projected gradient of the surface geopotential and the
+Coriolis parameter (using a constant latitude for f-plane models, or the
+true latitude for spherical models).  Deep-atmosphere models also receive
+the non-traditional Coriolis parameter.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>phi_surf</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx], Float]</span></dt><dd><p>Surface geopotential (m^2 s^-2).</p>
+</dd>
+<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal grid struct containing physical coordinates and DSS operators.</p>
+</dd>
+<dt><strong>physics_config</strong><span class="classifier">dict</span></dt><dd><p>Physics configuration with keys <code class="docutils literal notranslate"><span class="pre">&quot;radius_earth&quot;</span></code> and
+<code class="docutils literal notranslate"><span class="pre">&quot;angular_freq_earth&quot;</span></code>.</p>
+</dd>
+<dt><strong>dims</strong><span class="classifier">frozendict[str, int]</span></dt><dd><p>Grid dimension tuple used for DSS projection.</p>
+</dd>
+<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier; selects f-plane vs spherical and shallow vs deep.</p>
+</dd>
+<dt><strong>f_plane_center</strong><span class="classifier">float, optional</span></dt><dd><p>Latitude (radians) for f-plane Coriolis constant (default: pi/4).</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>static_forcing</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Dict assembled by <a class="reference internal" href="#src.dynamical_cores.model_state.wrap_static_forcing" title="src.dynamical_cores.model_state.wrap_static_forcing"><code class="xref py py-func docutils literal notranslate"><span class="pre">wrap_static_forcing()</span></code></a>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.model_state.project_dynamics">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.model_state.</span></span><span class="sig-name descname"><span class="pre">project_dynamics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dynamics_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.model_state.project_dynamics" title="Link to this definition">¶</a></dt>
+<dd><p>Apply DSS (Direct Stiffness Summation) projection to all dynamics fields.</p>
+<p>Each dynamics field is projected level-by-level via <a class="reference internal" href="#src.dynamical_cores.model_state.project_scalar_3d" title="src.dynamical_cores.model_state.project_scalar_3d"><code class="xref py py-func docutils literal notranslate"><span class="pre">project_scalar_3d()</span></code></a>
+to enforce C0 continuity across element boundaries.  Non-hydrostatic fields
+<code class="docutils literal notranslate"><span class="pre">&quot;phi_i&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;w_i&quot;</span></code> are projected only when present.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>dynamics_in</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Input dynamics state from <a class="reference internal" href="#src.dynamical_cores.model_state.wrap_dynamics" title="src.dynamical_cores.model_state.wrap_dynamics"><code class="xref py py-func docutils literal notranslate"><span class="pre">wrap_dynamics()</span></code></a>.</p>
+</dd>
+<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal grid struct containing DSS operators.</p>
+</dd>
+<dt><strong>dims</strong><span class="classifier">frozendict[str, int]</span></dt><dd><p>Grid dimension tuple used for DSS projection.</p>
+</dd>
+<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier; determines whether non-hydrostatic fields are projected.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>dynamics_proj</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Dynamics state with all fields replaced by their DSS projections.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.model_state.project_scalar_3d">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.model_state.</span></span><span class="sig-name descname"><span class="pre">project_scalar_3d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">variable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.model_state.project_scalar_3d" title="Link to this definition">¶</a></dt>
+<dd><p>Apply DSS projection to a 3-D scalar field, with optional MPI communication.</p>
+<p>When MPI communication is enabled the global DSS assembly is performed via
+<code class="xref py py-func docutils literal notranslate"><span class="pre">project_scalar_global()</span></code>; otherwise the purely local 2-D
+<code class="xref py py-func docutils literal notranslate"><span class="pre">project_scalar()</span></code> is mapped over the vertical axis via
+<code class="docutils literal notranslate"><span class="pre">vmap_1d_apply</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>variable</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Discontinuous 3-D scalar field (one value per GLL node per level).</p>
+</dd>
+<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal grid struct containing DSS operators.</p>
+</dd>
+<dt><strong>dims</strong><span class="classifier">frozendict[str, int]</span></dt><dd><p>Grid dimension tuple used for DSS projection.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>variable_cont</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>DSS-projected (C0-continuous) scalar field.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.model_state.remap_dynamics">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.model_state.</span></span><span class="sig-name descname"><span class="pre">remap_dynamics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dynamics_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">static_forcing</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_lev</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.model_state.remap_dynamics" title="Link to this definition">¶</a></dt>
+<dd><p>Vertically remap all dynamics fields to the reference hybrid-coordinate levels.</p>
+<p>Converts mass-weighted prognostic fields to layer-integrated form
+(<code class="docutils literal notranslate"><span class="pre">q</span> <span class="pre">*</span> <span class="pre">d_mass</span></code>), remaps them conservatively via <code class="xref py py-func docutils literal notranslate"><span class="pre">zerroukat_remap()</span></code>,
+then recovers mixing-ratio form on the reference levels.  Non-hydrostatic
+models additionally remap the geopotential perturbation and vertical
+velocity.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>dynamics_in</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Current dynamics state from <a class="reference internal" href="#src.dynamical_cores.model_state.wrap_dynamics" title="src.dynamical_cores.model_state.wrap_dynamics"><code class="xref py py-func docutils literal notranslate"><span class="pre">wrap_dynamics()</span></code></a>.</p>
+</dd>
+<dt><strong>static_forcing</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Static forcing from <a class="reference internal" href="#src.dynamical_cores.model_state.init_static_forcing" title="src.dynamical_cores.model_state.init_static_forcing"><code class="xref py py-func docutils literal notranslate"><span class="pre">init_static_forcing()</span></code></a>; <code class="docutils literal notranslate"><span class="pre">&quot;phi_surf&quot;</span></code> and
+<code class="docutils literal notranslate"><span class="pre">&quot;grad_phi_surf&quot;</span></code> are used for the non-hydrostatic geopotential remap.</p>
+</dd>
+<dt><strong>v_grid</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Vertical grid struct from <code class="xref py py-func docutils literal notranslate"><span class="pre">init_vertical_grid()</span></code>.</p>
+</dd>
+<dt><strong>physics_config</strong><span class="classifier">dict</span></dt><dd><p>Physics configuration forwarded to thermodynamic helpers.</p>
+</dd>
+<dt><strong>num_lev</strong><span class="classifier">int</span></dt><dd><p>Number of vertical levels; static JIT argument.</p>
+</dd>
+<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier; selects thermodynamic variable and non-hydrostatic
+handling.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>dynamics_remapped</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Dynamics state on the reference <code class="docutils literal notranslate"><span class="pre">d_mass_ref</span></code> levels.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.model_state.remap_tracers">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.model_state.</span></span><span class="sig-name descname"><span class="pre">remap_tracers</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dynamics</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tracers</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_lev</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.model_state.remap_tracers" title="Link to this definition">¶</a></dt>
+<dd><p>Vertically remap all tracer species to the reference hybrid-coordinate levels.</p>
+<p>Each tracer mixing ratio is converted to a mass quantity (<code class="docutils literal notranslate"><span class="pre">q</span> <span class="pre">*</span> <span class="pre">d_mass</span></code>),
+remapped conservatively via <code class="xref py py-func docutils literal notranslate"><span class="pre">zerroukat_remap()</span></code>, and then divided by
+the reference layer mass to recover the remapped mixing ratio.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>dynamics</strong><span class="classifier">dict</span></dt><dd><p>Dynamics state dict containing <code class="docutils literal notranslate"><span class="pre">&quot;d_mass&quot;</span></code> for the current model levels.</p>
+</dd>
+<dt><strong>tracers</strong><span class="classifier">dict</span></dt><dd><p>Tracer state dict with sub-dicts <code class="docutils literal notranslate"><span class="pre">&quot;moisture_species&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;tracers&quot;</span></code>,
+and (for CAM-SE models) <code class="docutils literal notranslate"><span class="pre">&quot;dry_air_species&quot;</span></code>.</p>
+</dd>
+<dt><strong>v_grid</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Vertical grid struct from <code class="xref py py-func docutils literal notranslate"><span class="pre">init_vertical_grid()</span></code>.</p>
+</dd>
+<dt><strong>num_lev</strong><span class="classifier">int</span></dt><dd><p>Number of vertical levels; used as a static argument for JIT tracing.</p>
+</dd>
+<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier; determines whether <code class="docutils literal notranslate"><span class="pre">&quot;dry_air_species&quot;</span></code> is remapped.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>tracers_remapped</strong><span class="classifier">dict</span></dt><dd><p>Tracer state dict assembled by <a class="reference internal" href="#src.dynamical_cores.model_state.wrap_tracers" title="src.dynamical_cores.model_state.wrap_tracers"><code class="xref py py-func docutils literal notranslate"><span class="pre">wrap_tracers()</span></code></a> with all species
+remapped onto the reference <code class="docutils literal notranslate"><span class="pre">d_mass_ref</span></code> levels.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.model_state.sum_consistency_struct">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.model_state.</span></span><span class="sig-name descname"><span class="pre">sum_consistency_struct</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">struct_1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">struct_2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coeff_1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coeff_2</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.model_state.sum_consistency_struct" title="Link to this definition">¶</a></dt>
+<dd><p>Compute a weighted field-wise sum of two tracer-consistency structs.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>struct_1</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>First consistency struct (e.g. from <a class="reference internal" href="#src.dynamical_cores.model_state.wrap_tracer_consist_dynamics" title="src.dynamical_cores.model_state.wrap_tracer_consist_dynamics"><code class="xref py py-func docutils literal notranslate"><span class="pre">wrap_tracer_consist_dynamics()</span></code></a>
+or <a class="reference internal" href="#src.dynamical_cores.model_state.wrap_tracer_consist_hypervis" title="src.dynamical_cores.model_state.wrap_tracer_consist_hypervis"><code class="xref py py-func docutils literal notranslate"><span class="pre">wrap_tracer_consist_hypervis()</span></code></a>).</p>
+</dd>
+<dt><strong>struct_2</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Second consistency struct with the same keys as <code class="docutils literal notranslate"><span class="pre">struct_1</span></code>.</p>
+</dd>
+<dt><strong>coeff_1</strong><span class="classifier">float</span></dt><dd><p>Scalar weight applied to <code class="docutils literal notranslate"><span class="pre">struct_1</span></code>.</p>
+</dd>
+<dt><strong>coeff_2</strong><span class="classifier">float</span></dt><dd><p>Scalar weight applied to <code class="docutils literal notranslate"><span class="pre">struct_2</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>result</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Field-wise <code class="docutils literal notranslate"><span class="pre">coeff_1</span> <span class="pre">*</span> <span class="pre">struct_1</span> <span class="pre">+</span> <span class="pre">coeff_2</span> <span class="pre">*</span> <span class="pre">struct_2</span></code>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.model_state.sum_dynamics">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.model_state.</span></span><span class="sig-name descname"><span class="pre">sum_dynamics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fold_coeff1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fold_coeff2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.model_state.sum_dynamics" title="Link to this definition">¶</a></dt>
+<dd><p>Compute a weighted sum of two dynamics states field-by-field.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>state1</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>First dynamics state from <a class="reference internal" href="#src.dynamical_cores.model_state.wrap_dynamics" title="src.dynamical_cores.model_state.wrap_dynamics"><code class="xref py py-func docutils literal notranslate"><span class="pre">wrap_dynamics()</span></code></a>.</p>
+</dd>
+<dt><strong>state2</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Second dynamics state with the same model fields as <code class="docutils literal notranslate"><span class="pre">state1</span></code>.</p>
+</dd>
+<dt><strong>fold_coeff1</strong><span class="classifier">float</span></dt><dd><p>Scalar weight for <code class="docutils literal notranslate"><span class="pre">state1</span></code>.</p>
+</dd>
+<dt><strong>fold_coeff2</strong><span class="classifier">float</span></dt><dd><p>Scalar weight for <code class="docutils literal notranslate"><span class="pre">state2</span></code>.</p>
+</dd>
+<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier; selects the thermodynamic variable name and whether
+non-hydrostatic fields are combined.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>dynamics_out</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Field-wise <code class="docutils literal notranslate"><span class="pre">fold_coeff1</span> <span class="pre">*</span> <span class="pre">state1</span> <span class="pre">+</span> <span class="pre">fold_coeff2</span> <span class="pre">*</span> <span class="pre">state2</span></code>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.model_state.sum_dynamics_series">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.model_state.</span></span><span class="sig-name descname"><span class="pre">sum_dynamics_series</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">states</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coeffs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.model_state.sum_dynamics_series" title="Link to this definition">¶</a></dt>
+<dd><p>Compute a weighted linear combination of a list of dynamics states.</p>
+<p>Applies <a class="reference internal" href="#src.dynamical_cores.model_state.sum_dynamics" title="src.dynamical_cores.model_state.sum_dynamics"><code class="xref py py-func docutils literal notranslate"><span class="pre">sum_dynamics()</span></code></a> iteratively: the first two states are combined
+with <code class="docutils literal notranslate"><span class="pre">coeffs[0]</span></code> and <code class="docutils literal notranslate"><span class="pre">coeffs[1]</span></code>; each subsequent state is folded in
+with coefficient <code class="docutils literal notranslate"><span class="pre">coeffs[i]</span></code> (accumulated result weight is <code class="docutils literal notranslate"><span class="pre">1.0</span></code>).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>states</strong><span class="classifier">list[dict[str, Array]]</span></dt><dd><p>List of dynamics state dicts from <a class="reference internal" href="#src.dynamical_cores.model_state.wrap_dynamics" title="src.dynamical_cores.model_state.wrap_dynamics"><code class="xref py py-func docutils literal notranslate"><span class="pre">wrap_dynamics()</span></code></a>.</p>
+</dd>
+<dt><strong>coeffs</strong><span class="classifier">sequence[float]</span></dt><dd><p>Scalar weights, one per element of <code class="docutils literal notranslate"><span class="pre">states</span></code>.</p>
+</dd>
+<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier forwarded to <a class="reference internal" href="#src.dynamical_cores.model_state.sum_dynamics" title="src.dynamical_cores.model_state.sum_dynamics"><code class="xref py py-func docutils literal notranslate"><span class="pre">sum_dynamics()</span></code></a>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>dynamics_out</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Field-wise weighted sum over all input states.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.model_state.sum_tracers">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.model_state.</span></span><span class="sig-name descname"><span class="pre">sum_tracers</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fold_coeff1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fold_coeff2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_dry_air_species</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.model_state.sum_tracers" title="Link to this definition">¶</a></dt>
+<dd><p>Compute a weighted sum of two tracer species dicts field-by-field.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>state1</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>First tracer species dict (e.g. <code class="docutils literal notranslate"><span class="pre">tracers[&quot;moisture_species&quot;]</span></code>).</p>
+</dd>
+<dt><strong>state2</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Second tracer species dict with the same keys as <code class="docutils literal notranslate"><span class="pre">state1</span></code>.</p>
+</dd>
+<dt><strong>fold_coeff1</strong><span class="classifier">float</span></dt><dd><p>Scalar weight for <code class="docutils literal notranslate"><span class="pre">state1</span></code>.</p>
+</dd>
+<dt><strong>fold_coeff2</strong><span class="classifier">float</span></dt><dd><p>Scalar weight for <code class="docutils literal notranslate"><span class="pre">state2</span></code>.</p>
+</dd>
+<dt><strong>is_dry_air_species</strong><span class="classifier">bool, optional</span></dt><dd><p>Currently unused; reserved for dry-air species handling (default: False).</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>state_out</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Field-wise weighted sum <code class="docutils literal notranslate"><span class="pre">fold_coeff1</span> <span class="pre">*</span> <span class="pre">state1</span> <span class="pre">+</span> <span class="pre">fold_coeff2</span> <span class="pre">*</span> <span class="pre">state2</span></code>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.model_state.wrap_dynamics">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.model_state.</span></span><span class="sig-name descname"><span class="pre">wrap_dynamics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">horizontal_wind</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thermodynamic_variable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_mass</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phi_i</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">w_i</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.model_state.wrap_dynamics" title="Link to this definition">¶</a></dt>
+<dd><p>Assemble the dynamics state dict from its prognostic fields.</p>
+<p>The thermodynamic variable is stored under the model-specific key given by
+<code class="docutils literal notranslate"><span class="pre">thermodynamic_variable_names[model]</span></code> (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;T&quot;</span></code> for CAM-SE,
+<code class="docutils literal notranslate"><span class="pre">&quot;theta_v_d_mass&quot;</span></code> for HOMME).  The optional non-hydrostatic fields
+<code class="docutils literal notranslate"><span class="pre">phi_i</span></code> and <code class="docutils literal notranslate"><span class="pre">w_i</span></code> are included only when provided.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>horizontal_wind</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, 2], Float]</span></dt><dd><p>Contra-variant horizontal wind components <code class="docutils literal notranslate"><span class="pre">(u,</span> <span class="pre">v)</span></code>.</p>
+</dd>
+<dt><strong>thermodynamic_variable</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Model thermodynamic variable (temperature or virtual potential temperature
+times layer mass, depending on <code class="docutils literal notranslate"><span class="pre">model</span></code>).</p>
+</dd>
+<dt><strong>d_mass</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Dry-air layer mass (pressure thickness in Pa).</p>
+</dd>
+<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier; selects the thermodynamic variable name and whether
+non-hydrostatic fields are expected.</p>
+</dd>
+<dt><strong>phi_i</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, ilev_idx], Float], optional</span></dt><dd><p>Interface geopotential; included only for non-hydrostatic models.</p>
+</dd>
+<dt><strong>w_i</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, ilev_idx], Float], optional</span></dt><dd><p>Interface vertical velocity; included only for non-hydrostatic models.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>dynamics</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>State dict with keys <code class="docutils literal notranslate"><span class="pre">&quot;horizontal_wind&quot;</span></code>, the model thermodynamic key,
+<code class="docutils literal notranslate"><span class="pre">&quot;d_mass&quot;</span></code>, and optionally <code class="docutils literal notranslate"><span class="pre">&quot;phi_i&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;w_i&quot;</span></code>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.model_state.wrap_model_state">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.model_state.</span></span><span class="sig-name descname"><span class="pre">wrap_model_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dynamics</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">static_forcing</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tracers</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.model_state.wrap_model_state" title="Link to this definition">¶</a></dt>
+<dd><p>Assemble the top-level model state dict.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>dynamics</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Prognostic dynamics state from <a class="reference internal" href="#src.dynamical_cores.model_state.wrap_dynamics" title="src.dynamical_cores.model_state.wrap_dynamics"><code class="xref py py-func docutils literal notranslate"><span class="pre">wrap_dynamics()</span></code></a>.</p>
+</dd>
+<dt><strong>static_forcing</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Time-invariant forcing from <a class="reference internal" href="#src.dynamical_cores.model_state.init_static_forcing" title="src.dynamical_cores.model_state.init_static_forcing"><code class="xref py py-func docutils literal notranslate"><span class="pre">init_static_forcing()</span></code></a> (surface
+geopotential, its gradient, and Coriolis parameters).</p>
+</dd>
+<dt><strong>tracers</strong><span class="classifier">dict</span></dt><dd><p>Tracer state from <a class="reference internal" href="#src.dynamical_cores.model_state.wrap_tracers" title="src.dynamical_cores.model_state.wrap_tracers"><code class="xref py py-func docutils literal notranslate"><span class="pre">wrap_tracers()</span></code></a>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>state</strong><span class="classifier">dict</span></dt><dd><p>Dict with keys <code class="docutils literal notranslate"><span class="pre">&quot;dynamics&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;static_forcing&quot;</span></code>, and <code class="docutils literal notranslate"><span class="pre">&quot;tracers&quot;</span></code>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.model_state.wrap_static_forcing">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.model_state.</span></span><span class="sig-name descname"><span class="pre">wrap_static_forcing</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">phi_surf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grad_phi_surf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coriolis_param</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nontrad_coriolis_param</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.model_state.wrap_static_forcing" title="Link to this definition">¶</a></dt>
+<dd><p>Assemble the static forcing dict from its precomputed fields.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>phi_surf</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx], Float]</span></dt><dd><p>Surface geopotential (m^2 s^-2).</p>
+</dd>
+<dt><strong>grad_phi_surf</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, 2], Float]</span></dt><dd><p>DSS-projected gradient of the surface geopotential.</p>
+</dd>
+<dt><strong>coriolis_param</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx], Float]</span></dt><dd><p>Coriolis parameter <code class="docutils literal notranslate"><span class="pre">f</span> <span class="pre">=</span> <span class="pre">2</span> <span class="pre">Omega</span> <span class="pre">sin(lat)</span></code> (or constant for f-plane
+models).</p>
+</dd>
+<dt><strong>nontrad_coriolis_param</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx], Float] or None, optional</span></dt><dd><p>Non-traditional Coriolis parameter <code class="docutils literal notranslate"><span class="pre">2</span> <span class="pre">Omega</span> <span class="pre">cos(lat)</span></code>; included only
+for deep-atmosphere models.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>static_forcing</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Dict with keys <code class="docutils literal notranslate"><span class="pre">&quot;phi_surf&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;grad_phi_surf&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;coriolis_param&quot;</span></code>,
+and optionally <code class="docutils literal notranslate"><span class="pre">&quot;nontrad_coriolis_param&quot;</span></code>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.model_state.wrap_tracer_consist_dynamics">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.model_state.</span></span><span class="sig-name descname"><span class="pre">wrap_tracer_consist_dynamics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">u_d_mass</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.model_state.wrap_tracer_consist_dynamics" title="Link to this definition">¶</a></dt>
+<dd><p>Pack the tracer-consistency flux array into its named struct.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>u_d_mass</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, 2], Float]</span></dt><dd><p>Mass-weighted horizontal wind <code class="docutils literal notranslate"><span class="pre">u</span> <span class="pre">*</span> <span class="pre">d_mass</span></code> accumulated during the
+dynamics sub-steps; used to transport tracers in a manner consistent
+with the dynamical-core mass update.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>consist_dynamics</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Dict <code class="docutils literal notranslate"><span class="pre">{&quot;u_d_mass_avg&quot;:</span> <span class="pre">u_d_mass}</span></code> consumed by
+<code class="xref py py-func docutils literal notranslate"><span class="pre">advance_tracers_rk2()</span></code> and related tracer-transport routines.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.model_state.wrap_tracer_consist_hypervis">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.model_state.</span></span><span class="sig-name descname"><span class="pre">wrap_tracer_consist_hypervis</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">d_mass_val</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_mass_tend</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.model_state.wrap_tracer_consist_hypervis" title="Link to this definition">¶</a></dt>
+<dd><p>Pack hyperviscosity consistency quantities into their named struct.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>d_mass_val</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Layer-mass field used as the reference state for the hyperviscosity
+tracer-consistency correction (typically the time-averaged <code class="docutils literal notranslate"><span class="pre">d_mass</span></code>).</p>
+</dd>
+<dt><strong>d_mass_tend</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Hyperviscosity tendency applied to <code class="docutils literal notranslate"><span class="pre">d_mass</span></code>; communicated to the
+tracer solver so that tracers experience the same mass diffusion as
+the dynamics.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>consist_hypervis</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Dict with keys <code class="docutils literal notranslate"><span class="pre">&quot;d_mass_hypervis_tend&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;d_mass_hypervis_avg&quot;</span></code>
+consumed by the tracer hyperviscosity routines.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.model_state.wrap_tracer_mass">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.model_state.</span></span><span class="sig-name descname"><span class="pre">wrap_tracer_mass</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">moisture_species_mass</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tracers_mass</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dry_air_species_mass</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.model_state.wrap_tracer_mass" title="Link to this definition">¶</a></dt>
+<dd><p>Assemble the tracer <em>mass</em> dict (<code class="docutils literal notranslate"><span class="pre">q</span> <span class="pre">*</span> <span class="pre">d_mass</span></code>) from per-species arrays.</p>
+<p>Identical in structure to <a class="reference internal" href="#src.dynamical_cores.model_state.wrap_tracers" title="src.dynamical_cores.model_state.wrap_tracers"><code class="xref py py-func docutils literal notranslate"><span class="pre">wrap_tracers()</span></code></a> but marks the result with
+<code class="docutils literal notranslate"><span class="pre">&quot;mass_quantity&quot;:</span> <span class="pre">1.0</span></code> instead of a mixing-ratio flag, so downstream code
+can distinguish the two representations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>moisture_species_mass</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Mass-weighted moisture fields (<code class="docutils literal notranslate"><span class="pre">q</span> <span class="pre">*</span> <span class="pre">d_mass</span></code>) keyed by species name.</p>
+</dd>
+<dt><strong>tracers_mass</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Mass-weighted passive tracer fields keyed by tracer name.</p>
+</dd>
+<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier forwarded to <code class="xref py py-func docutils literal notranslate"><span class="pre">_wrap_tracer_like()</span></code>.</p>
+</dd>
+<dt><strong>dry_air_species_mass</strong><span class="classifier">dict[str, Array] or None, optional</span></dt><dd><p>Mass-weighted dry-air species fields (CAM-SE models only).</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>tracer_mass</strong><span class="classifier">dict</span></dt><dd><p>Tracer mass dict with key <code class="docutils literal notranslate"><span class="pre">&quot;mass_quantity&quot;:</span> <span class="pre">1.0</span></code>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.dynamical_cores.model_state.wrap_tracers">
+<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.model_state.</span></span><span class="sig-name descname"><span class="pre">wrap_tracers</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">moisture_species</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tracers</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dry_air_species</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.model_state.wrap_tracers" title="Link to this definition">¶</a></dt>
+<dd><p>Assemble the tracer state dict from mixing-ratio species dicts.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>moisture_species</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Moisture mixing-ratio fields keyed by species name.</p>
+</dd>
+<dt><strong>tracers</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Passive tracer fields keyed by tracer name.</p>
+</dd>
+<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier; selects the mixing-ratio convention and whether
+<code class="docutils literal notranslate"><span class="pre">&quot;dry_air_species&quot;</span></code> is included.</p>
+</dd>
+<dt><strong>dry_air_species</strong><span class="classifier">dict[str, Array] or None, optional</span></dt><dd><p>Dry-air species mixing-ratio fields (CAM-SE models only).</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>tracer_struct</strong><span class="classifier">dict</span></dt><dd><p>Tracer state dict suitable for use in the full model state.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">pyses</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation_and_validation.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">How to run the model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_friendly_api.html">The pySEs public API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../anatomy_of_a_model_struct.html">How is the atmospheric state represented in pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">How are horizontal grids generated and read into pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">src</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="src.html">src package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="src.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="src.analytic_initialization.html">src.analytic_initialization package</a></li>
+<li class="toctree-l4 current"><a class="reference internal" href="src.dynamical_cores.html">src.dynamical_cores package</a><ul class="current">
+<li class="toctree-l5"><a class="reference internal" href="src.dynamical_cores.html#subpackages">Subpackages</a></li>
+<li class="toctree-l5 current"><a class="reference internal" href="src.dynamical_cores.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.finite_volume_grid.html">src.dynamical_cores.finite_volume_grid module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.hyperviscosity.html">src.dynamical_cores.hyperviscosity module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.initialization.html">src.dynamical_cores.initialization module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.mass_coordinate.html">src.dynamical_cores.mass_coordinate module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.model_config.html">src.dynamical_cores.model_config module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.model_info.html">src.dynamical_cores.model_info module</a></li>
+<li class="toctree-l6 current"><a class="current reference internal" href="#">src.dynamical_cores.model_state module</a><ul>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.model_state.advance_tracers"><code class="docutils literal notranslate"><span class="pre">advance_tracers()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.model_state.apply_mask"><code class="docutils literal notranslate"><span class="pre">apply_mask()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.model_state.check_dynamics_nan"><code class="docutils literal notranslate"><span class="pre">check_dynamics_nan()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.model_state.check_tracers_nan"><code class="docutils literal notranslate"><span class="pre">check_tracers_nan()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.model_state.copy_dynamics"><code class="docutils literal notranslate"><span class="pre">copy_dynamics()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.model_state.copy_model_state"><code class="docutils literal notranslate"><span class="pre">copy_model_state()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.model_state.copy_tracers"><code class="docutils literal notranslate"><span class="pre">copy_tracers()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.model_state.dynamics_to_surface_mass"><code class="docutils literal notranslate"><span class="pre">dynamics_to_surface_mass()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.model_state.init_static_forcing"><code class="docutils literal notranslate"><span class="pre">init_static_forcing()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.model_state.project_dynamics"><code class="docutils literal notranslate"><span class="pre">project_dynamics()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.model_state.project_scalar_3d"><code class="docutils literal notranslate"><span class="pre">project_scalar_3d()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.model_state.remap_dynamics"><code class="docutils literal notranslate"><span class="pre">remap_dynamics()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.model_state.remap_tracers"><code class="docutils literal notranslate"><span class="pre">remap_tracers()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.model_state.sum_consistency_struct"><code class="docutils literal notranslate"><span class="pre">sum_consistency_struct()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.model_state.sum_dynamics"><code class="docutils literal notranslate"><span class="pre">sum_dynamics()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.model_state.sum_dynamics_series"><code class="docutils literal notranslate"><span class="pre">sum_dynamics_series()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.model_state.sum_tracers"><code class="docutils literal notranslate"><span class="pre">sum_tracers()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.model_state.wrap_dynamics"><code class="docutils literal notranslate"><span class="pre">wrap_dynamics()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.model_state.wrap_model_state"><code class="docutils literal notranslate"><span class="pre">wrap_model_state()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.model_state.wrap_static_forcing"><code class="docutils literal notranslate"><span class="pre">wrap_static_forcing()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.model_state.wrap_tracer_consist_dynamics"><code class="docutils literal notranslate"><span class="pre">wrap_tracer_consist_dynamics()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.model_state.wrap_tracer_consist_hypervis"><code class="docutils literal notranslate"><span class="pre">wrap_tracer_consist_hypervis()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.model_state.wrap_tracer_mass"><code class="docutils literal notranslate"><span class="pre">wrap_tracer_mass()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.model_state.wrap_tracers"><code class="docutils literal notranslate"><span class="pre">wrap_tracers()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.operators_3d.html">src.dynamical_cores.operators_3d module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.physics_config.html">src.dynamical_cores.physics_config module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.physics_dynamics_coupling.html">src.dynamical_cores.physics_dynamics_coupling module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.run_dycore.html">src.dynamical_cores.run_dycore module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.time_step.html">src.dynamical_cores.time_step module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.time_stepping.html">src.dynamical_cores.time_stepping module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.utils_3d.html">src.dynamical_cores.utils_3d module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.vertical_remap.html">src.dynamical_cores.vertical_remap module</a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="src.dynamical_cores.html#module-src.dynamical_cores">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="src.mesh_generation.html">src.mesh_generation package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.mpi.html">src.mpi package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.operations_2d.html">src.operations_2d package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.shallow_water_models.html">src.shallow_water_models package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="src.tracer_transport.html">src.tracer_transport package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="src.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="src.html#module-src">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">src</a><ul>
+  <li><a href="src.html">src package</a><ul>
+  <li><a href="src.dynamical_cores.html">src.dynamical_cores package</a><ul>
+      <li>Previous: <a href="src.dynamical_cores.model_info.html" title="previous chapter">src.dynamical_cores.model_info module</a></li>
+      <li>Next: <a href="src.dynamical_cores.operators_3d.html" title="next chapter">src.dynamical_cores.operators_3d module</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Owen K Hughes.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/api/src.dynamical_cores.model_state.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

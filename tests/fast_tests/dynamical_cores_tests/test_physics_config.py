@@ -1,6 +1,8 @@
-from pysces.dynamical_cores.physics_config import init_physics_config, typical_mass_ratios
-from pysces.model_info import models
-from pysces.config import np
+from src.dynamical_cores.physics_config import init_physics_config, typical_mass_ratios
+from src.dynamical_cores.model_info import models
+from src._config import get_backend as _get_backend
+_be = _get_backend()
+import numpy as np
 
 
 def test_mass_ratio_consistency():

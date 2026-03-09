@@ -1,12 +1,19 @@
 
-from pysces.config import np, jnp, eps, device_wrapper, device_unwrapper, get_global_array
-from pysces.mesh_generation.equiangular_metric import init_quasi_uniform_grid
-from pysces.operations_2d.operators import inner_product
-from pysces.dynamical_cores.operators_3d import (horizontal_divergence_3d,
+from src._config import get_backend as _get_backend
+_be = _get_backend()
+jnp = _be.np
+eps = _be.eps
+device_wrapper = _be.array
+device_unwrapper = _be.unwrap
+get_global_array = _be.get_global_array
+import numpy as np
+from src.mesh_generation.equiangular_metric import init_quasi_uniform_grid
+from src.operations_2d.operators import inner_product
+from src.dynamical_cores.operators_3d import (horizontal_divergence_3d,
                                                  horizontal_gradient_3d,
                                                  horizontal_vorticity_3d,
                                                  horizontal_weak_vector_laplacian_3d)
-from pysces.dynamical_cores.model_state import project_scalar_3d
+from src.dynamical_cores.model_state import project_scalar_3d
 
 
 def threedify(field, nlev, axis=-1):
