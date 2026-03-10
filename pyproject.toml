@@ -1,6 +1,6 @@
 [project]
 name = "pyses"
-version = "0.2.0"
+version = "0.0.2"
 description = "A highly readable, well documented, well tested set of atmospheric dynamical cores with support for variable resolution meshes, as well as automatic differentiation for machine learning and data assimilation."
 readme = "README.md"
 license = { text = "LGPL" }  
@@ -14,7 +14,7 @@ dependencies = [
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: LGPL License",
+    "License :: OSI Approved :: LGPL-2.1-only",
     "Operating System :: OS Independent",
     "Topic :: Scientific/Engineering :: Atmospheric Science :: Machine Learning",
 ]
@@ -33,7 +33,7 @@ dev = [
     "twine>=6.2.0",
     "flake8>=7.3.0",
     "matplotlib>=3.10.7",
-    "pytest>=9.0.1",
+    "pytest>=9.0.2",
 ]
 doc = [
     "numpydoc>=1.10.0",
