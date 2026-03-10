@@ -33,91 +33,8 @@
 
           <div class="body" role="main">
             
-  <section id="module-src.shallow_water_models.tracers">
-<span id="src-shallow-water-models-tracers-module"></span><h1>src.shallow_water_models.tracers module<a class="headerlink" href="#module-src.shallow_water_models.tracers" title="Link to this heading">¶</a></h1>
-<dl class="py function">
-<dt class="sig sig-object py" id="src.shallow_water_models.tracers.advance_tracers_shallow_water">
-<span class="sig-prename descclassname"><span class="pre">src.shallow_water_models.tracers.</span></span><span class="sig-name descname"><span class="pre">advance_tracers_shallow_water</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tracers</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tracer_consist_dyn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tracer_init_struct</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">diffusion_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestep_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tracer_consist_hypervis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.shallow_water_models.tracers.advance_tracers_shallow_water" title="Link to this definition">¶</a></dt>
-<dd><p>Advance all passive tracers by one physics timestep on the shallow-water grid.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>tracers</strong><span class="classifier">dict[str, Array[tuple[elem_idx, gll_idx, gll_idx], Float]]</span></dt><dd><p>Named tracer mixing-ratio fields at the beginning of the timestep.</p>
-</dd>
-<dt><strong>tracer_consist_dyn</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Tracer-consistency struct from the dynamics step, containing
-<code class="docutils literal notranslate"><span class="pre">&quot;u_d_mass_avg&quot;</span></code>.</p>
-</dd>
-<dt><strong>tracer_init_struct</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Struct with keys <code class="docutils literal notranslate"><span class="pre">&quot;d_mass_init&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;d_mass_end&quot;</span></code>, holding the
-layer thickness at the start and end of the dynamics step.</p>
-</dd>
-<dt><strong>grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal spectral element grid.</p>
-</dd>
-<dt><strong>dims</strong><span class="classifier">frozendict[str, int]</span></dt><dd><p>Grid dimension parameters.</p>
-</dd>
-<dt><strong>physics_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Physical constants (e.g. <code class="docutils literal notranslate"><span class="pre">radius_earth</span></code>).</p>
-</dd>
-<dt><strong>diffusion_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Hyperviscosity configuration.</p>
-</dd>
-<dt><strong>timestep_config</strong><span class="classifier">frozendict</span></dt><dd><p>Time-step configuration from <code class="docutils literal notranslate"><span class="pre">init_timestep_config</span></code>.</p>
-</dd>
-<dt><strong>tracer_consist_hypervis</strong><span class="classifier">dict[str, Array] or None, optional</span></dt><dd><p>Tracer-consistency struct from the hyperviscosity step, or <code class="docutils literal notranslate"><span class="pre">None</span></code>
-if hyperviscosity was not applied.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>tracers_out</strong><span class="classifier">dict[str, Array[tuple[elem_idx, gll_idx, gll_idx], Float]]</span></dt><dd><p>Updated tracer mixing-ratio fields after one physics timestep.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.shallow_water_models.tracers.stack_tracers_shallow_water">
-<span class="sig-prename descclassname"><span class="pre">src.shallow_water_models.tracers.</span></span><span class="sig-name descname"><span class="pre">stack_tracers_shallow_water</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tracer_like</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.shallow_water_models.tracers.stack_tracers_shallow_water" title="Link to this definition">¶</a></dt>
-<dd><p>Stack a dict of 2-D tracer arrays into a single 5-D array.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>tracer_like</strong><span class="classifier">dict[str, Array[tuple[elem_idx, gll_idx, gll_idx], Float]]</span></dt><dd><p>Named tracer fields on the shallow-water grid.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>stacked</strong><span class="classifier">Array[tuple[n_tracers, elem_idx, gll_idx, gll_idx, 1], Float]</span></dt><dd><p>All tracers concatenated along a leading tracer axis.</p>
-</dd>
-<dt><strong>tracer_names</strong><span class="classifier">dict[str, int]</span></dt><dd><p>Mapping from tracer name to its index in <code class="docutils literal notranslate"><span class="pre">stacked</span></code>.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.shallow_water_models.tracers.unstack_tracers_shallow_water">
-<span class="sig-prename descclassname"><span class="pre">src.shallow_water_models.tracers.</span></span><span class="sig-name descname"><span class="pre">unstack_tracers_shallow_water</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tracer_like</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tracer_names</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.shallow_water_models.tracers.unstack_tracers_shallow_water" title="Link to this definition">¶</a></dt>
-<dd><p>Unstack a 5-D tracer array back into a named dict of 2-D arrays.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>tracer_like</strong><span class="classifier">Array[tuple[n_tracers, elem_idx, gll_idx, gll_idx, 1], Float]</span></dt><dd><p>Stacked tracer array as returned by <code class="docutils literal notranslate"><span class="pre">stack_tracers_shallow_water</span></code>.</p>
-</dd>
-<dt><strong>tracer_names</strong><span class="classifier">dict[str, int]</span></dt><dd><p>Mapping from tracer name to index in <code class="docutils literal notranslate"><span class="pre">tracer_like</span></code>.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>tracers</strong><span class="classifier">dict[str, Array[tuple[elem_idx, gll_idx, gll_idx], Float]]</span></dt><dd><p>Named tracer mixing-ratio fields.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
+  <section id="src-shallow-water-models-tracers-module">
+<h1>src.shallow_water_models.tracers module<a class="headerlink" href="#src-shallow-water-models-tracers-module" title="Link to this heading">¶</a></h1>
 </section>
 
 
@@ -148,10 +65,10 @@ if hyperviscosity was not applied.</p>
 <script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../installation_and_validation.html">Usage</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">How to run the model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../user_friendly_api.html">The pySEs public API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../anatomy_of_a_model_struct.html">How is the atmospheric state represented in pySEs?</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">How are horizontal grids generated and read into pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">Horizontal grid generation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="modules.html">src</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="src.html">src package</a><ul class="current">
@@ -170,23 +87,18 @@ if hyperviscosity was not applied.</p>
 <li class="toctree-l6"><a class="reference internal" href="src.shallow_water_models.model_state.html">src.shallow_water_models.model_state module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.shallow_water_models.run_shallow_water.html">src.shallow_water_models.run_shallow_water module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.shallow_water_models.time_stepping.html">src.shallow_water_models.time_stepping module</a></li>
-<li class="toctree-l6 current"><a class="current reference internal" href="#">src.shallow_water_models.tracers module</a><ul>
-<li class="toctree-l7"><a class="reference internal" href="#src.shallow_water_models.tracers.advance_tracers_shallow_water"><code class="docutils literal notranslate"><span class="pre">advance_tracers_shallow_water()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.shallow_water_models.tracers.stack_tracers_shallow_water"><code class="docutils literal notranslate"><span class="pre">stack_tracers_shallow_water()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.shallow_water_models.tracers.unstack_tracers_shallow_water"><code class="docutils literal notranslate"><span class="pre">unstack_tracers_shallow_water()</span></code></a></li>
-</ul>
-</li>
+<li class="toctree-l6 current"><a class="current reference internal" href="#">src.shallow_water_models.tracers module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.shallow_water_models.williamson_init.html">src.shallow_water_models.williamson_init module</a></li>
 </ul>
 </li>
-<li class="toctree-l5"><a class="reference internal" href="src.shallow_water_models.html#module-src.shallow_water_models">Module contents</a></li>
+<li class="toctree-l5"><a class="reference internal" href="src.shallow_water_models.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 <li class="toctree-l4"><a class="reference internal" href="src.tracer_transport.html">src.tracer_transport package</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="src.html#submodules">Submodules</a></li>
-<li class="toctree-l3"><a class="reference internal" href="src.html#module-src">Module contents</a></li>
+<li class="toctree-l3"><a class="reference internal" href="src.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 </ul>

@@ -33,145 +33,8 @@
 
           <div class="body" role="main">
             
-  <section id="module-src.shallow_water_models.time_stepping">
-<span id="src-shallow-water-models-time-stepping-module"></span><h1>src.shallow_water_models.time_stepping module<a class="headerlink" href="#module-src.shallow_water_models.time_stepping" title="Link to this heading">¶</a></h1>
-<dl class="py function">
-<dt class="sig sig-object py" id="src.shallow_water_models.time_stepping.advance_hypervis_euler">
-<span class="sig-prename descclassname"><span class="pre">src.shallow_water_models.time_stepping.</span></span><span class="sig-name descname"><span class="pre">advance_hypervis_euler</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">diffusion_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestep_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.shallow_water_models.time_stepping.advance_hypervis_euler" title="Link to this definition">¶</a></dt>
-<dd><p>Apply hyperviscosity to the shallow-water model state using forward Euler subcycling.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>state_in</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Shallow-water model state to be diffused.</p>
-</dd>
-<dt><strong>grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal spectral element grid.</p>
-</dd>
-<dt><strong>physics_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Physical constants (e.g. <code class="docutils literal notranslate"><span class="pre">radius_earth</span></code>).</p>
-</dd>
-<dt><strong>diffusion_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Hyperviscosity configuration; must contain <code class="docutils literal notranslate"><span class="pre">&quot;nu&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;nu_d_mass&quot;</span></code>.</p>
-</dd>
-<dt><strong>timestep_config</strong><span class="classifier">frozendict</span></dt><dd><p>Time-step configuration; must contain <code class="docutils literal notranslate"><span class="pre">&quot;hypervis_subcycle&quot;</span></code> and
-<code class="docutils literal notranslate"><span class="pre">&quot;hyperviscosity&quot;</span></code> (with <code class="docutils literal notranslate"><span class="pre">&quot;dt&quot;</span></code>).</p>
-</dd>
-<dt><strong>dims</strong><span class="classifier">frozendict[str, int]</span></dt><dd><p>Grid dimension parameters.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>state_out</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Diffused shallow-water model state.</p>
-</dd>
-<dt><strong>avg</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Tracer-consistency struct accumulated over hyperviscosity subcycles,
-with keys <code class="docutils literal notranslate"><span class="pre">&quot;d_mass_hypervis_avg&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;d_mass_hypervis_tend&quot;</span></code>.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.shallow_water_models.time_stepping.advance_step_euler">
-<span class="sig-prename descclassname"><span class="pre">src.shallow_water_models.time_stepping.</span></span><span class="sig-name descname"><span class="pre">advance_step_euler</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestep_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.shallow_water_models.time_stepping.advance_step_euler" title="Link to this definition">¶</a></dt>
-<dd><p>Advance the shallow-water model by one dynamics timestep using forward Euler.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>state_in</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Shallow-water model state as returned by <code class="docutils literal notranslate"><span class="pre">wrap_model_state</span></code>.</p>
-</dd>
-<dt><strong>grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal spectral element grid.</p>
-</dd>
-<dt><strong>physics_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Physical constants (e.g. <code class="docutils literal notranslate"><span class="pre">radius_earth</span></code>, <code class="docutils literal notranslate"><span class="pre">gravity</span></code>).</p>
-</dd>
-<dt><strong>timestep_config</strong><span class="classifier">frozendict</span></dt><dd><p>Time-step configuration from <code class="docutils literal notranslate"><span class="pre">init_timestep_config</span></code>.</p>
-</dd>
-<dt><strong>dims</strong><span class="classifier">frozendict[str, int]</span></dt><dd><p>Grid dimension parameters.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>state_out</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Updated shallow-water model state after one Euler step.</p>
-</dd>
-<dt><strong>tracer_consist</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Tracer-consistency struct with key <code class="docutils literal notranslate"><span class="pre">&quot;u_d_mass_avg&quot;</span></code>.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.shallow_water_models.time_stepping.advance_step_ssprk3">
-<span class="sig-prename descclassname"><span class="pre">src.shallow_water_models.time_stepping.</span></span><span class="sig-name descname"><span class="pre">advance_step_ssprk3</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestep_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.shallow_water_models.time_stepping.advance_step_ssprk3" title="Link to this definition">¶</a></dt>
-<dd><p>Advance the shallow-water model by one dynamics timestep using strong-stability-preserving
-Runge-Kutta 3 (SSPRK3).</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>state0</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Shallow-water model state at the beginning of the timestep.</p>
-</dd>
-<dt><strong>grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal spectral element grid.</p>
-</dd>
-<dt><strong>physics_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Physical constants (e.g. <code class="docutils literal notranslate"><span class="pre">radius_earth</span></code>, <code class="docutils literal notranslate"><span class="pre">gravity</span></code>).</p>
-</dd>
-<dt><strong>timestep_config</strong><span class="classifier">frozendict</span></dt><dd><p>Time-step configuration from <code class="docutils literal notranslate"><span class="pre">init_timestep_config</span></code>.</p>
-</dd>
-<dt><strong>dims</strong><span class="classifier">frozendict[str, int]</span></dt><dd><p>Grid dimension parameters.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>state_out</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Updated shallow-water model state after one SSPRK3 step.</p>
-</dd>
-<dt><strong>avg</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Tracer-consistency struct with the time-averaged
-thickness-weighted wind <code class="docutils literal notranslate"><span class="pre">&quot;u_d_mass_avg&quot;</span></code>.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.shallow_water_models.time_stepping.init_timestep_config">
-<span class="sig-prename descclassname"><span class="pre">src.shallow_water_models.time_stepping.</span></span><span class="sig-name descname"><span class="pre">init_timestep_config</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dt_coupling</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">diffusion_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hypervis_tstep_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">time_step.Euler</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dynamics_tstep_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">time_step.SSPRK3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dyn_steps_per_coupling</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hypervis_steps_per_dyn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sphere</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.shallow_water_models.time_stepping.init_timestep_config" title="Link to this definition">¶</a></dt>
-<dd><p>Compute the shallow-water timestep configuration from CFL stability estimates.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>dt_coupling</strong><span class="classifier">float</span></dt><dd><p>The physics coupling timestep in seconds.</p>
-</dd>
-<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal spectral element grid.</p>
-</dd>
-<dt><strong>dims</strong><span class="classifier">frozendict[str, int]</span></dt><dd><p>Grid dimension parameters.</p>
-</dd>
-<dt><strong>physics_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Physical constants including <code class="docutils literal notranslate"><span class="pre">radius_earth</span></code>.</p>
-</dd>
-<dt><strong>diffusion_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Hyperviscosity configuration.</p>
-</dd>
-<dt><strong>hypervis_tstep_type</strong><span class="classifier">time_step_options, optional</span></dt><dd><p>Time integration scheme for hyperviscosity (default: Euler).</p>
-</dd>
-<dt><strong>dynamics_tstep_type</strong><span class="classifier">time_step_options, optional</span></dt><dd><p>Time integration scheme for dynamics (default: SSPRK3).</p>
-</dd>
-<dt><strong>dyn_steps_per_coupling</strong><span class="classifier">int, optional</span></dt><dd><p>Override for the number of dynamics subcycles per coupling step.
-Negative values use the CFL-derived estimate.</p>
-</dd>
-<dt><strong>hypervis_steps_per_dyn</strong><span class="classifier">int, optional</span></dt><dd><p>Minimum number of hyperviscosity subcycles per dynamics step (default: 3).</p>
-</dd>
-<dt><strong>sphere</strong><span class="classifier">bool, optional</span></dt><dd><p>Whether to use spherical CFL estimates (default: True).</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>timestep_config</strong><span class="classifier">frozendict</span></dt><dd><p>Nested frozen dict containing <code class="docutils literal notranslate"><span class="pre">&quot;dynamics&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;hyperviscosity&quot;</span></code>,
-<code class="docutils literal notranslate"><span class="pre">&quot;tracer_advection&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;dt_coupling&quot;</span></code>,
-<code class="docutils literal notranslate"><span class="pre">&quot;dynamics_subcycle&quot;</span></code>, and <code class="docutils literal notranslate"><span class="pre">&quot;hypervis_subcycle&quot;</span></code> entries.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
+  <section id="src-shallow-water-models-time-stepping-module">
+<h1>src.shallow_water_models.time_stepping module<a class="headerlink" href="#src-shallow-water-models-time-stepping-module" title="Link to this heading">¶</a></h1>
 </section>
 
 
@@ -202,10 +65,10 @@ Negative values use the CFL-derived estimate.</p>
 <script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../installation_and_validation.html">Usage</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">How to run the model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../user_friendly_api.html">The pySEs public API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../anatomy_of_a_model_struct.html">How is the atmospheric state represented in pySEs?</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">How are horizontal grids generated and read into pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">Horizontal grid generation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="modules.html">src</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="src.html">src package</a><ul class="current">
@@ -223,25 +86,19 @@ Negative values use the CFL-derived estimate.</p>
 <li class="toctree-l6"><a class="reference internal" href="src.shallow_water_models.hyperviscosity.html">src.shallow_water_models.hyperviscosity module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.shallow_water_models.model_state.html">src.shallow_water_models.model_state module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.shallow_water_models.run_shallow_water.html">src.shallow_water_models.run_shallow_water module</a></li>
-<li class="toctree-l6 current"><a class="current reference internal" href="#">src.shallow_water_models.time_stepping module</a><ul>
-<li class="toctree-l7"><a class="reference internal" href="#src.shallow_water_models.time_stepping.advance_hypervis_euler"><code class="docutils literal notranslate"><span class="pre">advance_hypervis_euler()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.shallow_water_models.time_stepping.advance_step_euler"><code class="docutils literal notranslate"><span class="pre">advance_step_euler()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.shallow_water_models.time_stepping.advance_step_ssprk3"><code class="docutils literal notranslate"><span class="pre">advance_step_ssprk3()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.shallow_water_models.time_stepping.init_timestep_config"><code class="docutils literal notranslate"><span class="pre">init_timestep_config()</span></code></a></li>
-</ul>
-</li>
+<li class="toctree-l6 current"><a class="current reference internal" href="#">src.shallow_water_models.time_stepping module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.shallow_water_models.tracers.html">src.shallow_water_models.tracers module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.shallow_water_models.williamson_init.html">src.shallow_water_models.williamson_init module</a></li>
 </ul>
 </li>
-<li class="toctree-l5"><a class="reference internal" href="src.shallow_water_models.html#module-src.shallow_water_models">Module contents</a></li>
+<li class="toctree-l5"><a class="reference internal" href="src.shallow_water_models.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 <li class="toctree-l4"><a class="reference internal" href="src.tracer_transport.html">src.tracer_transport package</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="src.html#submodules">Submodules</a></li>
-<li class="toctree-l3"><a class="reference internal" href="src.html#module-src">Module contents</a></li>
+<li class="toctree-l3"><a class="reference internal" href="src.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 </ul>

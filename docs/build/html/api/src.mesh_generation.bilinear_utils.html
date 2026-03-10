@@ -33,78 +33,8 @@
 
           <div class="body" role="main">
             
-  <section id="module-src.mesh_generation.bilinear_utils">
-<span id="src-mesh-generation-bilinear-utils-module"></span><h1>src.mesh_generation.bilinear_utils module<a class="headerlink" href="#module-src.mesh_generation.bilinear_utils" title="Link to this heading">¶</a></h1>
-<dl class="py function">
-<dt class="sig sig-object py" id="src.mesh_generation.bilinear_utils.eval_bilinear_jacobian">
-<span class="sig-prename descclassname"><span class="pre">src.mesh_generation.bilinear_utils.</span></span><span class="sig-name descname"><span class="pre">eval_bilinear_jacobian</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">v0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">beta</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.mesh_generation.bilinear_utils.eval_bilinear_jacobian" title="Link to this definition">¶</a></dt>
-<dd><p>Compute jacobian of the bilinear mapping for unstructured arrays of
-topological quadrilaterals in arbitrary cartesian dimension.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>v0: Array[*Shape, Float]</strong></dt><dd><p>Upper left vertex, final index is cartesian dimension</p>
-</dd>
-<dt><strong>v1: Array[*Shape, Float]</strong></dt><dd><p>Upper right vertex, final index is cartesian dimension</p>
-</dd>
-<dt><strong>v2: Array[*Shape, Float]</strong></dt><dd><p>Bottom left vertex, final index is cartesian dimension</p>
-</dd>
-<dt><strong>v3: Array[*Shape, Float]</strong></dt><dd><p>Bottom right vertex, final index is cartesian dimension</p>
-</dd>
-<dt><strong>alpha: Float</strong></dt><dd><p>First coordinate within reference element</p>
-</dd>
-<dt><strong>beta: Float</strong></dt><dd><p>Second coordinate within reference element</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt>dphys_dalpha: Array[<a href="#id1"><span class="problematic" id="id2">*</span></a>Shape, Float]</dt><dd><p>Derivative of each cartesian dimension
-w.r.t. the first coordinate on the reference element</p>
-</dd>
-<dt>dphys_dalpha: Array[<a href="#id3"><span class="problematic" id="id4">*</span></a>Shape, Float]</dt><dd><p>Derivative of each cartesian dimension
-w.r.t. the second coordinate on the reference element</p>
-</dd>
-</dl>
-</dd>
-</dl>
-<p class="rubric">Notes</p>
-<p>The reference element is assumed to be [-1, 1]^2.</p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.mesh_generation.bilinear_utils.eval_bilinear_mapping">
-<span class="sig-prename descclassname"><span class="pre">src.mesh_generation.bilinear_utils.</span></span><span class="sig-name descname"><span class="pre">eval_bilinear_mapping</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">v0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">beta</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.mesh_generation.bilinear_utils.eval_bilinear_mapping" title="Link to this definition">¶</a></dt>
-<dd><p>Compute bilinear mapping for unstructured arrays of
-topological quadrilaterals in arbitrary cartesian dimension.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>v0: Array[*Shape, Float]</strong></dt><dd><p>Upper left vertex, final index is cartesian dimension</p>
-</dd>
-<dt><strong>v1: Array[*Shape, Float]</strong></dt><dd><p>Upper right vertex, final index is cartesian dimension</p>
-</dd>
-<dt><strong>v2: Array[*Shape, Float]</strong></dt><dd><p>Bottom left vertex, final index is cartesian dimension</p>
-</dd>
-<dt><strong>v3: Array[*Shape, Float]</strong></dt><dd><p>Bottom right vertex, final index is cartesian dimension</p>
-</dd>
-<dt><strong>alpha: Float</strong></dt><dd><p>First coordinate within reference element</p>
-</dd>
-<dt><strong>beta: Float</strong></dt><dd><p>Second coordinate position within reference element</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt>Array[<a href="#id5"><span class="problematic" id="id6">*</span></a>Shape, Float]</dt><dd><p>Interpolated positions.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-<p class="rubric">Notes</p>
-<p>The reference element is assumed to be [-1, 1]^2.</p>
-</dd></dl>
-
+  <section id="src-mesh-generation-bilinear-utils-module">
+<h1>src.mesh_generation.bilinear_utils module<a class="headerlink" href="#src-mesh-generation-bilinear-utils-module" title="Link to this heading">¶</a></h1>
 </section>
 
 
@@ -135,10 +65,10 @@ topological quadrilaterals in arbitrary cartesian dimension.</p>
 <script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../installation_and_validation.html">Usage</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">How to run the model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../user_friendly_api.html">The pySEs public API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../anatomy_of_a_model_struct.html">How is the atmospheric state represented in pySEs?</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">How are horizontal grids generated and read into pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">Horizontal grid generation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="modules.html">src</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="src.html">src package</a><ul class="current">
@@ -147,11 +77,7 @@ topological quadrilaterals in arbitrary cartesian dimension.</p>
 <li class="toctree-l4"><a class="reference internal" href="src.dynamical_cores.html">src.dynamical_cores package</a></li>
 <li class="toctree-l4 current"><a class="reference internal" href="src.mesh_generation.html">src.mesh_generation package</a><ul class="current">
 <li class="toctree-l5 current"><a class="reference internal" href="src.mesh_generation.html#submodules">Submodules</a><ul class="current">
-<li class="toctree-l6 current"><a class="current reference internal" href="#">src.mesh_generation.bilinear_utils module</a><ul>
-<li class="toctree-l7"><a class="reference internal" href="#src.mesh_generation.bilinear_utils.eval_bilinear_jacobian"><code class="docutils literal notranslate"><span class="pre">eval_bilinear_jacobian()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.mesh_generation.bilinear_utils.eval_bilinear_mapping"><code class="docutils literal notranslate"><span class="pre">eval_bilinear_mapping()</span></code></a></li>
-</ul>
-</li>
+<li class="toctree-l6 current"><a class="current reference internal" href="#">src.mesh_generation.bilinear_utils module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.mesh_generation.cubed_sphere.html">src.mesh_generation.cubed_sphere module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.mesh_generation.element_local_metric.html">src.mesh_generation.element_local_metric module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.mesh_generation.equiangular_metric.html">src.mesh_generation.equiangular_metric module</a></li>
@@ -163,7 +89,7 @@ topological quadrilaterals in arbitrary cartesian dimension.</p>
 <li class="toctree-l6"><a class="reference internal" href="src.mesh_generation.spherical_coord_utils.html">src.mesh_generation.spherical_coord_utils module</a></li>
 </ul>
 </li>
-<li class="toctree-l5"><a class="reference internal" href="src.mesh_generation.html#module-src.mesh_generation">Module contents</a></li>
+<li class="toctree-l5"><a class="reference internal" href="src.mesh_generation.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 <li class="toctree-l4"><a class="reference internal" href="src.mpi.html">src.mpi package</a></li>
@@ -173,7 +99,7 @@ topological quadrilaterals in arbitrary cartesian dimension.</p>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="src.html#submodules">Submodules</a></li>
-<li class="toctree-l3"><a class="reference internal" href="src.html#module-src">Module contents</a></li>
+<li class="toctree-l3"><a class="reference internal" href="src.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 </ul>

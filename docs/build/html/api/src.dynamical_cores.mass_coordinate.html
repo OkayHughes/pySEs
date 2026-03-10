@@ -33,147 +33,8 @@
 
           <div class="body" role="main">
             
-  <section id="module-src.dynamical_cores.mass_coordinate">
-<span id="src-dynamical-cores-mass-coordinate-module"></span><h1>src.dynamical_cores.mass_coordinate module<a class="headerlink" href="#module-src.dynamical_cores.mass_coordinate" title="Link to this heading">¶</a></h1>
-<dl class="py function">
-<dt class="sig sig-object py" id="src.dynamical_cores.mass_coordinate.d_mass_to_surface_mass">
-<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.mass_coordinate.</span></span><span class="sig-name descname"><span class="pre">d_mass_to_surface_mass</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">d_mass</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v_grid</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.mass_coordinate.d_mass_to_surface_mass" title="Link to this definition">¶</a></dt>
-<dd><p>Recover surface pressure from the layer-thickness column by summing all levels.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>d_mass</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Layer thickness (Pa) at each model level.</p>
-</dd>
-<dt><strong>v_grid</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Vertical grid from <code class="docutils literal notranslate"><span class="pre">init_vertical_grid</span></code>.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>ps</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx], Float]</span></dt><dd><p>Surface pressure (Pa).</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.dynamical_cores.mass_coordinate.eval_top_interface_mass">
-<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.mass_coordinate.</span></span><span class="sig-name descname"><span class="pre">eval_top_interface_mass</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">v_grid</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.mass_coordinate.eval_top_interface_mass" title="Link to this definition">¶</a></dt>
-<dd><p>Compute the pressure at the model-top interface from the hybrid coordinate.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>v_grid</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Vertical grid from <code class="docutils literal notranslate"><span class="pre">init_vertical_grid</span></code>; must contain
-<code class="docutils literal notranslate"><span class="pre">&quot;hybrid_a_i&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;reference_surface_mass&quot;</span></code>.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>p_top</strong><span class="classifier">float</span></dt><dd><p>Top-of-model interface pressure (Pa).</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.dynamical_cores.mass_coordinate.init_vertical_grid">
-<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.mass_coordinate.</span></span><span class="sig-name descname"><span class="pre">init_vertical_grid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hybrid_a_i</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hybrid_b_i</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reference_surface_mass</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.mass_coordinate.init_vertical_grid" title="Link to this definition">¶</a></dt>
-<dd><p>Build the vertical grid struct from hybrid σ-p coordinate coefficients.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>hybrid_a_i</strong><span class="classifier">Array[tuple[nlev+1], Float]</span></dt><dd><p>Pure-pressure part of the hybrid coordinate at interfaces
-(dimensionless, normalised by <code class="docutils literal notranslate"><span class="pre">reference_surface_mass</span></code>).</p>
-</dd>
-<dt><strong>hybrid_b_i</strong><span class="classifier">Array[tuple[nlev+1], Float]</span></dt><dd><p>Terrain-following part of the hybrid coordinate at interfaces
-(dimensionless, ranges from 1 at the surface to 0 at the model top).</p>
-</dd>
-<dt><strong>reference_surface_mass</strong><span class="classifier">float</span></dt><dd><p>Nominal reference surface pressure / mass (Pa).</p>
-</dd>
-<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier; used to set <code class="docutils literal notranslate"><span class="pre">&quot;moist&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;dry&quot;</span></code> flag.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>v_grid</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Vertical grid struct containing <code class="docutils literal notranslate"><span class="pre">&quot;hybrid_a_i&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;hybrid_b_i&quot;</span></code>,
-<code class="docutils literal notranslate"><span class="pre">&quot;hybrid_a_m&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;hybrid_b_m&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;reference_surface_mass&quot;</span></code>,
-and a moisture flag.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.dynamical_cores.mass_coordinate.surface_mass_to_d_mass">
-<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.mass_coordinate.</span></span><span class="sig-name descname"><span class="pre">surface_mass_to_d_mass</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ps</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v_grid</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.mass_coordinate.surface_mass_to_d_mass" title="Link to this definition">¶</a></dt>
-<dd><p>Compute layer thickness (dp) from surface pressure using the hybrid coordinate.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>ps</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx], Float]</span></dt><dd><p>Surface pressure (Pa).</p>
-</dd>
-<dt><strong>v_grid</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Vertical grid from <code class="docutils literal notranslate"><span class="pre">init_vertical_grid</span></code>.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>d_mass</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Layer thickness (Pa) at each model level.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.dynamical_cores.mass_coordinate.surface_mass_to_interface_mass">
-<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.mass_coordinate.</span></span><span class="sig-name descname"><span class="pre">surface_mass_to_interface_mass</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ps</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v_grid</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.mass_coordinate.surface_mass_to_interface_mass" title="Link to this definition">¶</a></dt>
-<dd><p>Compute interface-level pressure (mass) from surface pressure using the hybrid coordinate.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>ps</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx], Float]</span></dt><dd><p>Surface pressure (Pa).</p>
-</dd>
-<dt><strong>v_grid</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Vertical grid from <code class="docutils literal notranslate"><span class="pre">init_vertical_grid</span></code>.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>p_int</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, nlev+1], Float]</span></dt><dd><p>Interface-level pressure (Pa) for each model interface.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.dynamical_cores.mass_coordinate.surface_mass_to_midlevel_mass">
-<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.mass_coordinate.</span></span><span class="sig-name descname"><span class="pre">surface_mass_to_midlevel_mass</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ps</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v_grid</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.mass_coordinate.surface_mass_to_midlevel_mass" title="Link to this definition">¶</a></dt>
-<dd><p>Compute mid-level pressure (mass) from surface pressure using the hybrid coordinate.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>ps</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx], Float]</span></dt><dd><p>Surface pressure (Pa).</p>
-</dd>
-<dt><strong>v_grid</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Vertical grid from <code class="docutils literal notranslate"><span class="pre">init_vertical_grid</span></code>.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>p_mid</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Mid-level pressure (Pa) for each model level.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
+  <section id="src-dynamical-cores-mass-coordinate-module">
+<h1>src.dynamical_cores.mass_coordinate module<a class="headerlink" href="#src-dynamical-cores-mass-coordinate-module" title="Link to this heading">¶</a></h1>
 </section>
 
 
@@ -204,10 +65,10 @@ and a moisture flag.</p>
 <script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../installation_and_validation.html">Usage</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">How to run the model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../user_friendly_api.html">The pySEs public API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../anatomy_of_a_model_struct.html">How is the atmospheric state represented in pySEs?</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">How are horizontal grids generated and read into pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">Horizontal grid generation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="modules.html">src</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="src.html">src package</a><ul class="current">
@@ -219,15 +80,7 @@ and a moisture flag.</p>
 <li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.finite_volume_grid.html">src.dynamical_cores.finite_volume_grid module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.hyperviscosity.html">src.dynamical_cores.hyperviscosity module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.initialization.html">src.dynamical_cores.initialization module</a></li>
-<li class="toctree-l6 current"><a class="current reference internal" href="#">src.dynamical_cores.mass_coordinate module</a><ul>
-<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.mass_coordinate.d_mass_to_surface_mass"><code class="docutils literal notranslate"><span class="pre">d_mass_to_surface_mass()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.mass_coordinate.eval_top_interface_mass"><code class="docutils literal notranslate"><span class="pre">eval_top_interface_mass()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.mass_coordinate.init_vertical_grid"><code class="docutils literal notranslate"><span class="pre">init_vertical_grid()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.mass_coordinate.surface_mass_to_d_mass"><code class="docutils literal notranslate"><span class="pre">surface_mass_to_d_mass()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.mass_coordinate.surface_mass_to_interface_mass"><code class="docutils literal notranslate"><span class="pre">surface_mass_to_interface_mass()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.mass_coordinate.surface_mass_to_midlevel_mass"><code class="docutils literal notranslate"><span class="pre">surface_mass_to_midlevel_mass()</span></code></a></li>
-</ul>
-</li>
+<li class="toctree-l6 current"><a class="current reference internal" href="#">src.dynamical_cores.mass_coordinate module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.model_config.html">src.dynamical_cores.model_config module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.model_info.html">src.dynamical_cores.model_info module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.model_state.html">src.dynamical_cores.model_state module</a></li>
@@ -241,7 +94,7 @@ and a moisture flag.</p>
 <li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.vertical_remap.html">src.dynamical_cores.vertical_remap module</a></li>
 </ul>
 </li>
-<li class="toctree-l5"><a class="reference internal" href="src.dynamical_cores.html#module-src.dynamical_cores">Module contents</a></li>
+<li class="toctree-l5"><a class="reference internal" href="src.dynamical_cores.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 <li class="toctree-l4"><a class="reference internal" href="src.mesh_generation.html">src.mesh_generation package</a></li>
@@ -252,7 +105,7 @@ and a moisture flag.</p>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="src.html#submodules">Submodules</a></li>
-<li class="toctree-l3"><a class="reference internal" href="src.html#module-src">Module contents</a></li>
+<li class="toctree-l3"><a class="reference internal" href="src.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 </ul>

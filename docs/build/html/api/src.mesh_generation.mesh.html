@@ -33,217 +33,8 @@
 
           <div class="body" role="main">
             
-  <section id="module-src.mesh_generation.mesh">
-<span id="src-mesh-generation-mesh-module"></span><h1>src.mesh_generation.mesh module<a class="headerlink" href="#module-src.mesh_generation.mesh" title="Link to this heading">¶</a></h1>
-<dl class="py function">
-<dt class="sig sig-object py" id="src.mesh_generation.mesh.edge_to_vert">
-<span class="sig-prename descclassname"><span class="pre">src.mesh_generation.mesh.</span></span><span class="sig-name descname"><span class="pre">edge_to_vert</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">edge_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_forwards</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.mesh_generation.mesh.edge_to_vert" title="Link to this definition">¶</a></dt>
-<dd><p>Map an edge id of oriented vertex ids of a given element edge.</p>
-<dl class="field-list">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl>
-<dt><strong>edge_id</strong><span class="classifier"><cite>int</cite></span></dt><dd><p>Index of edge within an element</p>
-</dd>
-<dt><strong>is_forwards: `int`, default=FORWARDS</strong></dt><dd><p>Is the edge reversed from its
-default orientation.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><cite>tuple[int, int]</cite></dt><dd><p>(vert_idx_0, vert_idx_1)</p>
-</dd>
-</dl>
-</dd>
-</dl>
-<p class="rubric">Notes</p>
-<p>See mesh_definitions for grid conventions on
-vertex_idx, edge enumeration, and default direction.</p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.mesh_generation.mesh.init_element_corner_vert_redundancy">
-<span class="sig-prename descclassname"><span class="pre">src.mesh_generation.mesh.</span></span><span class="sig-name descname"><span class="pre">init_element_corner_vert_redundancy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">face_connectivity</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.mesh_generation.mesh.init_element_corner_vert_redundancy" title="Link to this definition">¶</a></dt>
-<dd><p>Enumerate redundant DOFs on the elemental
-representation of an arbitrary mesh</p>
-<dl class="field-list">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl>
-<dt><strong>nx</strong><span class="classifier"><cite>int</cite></span></dt><dd><p>The number of elements on a cubed-sphere edge.</p>
-</dd>
-<dt><strong>face_connectivity</strong><span class="classifier"><cite>Array[tuple[elem_idx, edge_idx, 3], Int]</cite></span></dt><dd><p>An array containing the topological information about the grid.
-It is unpacked as
-<a href="#id1"><span class="problematic" id="id2">``</span></a>`
-(remote_elem_idx, remote_edge_idx, same_direction) = face_connectivity[local_elem_idx,</p>
-<blockquote>
-<div><p>edge_idx, :]</p>
-</div></blockquote>
-<p><a href="#id3"><span class="problematic" id="id4">``</span></a><a href="#id5"><span class="problematic" id="id6">`</span></a></p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><cite>vert_redundancy: dict[local_elem_idx, dict[vert_idx, set[tuple[remote_elem_idx, vert_idx]]]]</cite></dt><dd><p><cite>dict[local_elem_idx][vert_idx]</cite> is a set of tuples
-<cite>(remote_elem_idx, vert_idx_pair)</cite> which represent vertices that
-share the same physical coordinates as <cite>(local_elem_idx, vert_idx)</cite>.
-Therefore, they represent redundant degrees of freedom.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-<p class="rubric">Notes</p>
-<p>This struct deliberately does not contain diagonal associations, i.e.
-(local_elem_idx, vert_idx) &lt;-/-&gt; (local_elem_idx, vert_idx)</p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.mesh_generation.mesh.init_spectral_grid_redundancy">
-<span class="sig-prename descclassname"><span class="pre">src.mesh_generation.mesh.</span></span><span class="sig-name descname"><span class="pre">init_spectral_grid_redundancy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">vert_redundancy</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">npt</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.mesh_generation.mesh.init_spectral_grid_redundancy" title="Link to this definition">¶</a></dt>
-<dd><p>Enumerate all redundant DOFs in a global
-SpectralElementGrid.</p>
-<dl class="field-list">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl>
-<dt><strong>vert_redundancy</strong><span class="classifier"><cite>dict[elem_idx, dict[corner_idx, set(tuple[elem_idx, corner_idx])]]</cite></span></dt><dd><p><cite>dict[elem_idx][corner_idx]</cite> is a set of element corners
-that are coincident with <cite>face_position[elem_idx, corner_idx, :]</cite>.</p>
-</dd>
-<dt><strong>npt</strong><span class="classifier"><cite>int</cite></span></dt><dd><p>number of Gauss-Lobatto-Legendre points in each
-dimension of an element.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt>vert_redundancy_gll: <cite>dict[elem_idx, dict[tuple(gll_idx, gll_idx),                                            set[tuple[elem_idx, gll_idx, gll_idx]]]]</cite></dt><dd><p><cite>dict[elem_idx][(gll_idx,gll_idx)]</cite> is a set
-of redundant DOFs on the global GLL grid.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-<p class="rubric">Notes</p>
-<p>This method works for general meshes, and is not
-specific to a particular topology.</p>
-<p>DOFs are not considered redundant with themselves.
-If assembling the Spectral Element projection operator
-from this struct, you must construct the diagonal entries yourself.</p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.mesh_generation.mesh.mesh_to_cart_bilinear">
-<span class="sig-prename descclassname"><span class="pre">src.mesh_generation.mesh.</span></span><span class="sig-name descname"><span class="pre">mesh_to_cart_bilinear</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">face_position</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">npt</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.mesh_generation.mesh.mesh_to_cart_bilinear" title="Link to this definition">¶</a></dt>
-<dd><p>Bilinearly map cartesian elements corners to
-cartesian tensor-GLL mesh.</p>
-<dl class="field-list">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl>
-<dt><strong>face_position</strong><span class="classifier"><cite>Array[tuple[elem_idx, vert_idx, cart_idx], Float]</cite></span></dt><dd><p>Array of cartesian position of element corners.</p>
-</dd>
-<dt><strong>npt</strong><span class="classifier"><cite>int</cite></span></dt><dd><p>number of Gauss-Lobatto-Legendre points in each
-dimension of an element.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl>
-<dt><strong>gll_position</strong><span class="classifier"><cite>Array[tuple[elem_idx, gll_idx, gll_idx, cart_idx], Float]</cite></span></dt><dd><p>Position of GLL gridpoints in cartesian space, e.g. the (x, y) coordinates
-in a cubed sphere face</p>
-</dd>
-<dt><strong>gll_jacobian</strong><span class="classifier"><cite>Array[tuple[elem_idx, gll_idx, gll_idx, cart_idx, ab], Float]</cite></span></dt><dd><p>Jacobian of bilinear mapping from the reference element to cartesian space
-for the GLL mesh.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-<p class="rubric">Notes</p>
-<p>This method works for general meshes, and is not
-specific to a particular topology.</p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.mesh_generation.mesh.metric_terms_to_grid">
-<span class="sig-prename descclassname"><span class="pre">src.mesh_generation.mesh.</span></span><span class="sig-name descname"><span class="pre">metric_terms_to_grid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">gll_latlon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gll_to_cartesian_jacobian</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cartesian_to_sphere_jacobian</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vert_redundancy_gll</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">npt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wrapped</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calc_smooth_tensor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.mesh_generation.mesh.metric_terms_to_grid" title="Link to this definition">¶</a></dt>
-<dd><p>Collate individual coordinate mappings into global SpectralElementGrid
-on an equiangular cubed sphere grid.</p>
-<dl class="field-list">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl>
-<dt><strong>gll_latlon: `Array[tuple[elem_idx, gll_idx, gll_idx, phi_lambda], Float]`</strong></dt><dd><p>Grid point positions in spherical coordinates.</p>
-</dd>
-<dt><strong>gll_to_cube_jacobian</strong><span class="classifier"><cite>Array[tuple[elem_idx, gll_idx, gll_idx, xy, ab]</cite></span></dt><dd><p>Jacobian of mapping from reference element onto cube faces.</p>
-</dd>
-<dt><strong>cube_to_sphere_jacobian: `Array[tuple[elem_idx, gll_idx, gll_idx, phi_lambda, xy]`</strong></dt><dd><p>Jacobian of mapping from cube face to sphere</p>
-</dd>
-<dt><strong>vert_redundancy_gll: `dict[elem_idx, dict[tuple[gll_idx, gll_idx], set[tuple(elem_idx, gll_idx, gll_idx)]]]`</strong></dt><dd><p>Gridpoint redundancy struct.</p>
-</dd>
-<dt><strong>npt: `int`</strong></dt><dd><p>Number of 1D gll points used in grid.</p>
-</dd>
-<dt><strong>wrapped: `bool`, default=use_wrapper</strong></dt><dd><p>Flag that determines whether returned grid
-will use accelerator framework arrays
-or numpy arrays.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt>SpectralElementGrid</dt><dd><p>Global spectral element grid.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-<p class="rubric">Notes</p>
-<ul class="simple">
-<li><p>See <cite>mesh.gen_gll_redundancy</cite> for a description of <cite>vert_redundancy_gll</cite></p></li>
-<li><p>See <cite>se_grid.create_spectral_element_grid</cite> for description of</p></li>
-</ul>
-<p>the grid data structure.</p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.mesh_generation.mesh.vert_red_flat_to_hierarchy">
-<span class="sig-prename descclassname"><span class="pre">src.mesh_generation.mesh.</span></span><span class="sig-name descname"><span class="pre">vert_red_flat_to_hierarchy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">vert_redundancy_gll_flat</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.mesh_generation.mesh.vert_red_flat_to_hierarchy" title="Link to this definition">¶</a></dt>
-<dd><p>Convert a flat list of redundancy pairs to a nested hierarchy dict.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>vert_redundancy_gll_flat</strong><span class="classifier">list[tuple[tuple[int,int,int], tuple[int,int,int]]]</span></dt><dd><p>Flat redundancy list where each entry is
-<code class="docutils literal notranslate"><span class="pre">((target_idx,</span> <span class="pre">target_i,</span> <span class="pre">target_j),</span> <span class="pre">(source_idx,</span> <span class="pre">source_i,</span> <span class="pre">source_j))</span></code>.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>vert_redundancy</strong><span class="classifier">dict[int, dict[tuple[int,int], list[tuple[int,int,int]]]]</span></dt><dd><p>Nested dict <code class="docutils literal notranslate"><span class="pre">[target_idx][(target_i,</span> <span class="pre">target_j)]</span></code> → list of
-<code class="docutils literal notranslate"><span class="pre">(source_idx,</span> <span class="pre">source_i,</span> <span class="pre">source_j)</span></code> tuples.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.mesh_generation.mesh.vert_red_hierarchy_to_flat">
-<span class="sig-prename descclassname"><span class="pre">src.mesh_generation.mesh.</span></span><span class="sig-name descname"><span class="pre">vert_red_hierarchy_to_flat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">vert_redundancy_gll</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.mesh_generation.mesh.vert_red_hierarchy_to_flat" title="Link to this definition">¶</a></dt>
-<dd><p>Convert a nested redundancy hierarchy dict to a flat list of pairs.</p>
-<p>Reverses <a class="reference internal" href="#src.mesh_generation.mesh.vert_red_flat_to_hierarchy" title="src.mesh_generation.mesh.vert_red_flat_to_hierarchy"><code class="xref py py-func docutils literal notranslate"><span class="pre">vert_red_flat_to_hierarchy()</span></code></a>.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>vert_redundancy_gll</strong><span class="classifier">dict[int, dict[tuple[int,int], set[tuple[int,int,int]]]]</span></dt><dd><p>Nested dict <code class="docutils literal notranslate"><span class="pre">[target_idx][(target_i,</span> <span class="pre">target_j)]</span></code> → set of
-<code class="docutils literal notranslate"><span class="pre">(source_idx,</span> <span class="pre">source_i,</span> <span class="pre">source_j)</span></code> tuples.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>vert_redundancy</strong><span class="classifier">list[tuple[tuple[int,int,int], tuple[int,int,int]]]</span></dt><dd><p>Flat list of <code class="docutils literal notranslate"><span class="pre">((target_idx,</span> <span class="pre">target_i,</span> <span class="pre">target_j),</span> <span class="pre">(source_idx,</span> <span class="pre">source_i,</span> <span class="pre">source_j))</span></code>
-pairs.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
+  <section id="src-mesh-generation-mesh-module">
+<h1>src.mesh_generation.mesh module<a class="headerlink" href="#src-mesh-generation-mesh-module" title="Link to this heading">¶</a></h1>
 </section>
 
 
@@ -274,10 +65,10 @@ pairs.</p>
 <script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../installation_and_validation.html">Usage</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">How to run the model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../user_friendly_api.html">The pySEs public API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../anatomy_of_a_model_struct.html">How is the atmospheric state represented in pySEs?</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">How are horizontal grids generated and read into pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">Horizontal grid generation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="modules.html">src</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="src.html">src package</a><ul class="current">
@@ -290,16 +81,7 @@ pairs.</p>
 <li class="toctree-l6"><a class="reference internal" href="src.mesh_generation.cubed_sphere.html">src.mesh_generation.cubed_sphere module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.mesh_generation.element_local_metric.html">src.mesh_generation.element_local_metric module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.mesh_generation.equiangular_metric.html">src.mesh_generation.equiangular_metric module</a></li>
-<li class="toctree-l6 current"><a class="current reference internal" href="#">src.mesh_generation.mesh module</a><ul>
-<li class="toctree-l7"><a class="reference internal" href="#src.mesh_generation.mesh.edge_to_vert"><code class="docutils literal notranslate"><span class="pre">edge_to_vert()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.mesh_generation.mesh.init_element_corner_vert_redundancy"><code class="docutils literal notranslate"><span class="pre">init_element_corner_vert_redundancy()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.mesh_generation.mesh.init_spectral_grid_redundancy"><code class="docutils literal notranslate"><span class="pre">init_spectral_grid_redundancy()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.mesh_generation.mesh.mesh_to_cart_bilinear"><code class="docutils literal notranslate"><span class="pre">mesh_to_cart_bilinear()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.mesh_generation.mesh.metric_terms_to_grid"><code class="docutils literal notranslate"><span class="pre">metric_terms_to_grid()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.mesh_generation.mesh.vert_red_flat_to_hierarchy"><code class="docutils literal notranslate"><span class="pre">vert_red_flat_to_hierarchy()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.mesh_generation.mesh.vert_red_hierarchy_to_flat"><code class="docutils literal notranslate"><span class="pre">vert_red_hierarchy_to_flat()</span></code></a></li>
-</ul>
-</li>
+<li class="toctree-l6 current"><a class="current reference internal" href="#">src.mesh_generation.mesh module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.mesh_generation.mesh_definitions.html">src.mesh_generation.mesh_definitions module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.mesh_generation.mesh_io.html">src.mesh_generation.mesh_io module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.mesh_generation.periodic_plane.html">src.mesh_generation.periodic_plane module</a></li>
@@ -307,7 +89,7 @@ pairs.</p>
 <li class="toctree-l6"><a class="reference internal" href="src.mesh_generation.spherical_coord_utils.html">src.mesh_generation.spherical_coord_utils module</a></li>
 </ul>
 </li>
-<li class="toctree-l5"><a class="reference internal" href="src.mesh_generation.html#module-src.mesh_generation">Module contents</a></li>
+<li class="toctree-l5"><a class="reference internal" href="src.mesh_generation.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 <li class="toctree-l4"><a class="reference internal" href="src.mpi.html">src.mpi package</a></li>
@@ -317,7 +99,7 @@ pairs.</p>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="src.html#submodules">Submodules</a></li>
-<li class="toctree-l3"><a class="reference internal" href="src.html#module-src">Module contents</a></li>
+<li class="toctree-l3"><a class="reference internal" href="src.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 </ul>

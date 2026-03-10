@@ -33,121 +33,8 @@
 
           <div class="body" role="main">
             
-  <section id="module-src.mesh_generation.equiangular_metric">
-<span id="src-mesh-generation-equiangular-metric-module"></span><h1>src.mesh_generation.equiangular_metric module<a class="headerlink" href="#module-src.mesh_generation.equiangular_metric" title="Link to this heading">¶</a></h1>
-<dl class="py function">
-<dt class="sig sig-object py" id="src.mesh_generation.equiangular_metric.eval_metric_terms_equiangular">
-<span class="sig-prename descclassname"><span class="pre">src.mesh_generation.equiangular_metric.</span></span><span class="sig-name descname"><span class="pre">eval_metric_terms_equiangular</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">face_mask</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cube_points_2d</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">npt</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.mesh_generation.equiangular_metric.eval_metric_terms_equiangular" title="Link to this definition">¶</a></dt>
-<dd><p>Use the equiangular cubed sphere map
-to evaluate latitude, longitude and jacobian ∂(x, y)/∂(λ, φ)
-for a quasi-regular cubed-sphere grid.</p>
-<dl class="field-list">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>face_mask: `Array[tuple[elem_idx], Int]`</strong></dt><dd><p>Integer mask denoting which cubed sphere face each element belongs to.</p>
-</dd>
-<dt><strong>cube_points_2d: `Array[tuple[elem_idx, gll_idx, gll_idx, xy], Float]`</strong></dt><dd><p>Local (x, y) coordinates of grid points
-in the cubed sphere face containing the element</p>
-</dd>
-<dt><strong>npt: `int`</strong></dt><dd><p>Number of 1d GLL points within each element.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl>
-<dt>gll_latlon: <cite>Array[tuple[elem_idx, gll_idx, gll_idx, phi_lambda], Float]</cite></dt><dd><p>Gridpoint locations in spherical coordinates.</p>
-</dd>
-<dt>cube_to_sphere_jacobian: <cite>Array[tuple[elem_idx, gll_idx, gll_idx, phi_lambda, xy], Float]</cite></dt><dd><p>Jacobian of mapping from xy coordinates on cubed sphere face to the sphere.
-Namely,
-<a href="#id1"><span class="problematic" id="id2">``</span></a>`
-cube_to_sphere_jacobian[elem_idx, gll_idx, gll_idx, :, :] = [[∂ϕ/∂x, ∂ϕ/∂y],</p>
-<blockquote>
-<div><p>[∂λ/∂x, ∂λ/∂y]]</p>
-</div></blockquote>
-<p><a href="#id3"><span class="problematic" id="id4">``</span></a><a href="#id5"><span class="problematic" id="id6">`</span></a></p>
-</dd>
-</dl>
-</dd>
-</dl>
-<p class="rubric">Notes</p>
-<p>See <cite>mesh_definitions.py</cite> for a diagram of how the local coordinates
-are oriented on each face.</p>
-<p>See Ullrich, Lauritzen, and Jablonowski (<a class="reference external" href="https://doi.org/10.1175/2008MWR2817.1">https://doi.org/10.1175/2008MWR2817.1</a>)
-for a thorough review of cubed sphere geometry.</p>
-<p><cite>cube_to_sphere_jacobian</cite> is not C0 across cubed-sphere boundaries!</p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.mesh_generation.equiangular_metric.init_grid_from_topo">
-<span class="sig-prename descclassname"><span class="pre">src.mesh_generation.equiangular_metric.</span></span><span class="sig-name descname"><span class="pre">init_grid_from_topo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">face_connectivity</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">face_mask</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">face_position_2d</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vert_redundancy</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">npt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calc_smooth_tensor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wrapped</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.mesh_generation.equiangular_metric.init_grid_from_topo" title="Link to this definition">¶</a></dt>
-<dd><p>Generate SpectralElementGrid from topological information.</p>
-<dl class="field-list">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl>
-<dt><strong>face_connectivity: `Array[tuple[elem_idx, edge_idx, 3], Int]`</strong></dt><dd><p>An array containing the topological information about the grid.
-It is unpacked as
-<a href="#id7"><span class="problematic" id="id8">``</span></a>`
-(remote_elem_idx, remote_edge_idx, same_direction) = face_connectivity[local_elem_idx,</p>
-<blockquote>
-<div><p>edge_idx, :]</p>
-</div></blockquote>
-<p><a href="#id9"><span class="problematic" id="id10">``</span></a><a href="#id11"><span class="problematic" id="id12">`</span></a></p>
-</dd>
-<dt><strong>face_mask: `Array[tuple[elem_idx], Int]`</strong></dt><dd><p>An integer mask describing which face of the cubed sphere each element lies on.</p>
-</dd>
-<dt><strong>face_position_2d: `Array[tuple[elem_idx, vert_idx, xy], Float]`</strong></dt><dd><p>Positions of the element vertices within the local (x, y)
-coordinates on the cubed-sphere face that contains it.</p>
-</dd>
-<dt><strong>vert_redundancy: `dict[local_elem_idx, dict[vert_idx, set[tuple[remote_elem_idx, vert_idx]]]]`</strong></dt><dd><p><cite>dict[local_elem_idx][vert_idx]</cite> is a set of tuples
-<cite>(remote_elem_idx, vert_idx_pair)</cite> which represent vertices that
-share the same physical coordinates as <cite>(local_elem_idx, vert_idx)</cite>.
-Therefore, they represent redundant degrees of freedom.</p>
-</dd>
-<dt><strong>wrapped: `bool`, default=use_wrapper</strong></dt><dd><p>Flag that determines whether returned grid
-will use accelerator framework arrays
-or numpy arrays.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt>SpectralElementGrid</dt><dd><p>Global spectral element grid.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-<p class="rubric">Notes</p>
-<ul class="simple">
-<li><p>See <cite>cubed_sphere.gen_cube_topo</cite> to generate <cite>face_connectivity</cite>, <cite>face_mask</cite>, <cite>face_position_2d</cite></p></li>
-<li><p>See <cite>cubed_sphere.gen_vert_redundancy</cite> to generate <cite>vert_redundancy</cite></p></li>
-</ul>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.mesh_generation.equiangular_metric.init_quasi_uniform_grid">
-<span class="sig-prename descclassname"><span class="pre">src.mesh_generation.equiangular_metric.</span></span><span class="sig-name descname"><span class="pre">init_quasi_uniform_grid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">npt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wrapped</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calc_smooth_tensor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.mesh_generation.equiangular_metric.init_quasi_uniform_grid" title="Link to this definition">¶</a></dt>
-<dd><p>Generate an equiangular quasi-uniform cubed-sphere
-SpectralElementGrid.</p>
-<dl class="field-list">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl>
-<dt><strong>nx</strong><span class="classifier"><cite>int</cite></span></dt><dd><p>Number of elements per edge of a cubed sphere face</p>
-</dd>
-<dt><strong>npt</strong><span class="classifier"><cite>int</cite></span></dt><dd><p>Number of 1D gll points to use within reference elements.</p>
-</dd>
-<dt><strong>wrapped: `bool`, default=use_wrapper</strong></dt><dd><p>Flag that determines whether returned grid
-will use accelerator framework arrays
-or numpy arrays.</p>
-</dd>
-<dt><strong>Returns</strong></dt><dd></dd>
-<dt><strong>——-</strong></dt><dd></dd>
-<dt><strong>SpectralElementGrid</strong></dt><dd><p>Global spectral element grid.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
+  <section id="src-mesh-generation-equiangular-metric-module">
+<h1>src.mesh_generation.equiangular_metric module<a class="headerlink" href="#src-mesh-generation-equiangular-metric-module" title="Link to this heading">¶</a></h1>
 </section>
 
 
@@ -178,10 +65,10 @@ or numpy arrays.</p>
 <script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../installation_and_validation.html">Usage</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">How to run the model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../user_friendly_api.html">The pySEs public API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../anatomy_of_a_model_struct.html">How is the atmospheric state represented in pySEs?</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">How are horizontal grids generated and read into pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">Horizontal grid generation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="modules.html">src</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="src.html">src package</a><ul class="current">
@@ -193,12 +80,7 @@ or numpy arrays.</p>
 <li class="toctree-l6"><a class="reference internal" href="src.mesh_generation.bilinear_utils.html">src.mesh_generation.bilinear_utils module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.mesh_generation.cubed_sphere.html">src.mesh_generation.cubed_sphere module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.mesh_generation.element_local_metric.html">src.mesh_generation.element_local_metric module</a></li>
-<li class="toctree-l6 current"><a class="current reference internal" href="#">src.mesh_generation.equiangular_metric module</a><ul>
-<li class="toctree-l7"><a class="reference internal" href="#src.mesh_generation.equiangular_metric.eval_metric_terms_equiangular"><code class="docutils literal notranslate"><span class="pre">eval_metric_terms_equiangular()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.mesh_generation.equiangular_metric.init_grid_from_topo"><code class="docutils literal notranslate"><span class="pre">init_grid_from_topo()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.mesh_generation.equiangular_metric.init_quasi_uniform_grid"><code class="docutils literal notranslate"><span class="pre">init_quasi_uniform_grid()</span></code></a></li>
-</ul>
-</li>
+<li class="toctree-l6 current"><a class="current reference internal" href="#">src.mesh_generation.equiangular_metric module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.mesh_generation.mesh.html">src.mesh_generation.mesh module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.mesh_generation.mesh_definitions.html">src.mesh_generation.mesh_definitions module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.mesh_generation.mesh_io.html">src.mesh_generation.mesh_io module</a></li>
@@ -207,7 +89,7 @@ or numpy arrays.</p>
 <li class="toctree-l6"><a class="reference internal" href="src.mesh_generation.spherical_coord_utils.html">src.mesh_generation.spherical_coord_utils module</a></li>
 </ul>
 </li>
-<li class="toctree-l5"><a class="reference internal" href="src.mesh_generation.html#module-src.mesh_generation">Module contents</a></li>
+<li class="toctree-l5"><a class="reference internal" href="src.mesh_generation.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 <li class="toctree-l4"><a class="reference internal" href="src.mpi.html">src.mpi package</a></li>
@@ -217,7 +99,7 @@ or numpy arrays.</p>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="src.html#submodules">Submodules</a></li>
-<li class="toctree-l3"><a class="reference internal" href="src.html#module-src">Module contents</a></li>
+<li class="toctree-l3"><a class="reference internal" href="src.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 </ul>

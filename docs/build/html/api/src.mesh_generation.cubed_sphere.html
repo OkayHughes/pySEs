@@ -33,171 +33,8 @@
 
           <div class="body" role="main">
             
-  <section id="module-src.mesh_generation.cubed_sphere">
-<span id="src-mesh-generation-cubed-sphere-module"></span><h1>src.mesh_generation.cubed_sphere module<a class="headerlink" href="#module-src.mesh_generation.cubed_sphere" title="Link to this heading">¶</a></h1>
-<dl class="py function">
-<dt class="sig sig-object py" id="src.mesh_generation.cubed_sphere.elem_id_fn">
-<span class="sig-prename descclassname"><span class="pre">src.mesh_generation.cubed_sphere.</span></span><span class="sig-name descname"><span class="pre">elem_id_fn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">face_idx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_idx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_idx</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.mesh_generation.cubed_sphere.elem_id_fn" title="Link to this definition">¶</a></dt>
-<dd><p>Maps an element within a
-regular grid on a cubed-sphere face
-to a scalar index.</p>
-<dl class="field-list">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl>
-<dt><strong>nx</strong><span class="classifier"><cite>int</cite></span></dt><dd><p>The number of elements on an edge of a cubed-sphere face.</p>
-</dd>
-<dt><strong>face_idx</strong><span class="classifier"><cite>int</cite></span></dt><dd><p>The index of the cubed-sphere face the element is located on.</p>
-</dd>
-<dt><strong>x_idx</strong><span class="classifier"><cite>int</cite></span></dt><dd><p>the horizontal index of the element within the face’s regular grid.</p>
-</dd>
-<dt><strong>y_idx</strong><span class="classifier"><cite>int</cite></span></dt><dd><p>the vertical index of the element within the face’s regular grid
-the 3rd param, by default ‘value’</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><cite>int</cite></dt><dd><p>The global index of the element.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-<p class="rubric">Notes</p>
-<p>This should be the inverse of <cite>inv_elem_id_fn</cite></p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.mesh_generation.cubed_sphere.init_cube_topo">
-<span class="sig-prename descclassname"><span class="pre">src.mesh_generation.cubed_sphere.</span></span><span class="sig-name descname"><span class="pre">init_cube_topo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nx</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.mesh_generation.cubed_sphere.init_cube_topo" title="Link to this definition">¶</a></dt>
-<dd><p>Generates the cartesian coordinates and topological
-connectivity of a quasi-regular grid
-on the cubed sphere.</p>
-<dl class="field-list">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl>
-<dt><strong>nx</strong><span class="classifier"><cite>int</cite></span></dt><dd><p>Number of elements on an edge of the cubed sphere.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl>
-<dt>face_connectivity: <cite>Array[tuple[elem_idx, edge_idx, 3], Int]</cite></dt><dd><p>An array containing the topological information about the grid.
-It is unpacked as
-<a href="#id1"><span class="problematic" id="id2">``</span></a>`
-(remote_elem_idx, remote_edge_idx, same_direction) = face_connectivity[local_elem_idx,</p>
-<blockquote>
-<div><p>edge_idx, :]</p>
-</div></blockquote>
-<p><a href="#id3"><span class="problematic" id="id4">``</span></a><a href="#id5"><span class="problematic" id="id6">`</span></a></p>
-</dd>
-<dt>face_mask: <cite>Array[tuple[elem_idx], Int]</cite></dt><dd><p>An integer mask describing which face of the cubed sphere each element lies on.</p>
-</dd>
-<dt>face_position: <cite>Array[tuple[elem_idx, vert_idx, xyz], Float]</cite></dt><dd><p>Positions of the element vertices on the reference cube
-in 3d Cartesian space</p>
-</dd>
-<dt>face_position_2d: <cite>Array[tuple[elem_idx, vert_idx, xy], Float]</cite></dt><dd><p>Positions of the element vertices within the local (x, y)
-coordinates on the cubed-sphere face that contains it.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.mesh_generation.cubed_sphere.init_vert_redundancy_cube">
-<span class="sig-prename descclassname"><span class="pre">src.mesh_generation.cubed_sphere.</span></span><span class="sig-name descname"><span class="pre">init_vert_redundancy_cube</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">face_connectivity</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">face_position</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.mesh_generation.cubed_sphere.init_vert_redundancy_cube" title="Link to this definition">¶</a></dt>
-<dd><p>Enumerate redundant DOFs on the elemental
-representation of a quasi-regular cubed sphere grid.</p>
-<dl class="field-list">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl>
-<dt><strong>nx</strong><span class="classifier"><cite>int</cite></span></dt><dd><p>The number of elements on a cubed-sphere edge.</p>
-</dd>
-<dt><strong>face_connectivity</strong><span class="classifier"><cite>Array[tuple[elem_idx, edge_idx, 3], Int]</cite></span></dt><dd><p>An array containing the topological information about the grid.
-It is unpacked as
-<a href="#id7"><span class="problematic" id="id8">``</span></a>`
-(remote_elem_idx, remote_edge_idx, same_direction) = face_connectivity[local_elem_idx,</p>
-<blockquote>
-<div><p>edge_idx, :]</p>
-</div></blockquote>
-<p><a href="#id9"><span class="problematic" id="id10">``</span></a><a href="#id11"><span class="problematic" id="id12">`</span></a></p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><cite>vert_redundancy: dict[local_elem_idx, dict[vert_idx, set[tuple[remote_elem_idx, vert_idx]]]]</cite></dt><dd><p><cite>dict[local_elem_idx][vert_idx]</cite> is a set of tuples
-<cite>(remote_elem_idx, vert_idx_pair)</cite> which represent vertices that
-share the same physical coordinates as <cite>(local_elem_idx, vert_idx)</cite>.
-Therefore, they represent redundant degrees of freedom.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-<p class="rubric">Notes</p>
-<p>This struct deliberately does not contain diagonal associations, i.e.
-(local_elem_idx, vert_idx) &lt;-/-&gt; (local_elem_idx, vert_idx)</p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.mesh_generation.cubed_sphere.inv_elem_id_fn">
-<span class="sig-prename descclassname"><span class="pre">src.mesh_generation.cubed_sphere.</span></span><span class="sig-name descname"><span class="pre">inv_elem_id_fn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">idx</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.mesh_generation.cubed_sphere.inv_elem_id_fn" title="Link to this definition">¶</a></dt>
-<dd><p>Map a global element index to the index of the
-cubed-sphere face it is located on, and its
-horizontal and vertical position in a regular grid.</p>
-<dl class="field-list">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl>
-<dt><strong>nx</strong><span class="classifier"><cite>int</cite></span></dt><dd><p>The number of elements on a cubed sphere edge.</p>
-</dd>
-<dt><strong>idx</strong><span class="classifier"><cite>int</cite></span></dt><dd><p>A scalar element index</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><cite>tuple[int, int, int]</cite></dt><dd><p><cite>(face_idx, horizontal_idx, vertical_idx)</cite>
-of the element.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-<p class="rubric">Notes</p>
-<p>This should be the inverse of <cite>elem_id_fn</cite></p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.mesh_generation.cubed_sphere.match_edges">
-<span class="sig-prename descclassname"><span class="pre">src.mesh_generation.cubed_sphere.</span></span><span class="sig-name descname"><span class="pre">match_edges</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">free_idx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id_edge_out</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_forwards</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.mesh_generation.cubed_sphere.match_edges" title="Link to this definition">¶</a></dt>
-<dd><p>Return the horizontal and vertical element indexes
-of the pair of an element across a cubed-sphere edge.</p>
-<dl class="field-list">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl>
-<dt><strong>nx</strong><span class="classifier"><cite>int</cite></span></dt><dd><p>The number of elements on an edge of
-a cubed sphere face</p>
-</dd>
-<dt><strong>free_idx: `int`</strong></dt><dd><p>Whichever of the horizontal or vertical indices
-is varying across the current cubed-sphere edge.</p>
-</dd>
-<dt><strong>id_edge_out: `int`</strong></dt><dd><p>The the cubed-sphere edge of the paired face
-along which edges are joined</p>
-</dd>
-<dt><strong>is_forwards</strong></dt><dd><p>Are the two paired cubed-sphere edges
-oriented the same way?</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><cite>tuple[int, int]</cite></dt><dd><p>(horizontal, vertical) element index of the
-paired element within the paired cubed-sphere face.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
+  <section id="src-mesh-generation-cubed-sphere-module">
+<h1>src.mesh_generation.cubed_sphere module<a class="headerlink" href="#src-mesh-generation-cubed-sphere-module" title="Link to this heading">¶</a></h1>
 </section>
 
 
@@ -228,10 +65,10 @@ paired element within the paired cubed-sphere face.</p>
 <script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../installation_and_validation.html">Usage</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">How to run the model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../user_friendly_api.html">The pySEs public API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../anatomy_of_a_model_struct.html">How is the atmospheric state represented in pySEs?</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">How are horizontal grids generated and read into pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">Horizontal grid generation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="modules.html">src</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="src.html">src package</a><ul class="current">
@@ -241,14 +78,7 @@ paired element within the paired cubed-sphere face.</p>
 <li class="toctree-l4 current"><a class="reference internal" href="src.mesh_generation.html">src.mesh_generation package</a><ul class="current">
 <li class="toctree-l5 current"><a class="reference internal" href="src.mesh_generation.html#submodules">Submodules</a><ul class="current">
 <li class="toctree-l6"><a class="reference internal" href="src.mesh_generation.bilinear_utils.html">src.mesh_generation.bilinear_utils module</a></li>
-<li class="toctree-l6 current"><a class="current reference internal" href="#">src.mesh_generation.cubed_sphere module</a><ul>
-<li class="toctree-l7"><a class="reference internal" href="#src.mesh_generation.cubed_sphere.elem_id_fn"><code class="docutils literal notranslate"><span class="pre">elem_id_fn()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.mesh_generation.cubed_sphere.init_cube_topo"><code class="docutils literal notranslate"><span class="pre">init_cube_topo()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.mesh_generation.cubed_sphere.init_vert_redundancy_cube"><code class="docutils literal notranslate"><span class="pre">init_vert_redundancy_cube()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.mesh_generation.cubed_sphere.inv_elem_id_fn"><code class="docutils literal notranslate"><span class="pre">inv_elem_id_fn()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.mesh_generation.cubed_sphere.match_edges"><code class="docutils literal notranslate"><span class="pre">match_edges()</span></code></a></li>
-</ul>
-</li>
+<li class="toctree-l6 current"><a class="current reference internal" href="#">src.mesh_generation.cubed_sphere module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.mesh_generation.element_local_metric.html">src.mesh_generation.element_local_metric module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.mesh_generation.equiangular_metric.html">src.mesh_generation.equiangular_metric module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.mesh_generation.mesh.html">src.mesh_generation.mesh module</a></li>
@@ -259,7 +89,7 @@ paired element within the paired cubed-sphere face.</p>
 <li class="toctree-l6"><a class="reference internal" href="src.mesh_generation.spherical_coord_utils.html">src.mesh_generation.spherical_coord_utils module</a></li>
 </ul>
 </li>
-<li class="toctree-l5"><a class="reference internal" href="src.mesh_generation.html#module-src.mesh_generation">Module contents</a></li>
+<li class="toctree-l5"><a class="reference internal" href="src.mesh_generation.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 <li class="toctree-l4"><a class="reference internal" href="src.mpi.html">src.mpi package</a></li>
@@ -269,7 +99,7 @@ paired element within the paired cubed-sphere face.</p>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="src.html#submodules">Submodules</a></li>
-<li class="toctree-l3"><a class="reference internal" href="src.html#module-src">Module contents</a></li>
+<li class="toctree-l3"><a class="reference internal" href="src.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 </ul>

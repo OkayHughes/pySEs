@@ -33,254 +33,8 @@
 
           <div class="body" role="main">
             
-  <section id="module-src.mpi.processor_decomposition">
-<span id="src-mpi-processor-decomposition-module"></span><h1>src.mpi.processor_decomposition module<a class="headerlink" href="#module-src.mpi.processor_decomposition" title="Link to this heading">¶</a></h1>
-<dl class="py function">
-<dt class="sig sig-object py" id="src.mpi.processor_decomposition.elem_idx_global_to_proc_idx">
-<span class="sig-prename descclassname"><span class="pre">src.mpi.processor_decomposition.</span></span><span class="sig-name descname"><span class="pre">elem_idx_global_to_proc_idx</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">elem_idxs_global</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decomp</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.mpi.processor_decomposition.elem_idx_global_to_proc_idx" title="Link to this definition">¶</a></dt>
-<dd><p>Map global element indexes to the id of the
-processor they are assigned to.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>elem_idxs_global: `Array[tuple[elem_idx], Int]`</strong></dt><dd><p>Global element indexes.</p>
-</dd>
-<dt><strong>decomp: `tuple[tuple(int, int), …]`</strong></dt><dd><p>Processor decomposition</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><cite>Union[Int, Array[tuple[elem_idx], Int]]</cite></dt><dd><p>Processor indexes of each element.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-<p class="rubric">Notes</p>
-<p>If an array with a single item is passed in,
-this function returns an unwrapped integer.
-This is for testing reasons and should
-probably be cleaned up.</p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.mpi.processor_decomposition.eval_hilbert_curve">
-<span class="sig-prename descclassname"><span class="pre">src.mpi.processor_decomposition.</span></span><span class="sig-name descname"><span class="pre">eval_hilbert_curve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_subdiv</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.mpi.processor_decomposition.eval_hilbert_curve" title="Link to this definition">¶</a></dt>
-<dd><p>Generate a 2D array containing indices
-representing a 2D hilbert curve in euclidean space.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>n_subdiv: int</strong></dt><dd><p>Number of times the initial 1x1 Hilbert curve should be subdivided</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt>Array[tuple[2**n_subdiv, 2**n_subdiv, Int]</dt><dd><p>Index of each grid cell in the hilbert curve.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-<p class="rubric">Notes</p>
-<p>Without loss of generality,
-the initial generator is assumed to be
-^
-|  |
-<a href="#id3"><span class="problematic" id="id4">|__|</span></a></p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.mpi.processor_decomposition.global_to_local">
-<span class="sig-prename descclassname"><span class="pre">src.mpi.processor_decomposition.</span></span><span class="sig-name descname"><span class="pre">global_to_local</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">elem_idxs_global</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">proc_idx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decomp</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.mpi.processor_decomposition.global_to_local" title="Link to this definition">¶</a></dt>
-<dd><p>Return local element indexes for a specific processor
-index, e.g., config.mpi_rank.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>elem_idxs_global: `Array[*Shape, Float]`</strong></dt><dd><p>Element indexes used to index
-global grid data.</p>
-</dd>
-<dt><strong>proc_idx: `int`</strong></dt><dd><p>The processor index to which the local indexes should
-apply.</p>
-</dd>
-<dt><strong>decomp: `tuple[tuple(int, int), …]`</strong></dt><dd><p>Processor decomposition</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt>elem_idxs_local: Array[<a href="#id1"><span class="problematic" id="id2">*</span></a>Shape, Float]</dt><dd><p>Local element indexes</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.mpi.processor_decomposition.init_decomp">
-<span class="sig-prename descclassname"><span class="pre">src.mpi.processor_decomposition.</span></span><span class="sig-name descname"><span class="pre">init_decomp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_elems</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_procs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.mpi.processor_decomposition.init_decomp" title="Link to this definition">¶</a></dt>
-<dd><p>Get decomposition of total number of faces by processor
-for all processors.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>num_elems: int</strong></dt><dd><p>The number of elements in the global grid</p>
-</dd>
-<dt><strong>num_procs: int</strong></dt><dd><p>The total number of processors
-among which the grid will be divided,
-e.g. <cite>config.mpi_size</cite>.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt>tuple[tuple[int, int], …]</dt><dd><p>A tuple of length num_procs where
-entry proc_idx is a tuple (begin_elem_idx, end_elem_idx)</p>
-</dd>
-</dl>
-</dd>
-</dl>
-<p class="rubric">Notes</p>
-<p>Invoking code should be careful about using the specifics
-of the return value of get_decomp, as there may eventually
-be a better way to do this.</p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.mpi.processor_decomposition.init_mapping">
-<span class="sig-prename descclassname"><span class="pre">src.mpi.processor_decomposition.</span></span><span class="sig-name descname"><span class="pre">init_mapping</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_subdiv</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">latlons</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.mpi.processor_decomposition.init_mapping" title="Link to this definition">¶</a></dt>
-<dd><p>Use a cubed-sphere hilbert curve
-to create a reordering of the global grid
-that puts sequential elements close to each other</p>
-<p>Sequential elements may not be geometrically close
-at the endpoints of the hilbert curve on each
-face of the cubed sphere.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>n_subdiv: int</strong></dt><dd><p>The number of subdivisions to use in the hilbert curve</p>
-</dd>
-<dt><strong>latlons: Array[tuple[elem_idx, 2], Float]</strong></dt><dd><p>Representative position of each element
-in lat-lon coordinates (e.g. centroid).
-Uses convention latlons[:, 0] is lat,
-latlons[:, 1] is lon.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>index_map</strong><span class="classifier">Array[tuple[elem_idx], Int]</span></dt><dd><p>Permutation array such that <code class="docutils literal notranslate"><span class="pre">grid[index_map]</span></code> reorders
-the global element array along the Hilbert curve,
-placing spatially adjacent elements close together in memory.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-<p class="rubric">Notes</p>
-<p>Although this decomposition method is based
-on the cubed sphere,
-it can also be used for unstructured grids on the sphere.</p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.mpi.processor_decomposition.local_to_global">
-<span class="sig-prename descclassname"><span class="pre">src.mpi.processor_decomposition.</span></span><span class="sig-name descname"><span class="pre">local_to_global</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">elem_idxs_local</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">proc_idx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decomp</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.mpi.processor_decomposition.local_to_global" title="Link to this definition">¶</a></dt>
-<dd><p>Return global element indexes for a specific processor
-index, e.g., config.mpi_rank.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>elem_idxs_local: `Array[*Shape, Float]`</strong></dt><dd><p>Element indexes used to index
-processor local data.</p>
-</dd>
-<dt><strong>proc_idx: `int`</strong></dt><dd><p>The processor index to which the local indexes
-apply.</p>
-</dd>
-<dt><strong>decomp: `tuple[tuple(int, int), …]`</strong></dt><dd><p>Processor decomposition</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt>elem_idxs_global: <cite>Array[*Shape, Float]</cite></dt><dd><p>Global element indexes</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.mpi.processor_decomposition.processor_id_to_range">
-<span class="sig-prename descclassname"><span class="pre">src.mpi.processor_decomposition.</span></span><span class="sig-name descname"><span class="pre">processor_id_to_range</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">proc_idx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_elems</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_procs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.mpi.processor_decomposition.processor_id_to_range" title="Link to this definition">¶</a></dt>
-<dd><p>Calculate the number of elements to assign to a processor
-from the global grid size.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>proc_idx: int</strong></dt><dd><p>The processor id (e.g. config.mpi_rank) for which to calculate
-the element assignment</p>
-</dd>
-<dt><strong>num_faces: int</strong></dt><dd><p>The total number of elements in the global grid.</p>
-</dd>
-<dt><strong>num_procs: int</strong></dt><dd><p>The number of processes (e.g. config.mpi_size) among which
-the grid will be divided.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt>tuple[int, int]</dt><dd><p>Tuple containing (begin_elem_idx, end_elem_idx),
-where the final index is exclusive.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-odd">Raises<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt>ValueError</dt><dd><p>Raises a value error if this processor decomposition strategy
-is used with more processors than elements.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-<p class="rubric">Notes</p>
-<p>This must be able to calculate the number of grid points
-assigned to remote processors as well.</p>
-<p>Invoking code should be careful about using the specifics
-of the return value of this function, as there may eventually
-be a better way to do this.</p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.mpi.processor_decomposition.sphere_coord_to_face_idx_pos">
-<span class="sig-prename descclassname"><span class="pre">src.mpi.processor_decomposition.</span></span><span class="sig-name descname"><span class="pre">sphere_coord_to_face_idx_pos</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lon</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.mpi.processor_decomposition.sphere_coord_to_face_idx_pos" title="Link to this definition">¶</a></dt>
-<dd><p>Calculate which face of the cubed sphere contain
-points given in spherical coordinates.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>lat: Array[tuple[Any], Float]</strong></dt><dd><p>Latitude of points</p>
-</dd>
-<dt><strong>lon: Array[tuple[Any], Float]</strong></dt><dd><p>Longitude of points</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt>face_mask: Array[tuple[Any], Int]</dt><dd><p>Which of TOP_FACE, BOTTOM_FACE, FRONT_FACE,
-BACK_FACE, LEFT_FACE, RIGHT_FACE each point lies on</p>
-</dd>
-<dt>x: Array[tuple[Any], Int]</dt><dd><p>Horizontal coordinates on cubed sphere face, [-1, 1]</p>
-</dd>
-<dt>y: Array[tuple[Any], Int]</dt><dd><p>Vertical coordinates on cubed sphere face, [-1, 1]</p>
-</dd>
-</dl>
-</dd>
-</dl>
-<p class="rubric">Notes</p>
-<p>See mesh_definitions.py for explanation of face conventions.</p>
-</dd></dl>
-
+  <section id="src-mpi-processor-decomposition-module">
+<h1>src.mpi.processor_decomposition module<a class="headerlink" href="#src-mpi-processor-decomposition-module" title="Link to this heading">¶</a></h1>
 </section>
 
 
@@ -311,10 +65,10 @@ BACK_FACE, LEFT_FACE, RIGHT_FACE each point lies on</p>
 <script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../installation_and_validation.html">Usage</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">How to run the model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../user_friendly_api.html">The pySEs public API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../anatomy_of_a_model_struct.html">How is the atmospheric state represented in pySEs?</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">How are horizontal grids generated and read into pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">Horizontal grid generation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="modules.html">src</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="src.html">src package</a><ul class="current">
@@ -326,20 +80,10 @@ BACK_FACE, LEFT_FACE, RIGHT_FACE each point lies on</p>
 <li class="toctree-l5 current"><a class="reference internal" href="src.mpi.html#submodules">Submodules</a><ul class="current">
 <li class="toctree-l6"><a class="reference internal" href="src.mpi.global_assembly.html">src.mpi.global_assembly module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.mpi.global_communication.html">src.mpi.global_communication module</a></li>
-<li class="toctree-l6 current"><a class="current reference internal" href="#">src.mpi.processor_decomposition module</a><ul>
-<li class="toctree-l7"><a class="reference internal" href="#src.mpi.processor_decomposition.elem_idx_global_to_proc_idx"><code class="docutils literal notranslate"><span class="pre">elem_idx_global_to_proc_idx()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.mpi.processor_decomposition.eval_hilbert_curve"><code class="docutils literal notranslate"><span class="pre">eval_hilbert_curve()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.mpi.processor_decomposition.global_to_local"><code class="docutils literal notranslate"><span class="pre">global_to_local()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.mpi.processor_decomposition.init_decomp"><code class="docutils literal notranslate"><span class="pre">init_decomp()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.mpi.processor_decomposition.init_mapping"><code class="docutils literal notranslate"><span class="pre">init_mapping()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.mpi.processor_decomposition.local_to_global"><code class="docutils literal notranslate"><span class="pre">local_to_global()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.mpi.processor_decomposition.processor_id_to_range"><code class="docutils literal notranslate"><span class="pre">processor_id_to_range()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.mpi.processor_decomposition.sphere_coord_to_face_idx_pos"><code class="docutils literal notranslate"><span class="pre">sphere_coord_to_face_idx_pos()</span></code></a></li>
+<li class="toctree-l6 current"><a class="current reference internal" href="#">src.mpi.processor_decomposition module</a></li>
 </ul>
 </li>
-</ul>
-</li>
-<li class="toctree-l5"><a class="reference internal" href="src.mpi.html#module-src.mpi">Module contents</a></li>
+<li class="toctree-l5"><a class="reference internal" href="src.mpi.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 <li class="toctree-l4"><a class="reference internal" href="src.operations_2d.html">src.operations_2d package</a></li>
@@ -348,7 +92,7 @@ BACK_FACE, LEFT_FACE, RIGHT_FACE each point lies on</p>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="src.html#submodules">Submodules</a></li>
-<li class="toctree-l3"><a class="reference internal" href="src.html#module-src">Module contents</a></li>
+<li class="toctree-l3"><a class="reference internal" href="src.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 </ul>

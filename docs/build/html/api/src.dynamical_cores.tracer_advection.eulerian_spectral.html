@@ -33,108 +33,8 @@
 
           <div class="body" role="main">
             
-  <section id="module-src.dynamical_cores.tracer_advection.eulerian_spectral">
-<span id="src-dynamical-cores-tracer-advection-eulerian-spectral-module"></span><h1>src.dynamical_cores.tracer_advection.eulerian_spectral module<a class="headerlink" href="#module-src.dynamical_cores.tracer_advection.eulerian_spectral" title="Link to this heading">¶</a></h1>
-<dl class="py function">
-<dt class="sig sig-object py" id="src.dynamical_cores.tracer_advection.eulerian_spectral.advance_tracers">
-<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.tracer_advection.eulerian_spectral.</span></span><span class="sig-name descname"><span class="pre">advance_tracers</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tracers</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tracer_consist_dyn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tracer_init_struct</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">diffusion_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestep_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tracer_consist_hypervis</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.tracer_advection.eulerian_spectral.advance_tracers" title="Link to this definition">¶</a></dt>
-<dd><p>Advance all tracer species by one tracer time step using RK2 advection.</p>
-<p>Stacks tracers into a single array via <a class="reference internal" href="#src.dynamical_cores.tracer_advection.eulerian_spectral.flatten_tracers" title="src.dynamical_cores.tracer_advection.eulerian_spectral.flatten_tracers"><code class="xref py py-func docutils literal notranslate"><span class="pre">flatten_tracers()</span></code></a>, converts to
-mass form (<code class="docutils literal notranslate"><span class="pre">q</span> <span class="pre">*</span> <span class="pre">d_mass_init</span></code>), calls <code class="xref py py-func docutils literal notranslate"><span class="pre">advance_tracers_rk2()</span></code>, then
-divides by <code class="docutils literal notranslate"><span class="pre">d_mass_end</span></code> and unstacks via <a class="reference internal" href="#src.dynamical_cores.tracer_advection.eulerian_spectral.ravel_tracers" title="src.dynamical_cores.tracer_advection.eulerian_spectral.ravel_tracers"><code class="xref py py-func docutils literal notranslate"><span class="pre">ravel_tracers()</span></code></a>.
-Optionally applies a hyperviscosity consistency correction.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>tracers</strong><span class="classifier">dict</span></dt><dd><p>Tracer state dict from <code class="xref py py-func docutils literal notranslate"><span class="pre">wrap_tracers()</span></code>.</p>
-</dd>
-<dt><strong>tracer_consist_dyn</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Dynamics tracer-consistency struct from
-<code class="xref py py-func docutils literal notranslate"><span class="pre">wrap_tracer_consist_dynamics()</span></code>; must contain <code class="docutils literal notranslate"><span class="pre">&quot;u_d_mass_avg&quot;</span></code>.</p>
-</dd>
-<dt><strong>tracer_init_struct</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Dict with <code class="docutils literal notranslate"><span class="pre">&quot;d_mass_init&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;d_mass_end&quot;</span></code> (layer mass at the
-beginning and end of the tracer interval).</p>
-</dd>
-<dt><strong>grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal grid struct.</p>
-</dd>
-<dt><strong>dims</strong><span class="classifier">frozendict[str, int]</span></dt><dd><p>Grid dimension tuple; static JIT argument.</p>
-</dd>
-<dt><strong>physics_config</strong><span class="classifier">dict</span></dt><dd><p>Physics configuration dict.</p>
-</dd>
-<dt><strong>diffusion_config</strong><span class="classifier">dict</span></dt><dd><p>Hyperviscosity configuration dict.</p>
-</dd>
-<dt><strong>timestep_config</strong><span class="classifier">frozendict</span></dt><dd><p>Time-stepping configuration; static JIT argument.</p>
-</dd>
-<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier; static JIT argument.</p>
-</dd>
-<dt><strong>tracer_consist_hypervis</strong><span class="classifier">dict[str, Array] or None, optional</span></dt><dd><p>Hyperviscosity consistency struct from
-<code class="xref py py-func docutils literal notranslate"><span class="pre">wrap_tracer_consist_hypervis()</span></code>; <code class="docutils literal notranslate"><span class="pre">None</span></code> disables the correction.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>tracers_out</strong><span class="classifier">dict</span></dt><dd><p>Updated tracer state dict with the same structure as <code class="docutils literal notranslate"><span class="pre">tracers</span></code>.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.dynamical_cores.tracer_advection.eulerian_spectral.flatten_tracers">
-<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.tracer_advection.eulerian_spectral.</span></span><span class="sig-name descname"><span class="pre">flatten_tracers</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tracers</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.tracer_advection.eulerian_spectral.flatten_tracers" title="Link to this definition">¶</a></dt>
-<dd><p>Stack all tracer species from the nested tracer dict into a single array.</p>
-<p>Iterates over <code class="docutils literal notranslate"><span class="pre">&quot;moisture_species&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;tracers&quot;</span></code>, and (for CAM-SE)
-<code class="docutils literal notranslate"><span class="pre">&quot;dry_air_species&quot;</span></code> in order, building a flat list of arrays and a
-mapping from species names to their index positions.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>tracers</strong><span class="classifier">dict</span></dt><dd><p>Tracer state dict from <code class="xref py py-func docutils literal notranslate"><span class="pre">wrap_tracers()</span></code>.</p>
-</dd>
-<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier; determines whether <code class="docutils literal notranslate"><span class="pre">&quot;dry_air_species&quot;</span></code> is included.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>tracers_flat</strong><span class="classifier">Array[tuple[n_species, elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>All species arrays stacked along axis 0.</p>
-</dd>
-<dt><strong>tracer_map</strong><span class="classifier">dict[str, dict[str, int]]</span></dt><dd><p>Nested dict mapping each species name to its index in <code class="docutils literal notranslate"><span class="pre">tracers_flat</span></code>.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.dynamical_cores.tracer_advection.eulerian_spectral.ravel_tracers">
-<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.tracer_advection.eulerian_spectral.</span></span><span class="sig-name descname"><span class="pre">ravel_tracers</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tracers_flat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tracer_map</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.tracer_advection.eulerian_spectral.ravel_tracers" title="Link to this definition">¶</a></dt>
-<dd><p>Unstack a flat species array back into the nested tracer dict structure.</p>
-<p>Reverses <a class="reference internal" href="#src.dynamical_cores.tracer_advection.eulerian_spectral.flatten_tracers" title="src.dynamical_cores.tracer_advection.eulerian_spectral.flatten_tracers"><code class="xref py py-func docutils literal notranslate"><span class="pre">flatten_tracers()</span></code></a>: uses <code class="docutils literal notranslate"><span class="pre">tracer_map</span></code> to extract each
-species slice from <code class="docutils literal notranslate"><span class="pre">tracers_flat</span></code> and place it back in the appropriate
-sub-dict.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>tracers_flat</strong><span class="classifier">Array[tuple[n_species, elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Stacked species array from <a class="reference internal" href="#src.dynamical_cores.tracer_advection.eulerian_spectral.flatten_tracers" title="src.dynamical_cores.tracer_advection.eulerian_spectral.flatten_tracers"><code class="xref py py-func docutils literal notranslate"><span class="pre">flatten_tracers()</span></code></a> (or after advection).</p>
-</dd>
-<dt><strong>tracer_map</strong><span class="classifier">dict[str, dict[str, int]]</span></dt><dd><p>Nested index map returned by <a class="reference internal" href="#src.dynamical_cores.tracer_advection.eulerian_spectral.flatten_tracers" title="src.dynamical_cores.tracer_advection.eulerian_spectral.flatten_tracers"><code class="xref py py-func docutils literal notranslate"><span class="pre">flatten_tracers()</span></code></a>.</p>
-</dd>
-<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier; determines whether <code class="docutils literal notranslate"><span class="pre">&quot;dry_air_species&quot;</span></code> is populated.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>tracers</strong><span class="classifier">dict</span></dt><dd><p>Tracer state dict with sub-dicts <code class="docutils literal notranslate"><span class="pre">&quot;moisture_species&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;tracers&quot;</span></code>,
-and optionally <code class="docutils literal notranslate"><span class="pre">&quot;dry_air_species&quot;</span></code>.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
+  <section id="src-dynamical-cores-tracer-advection-eulerian-spectral-module">
+<h1>src.dynamical_cores.tracer_advection.eulerian_spectral module<a class="headerlink" href="#src-dynamical-cores-tracer-advection-eulerian-spectral-module" title="Link to this heading">¶</a></h1>
 </section>
 
 
@@ -165,10 +65,10 @@ and optionally <code class="docutils literal notranslate"><span class="pre">&quo
 <script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../installation_and_validation.html">Usage</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">How to run the model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../user_friendly_api.html">The pySEs public API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../anatomy_of_a_model_struct.html">How is the atmospheric state represented in pySEs?</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">How are horizontal grids generated and read into pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">Horizontal grid generation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="modules.html">src</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="src.html">src package</a><ul class="current">
@@ -180,21 +80,16 @@ and optionally <code class="docutils literal notranslate"><span class="pre">&quo
 <li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.homme.html">src.dynamical_cores.homme package</a></li>
 <li class="toctree-l6 current"><a class="reference internal" href="src.dynamical_cores.tracer_advection.html">src.dynamical_cores.tracer_advection package</a><ul class="current">
 <li class="toctree-l7 current"><a class="reference internal" href="src.dynamical_cores.tracer_advection.html#submodules">Submodules</a><ul class="current">
-<li class="toctree-l8 current"><a class="current reference internal" href="#">src.dynamical_cores.tracer_advection.eulerian_spectral module</a><ul>
-<li class="toctree-l9"><a class="reference internal" href="#src.dynamical_cores.tracer_advection.eulerian_spectral.advance_tracers"><code class="docutils literal notranslate"><span class="pre">advance_tracers()</span></code></a></li>
-<li class="toctree-l9"><a class="reference internal" href="#src.dynamical_cores.tracer_advection.eulerian_spectral.flatten_tracers"><code class="docutils literal notranslate"><span class="pre">flatten_tracers()</span></code></a></li>
-<li class="toctree-l9"><a class="reference internal" href="#src.dynamical_cores.tracer_advection.eulerian_spectral.ravel_tracers"><code class="docutils literal notranslate"><span class="pre">ravel_tracers()</span></code></a></li>
+<li class="toctree-l8 current"><a class="current reference internal" href="#">src.dynamical_cores.tracer_advection.eulerian_spectral module</a></li>
 </ul>
 </li>
-</ul>
-</li>
-<li class="toctree-l7"><a class="reference internal" href="src.dynamical_cores.tracer_advection.html#module-src.dynamical_cores.tracer_advection">Module contents</a></li>
+<li class="toctree-l7"><a class="reference internal" href="src.dynamical_cores.tracer_advection.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 </ul>
 </li>
 <li class="toctree-l5"><a class="reference internal" href="src.dynamical_cores.html#submodules">Submodules</a></li>
-<li class="toctree-l5"><a class="reference internal" href="src.dynamical_cores.html#module-src.dynamical_cores">Module contents</a></li>
+<li class="toctree-l5"><a class="reference internal" href="src.dynamical_cores.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 <li class="toctree-l4"><a class="reference internal" href="src.mesh_generation.html">src.mesh_generation package</a></li>
@@ -205,7 +100,7 @@ and optionally <code class="docutils literal notranslate"><span class="pre">&quo
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="src.html#submodules">Submodules</a></li>
-<li class="toctree-l3"><a class="reference internal" href="src.html#module-src">Module contents</a></li>
+<li class="toctree-l3"><a class="reference internal" href="src.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 </ul>

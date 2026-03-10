@@ -33,347 +33,8 @@
 
           <div class="body" role="main">
             
-  <section id="module-src.dynamical_cores.hyperviscosity">
-<span id="src-dynamical-cores-hyperviscosity-module"></span><h1>src.dynamical_cores.hyperviscosity module<a class="headerlink" href="#module-src.dynamical_cores.hyperviscosity" title="Link to this heading">¶</a></h1>
-<dl class="py function">
-<dt class="sig sig-object py" id="src.dynamical_cores.hyperviscosity.advance_sponge_layer">
-<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.hyperviscosity.</span></span><span class="sig-name descname"><span class="pre">advance_sponge_layer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dynamics</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">diffusion_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.hyperviscosity.advance_sponge_layer" title="Link to this definition">¶</a></dt>
-<dd><p>Apply one Euler step of sponge-layer (top-of-model) diffusion.</p>
-<p>Only the uppermost <code class="docutils literal notranslate"><span class="pre">n_sponge</span></code> model levels are diffused.  Each level
-receives a viscosity coefficient scaled by <code class="docutils literal notranslate"><span class="pre">nu_top</span> <span class="pre">*</span> <span class="pre">nu_ramp</span></code>, where
-<code class="docutils literal notranslate"><span class="pre">nu_ramp</span></code> decreases monotonically away from the model top.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>dynamics</strong><span class="classifier">DynamicsState</span></dt><dd><p>3-D dynamics state dict.</p>
-</dd>
-<dt><strong>dt</strong><span class="classifier">float</span></dt><dd><p>Sponge-layer sub-step size in seconds.</p>
-</dd>
-<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal spectral element grid.</p>
-</dd>
-<dt><strong>physics_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Physical constants; must contain <code class="docutils literal notranslate"><span class="pre">radius_earth</span></code>.</p>
-</dd>
-<dt><strong>diffusion_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Hyperviscosity config; must contain <code class="docutils literal notranslate"><span class="pre">&quot;nu_top&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;nu_ramp&quot;</span></code>.</p>
-</dd>
-<dt><strong>dims</strong><span class="classifier">frozendict[str, int]</span></dt><dd><p>Grid dimension parameters.</p>
-</dd>
-<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier string.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>dynamics_out</strong><span class="classifier">DynamicsState</span></dt><dd><p>Updated dynamics state with the sponge-layer tendency applied.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.dynamical_cores.hyperviscosity.diffusion_config_for_tracer_consist">
-<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.hyperviscosity.</span></span><span class="sig-name descname"><span class="pre">diffusion_config_for_tracer_consist</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">diffusion_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v_grid</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.hyperviscosity.diffusion_config_for_tracer_consist" title="Link to this definition">¶</a></dt>
-<dd><p>Modify a 3-D diffusion config for use with tracer consistency.</p>
-<p>Disables mass diffusion (<code class="docutils literal notranslate"><span class="pre">&quot;nu_d_mass&quot;</span> <span class="pre">=</span> <span class="pre">0</span></code>) and adds a
-<code class="docutils literal notranslate"><span class="pre">&quot;d_mass_tracer&quot;</span></code> scaling array derived from the vertical grid.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>diffusion_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Existing hyperviscosity configuration (modified in-place).</p>
-</dd>
-<dt><strong>v_grid</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Vertical grid from <code class="docutils literal notranslate"><span class="pre">init_vertical_grid</span></code>; must contain
-<code class="docutils literal notranslate"><span class="pre">&quot;hybrid_a_m&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;hybrid_b_m&quot;</span></code>, and <code class="docutils literal notranslate"><span class="pre">&quot;reference_surface_mass&quot;</span></code>.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>diffusion_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>The modified configuration dict (same object as input).</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.dynamical_cores.hyperviscosity.eval_hypervis_harmonic">
-<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.hyperviscosity.</span></span><span class="sig-name descname"><span class="pre">eval_hypervis_harmonic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dynamics</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">diffusion_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">apply_nu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.hyperviscosity.eval_hypervis_harmonic" title="Link to this definition">¶</a></dt>
-<dd><p>Evaluate one biharmonic (del^2) pass of hyperviscosity on a 3-D dynamics state.</p>
-<p>Used as the inner routine for the full fourth-order biharmonic operator:
-<code class="docutils literal notranslate"><span class="pre">eval_hypervis_terms</span></code> calls this twice (with and without <code class="docutils literal notranslate"><span class="pre">apply_nu</span></code>).</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>dynamics</strong><span class="classifier">DynamicsState</span></dt><dd><p>3-D dynamics state dict containing <code class="docutils literal notranslate"><span class="pre">&quot;horizontal_wind&quot;</span></code>,
-thermodynamic variable, and <code class="docutils literal notranslate"><span class="pre">&quot;d_mass&quot;</span></code> (and <code class="docutils literal notranslate"><span class="pre">&quot;phi_i&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;w_i&quot;</span></code>
-for non-hydrostatic models).</p>
-</dd>
-<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal spectral element grid.</p>
-</dd>
-<dt><strong>physics_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Physical constants; must contain <code class="docutils literal notranslate"><span class="pre">radius_earth</span></code>.</p>
-</dd>
-<dt><strong>diffusion_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Hyperviscosity configuration.</p>
-</dd>
-<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier string.</p>
-</dd>
-<dt><strong>apply_nu</strong><span class="classifier">bool, optional</span></dt><dd><p>If True, multiply by the viscosity coefficients <code class="docutils literal notranslate"><span class="pre">nu</span></code>, <code class="docutils literal notranslate"><span class="pre">nu_phi</span></code>,
-<code class="docutils literal notranslate"><span class="pre">nu_d_mass</span></code> from <code class="docutils literal notranslate"><span class="pre">diffusion_config</span></code>; if False, use unit coefficients
-(default: True).</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>hypervis_tend</strong><span class="classifier">DynamicsState</span></dt><dd><p>Intermediate hyperviscosity tendency (one harmonic pass).</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.dynamical_cores.hyperviscosity.eval_hypervis_terms">
-<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.hyperviscosity.</span></span><span class="sig-name descname"><span class="pre">eval_hypervis_terms</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dynamics</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">static_forcing</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">diffusion_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.hyperviscosity.eval_hypervis_terms" title="Link to this definition">¶</a></dt>
-<dd><p>Evaluate the full fourth-order biharmonic hyperviscosity tendency.</p>
-<p>Computes perturbation fields relative to a reference state, applies two
-consecutive harmonic passes (<code class="docutils literal notranslate"><span class="pre">eval_hypervis_harmonic</span></code>), and assembles
-the tracer-consistency struct.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>dynamics</strong><span class="classifier">DynamicsState</span></dt><dd><p>3-D dynamics state dict.</p>
-</dd>
-<dt><strong>static_forcing</strong><span class="classifier">StaticForcing</span></dt><dd><p>Surface geopotential and Coriolis fields.</p>
-</dd>
-<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal spectral element grid.</p>
-</dd>
-<dt><strong>v_grid</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Vertical grid from <code class="docutils literal notranslate"><span class="pre">init_vertical_grid</span></code>.</p>
-</dd>
-<dt><strong>dims</strong><span class="classifier">frozendict[str, int]</span></dt><dd><p>Grid dimension parameters.</p>
-</dd>
-<dt><strong>physics_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Physical constants.</p>
-</dd>
-<dt><strong>diffusion_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Hyperviscosity configuration; must contain <code class="docutils literal notranslate"><span class="pre">&quot;reference_profiles&quot;</span></code>.</p>
-</dd>
-<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier string.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>dynamics_tend</strong><span class="classifier">DynamicsState</span></dt><dd><p>Fourth-order hyperviscosity tendency.</p>
-</dd>
-<dt><strong>tracer_consistency</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Tracer-consistency struct from the mass diffusion tendency.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.dynamical_cores.hyperviscosity.eval_nu_ramp">
-<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.hyperviscosity.</span></span><span class="sig-name descname"><span class="pre">eval_nu_ramp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">v_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_sponge</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.hyperviscosity.eval_nu_ramp" title="Link to this definition">¶</a></dt>
-<dd><p>Compute the level-dependent viscosity ramp profile for the sponge layer.</p>
-<p>Levels near the model top (where pressure ratio is large relative to the
-reference surface mass) receive a near-unity ramp, while levels further
-down receive smaller values capped at 8.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>v_grid</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Vertical grid from <code class="docutils literal notranslate"><span class="pre">init_vertical_grid</span></code>; must contain
-<code class="docutils literal notranslate"><span class="pre">&quot;hybrid_a_i&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;hybrid_b_i&quot;</span></code>, and <code class="docutils literal notranslate"><span class="pre">&quot;reference_surface_mass&quot;</span></code>.</p>
-</dd>
-<dt><strong>n_sponge</strong><span class="classifier">int</span></dt><dd><p>Number of levels in the sponge layer (must be static for JIT).</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>nu_ramp</strong><span class="classifier">Array[tuple[1, 1, 1, n_sponge], Float]</span></dt><dd><p>Dimensionless viscosity ramp coefficient for each sponge level.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.dynamical_cores.hyperviscosity.eval_ref_state">
-<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.hyperviscosity.</span></span><span class="sig-name descname"><span class="pre">eval_ref_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">phi_surf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">diffusion_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.hyperviscosity.eval_ref_state" title="Link to this definition">¶</a></dt>
-<dd><p>Compute the hydrostatic reference state used for hyperviscosity perturbation subtraction.</p>
-<p>Constructs a simple analytic reference atmosphere (linear lapse rate)
-from the surface geopotential and the hybrid vertical coordinate, to
-which perturbations are computed before applying the biharmonic operator.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>phi_surf</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx], Float]</span></dt><dd><p>Surface geopotential (m^2 s^-2).</p>
-</dd>
-<dt><strong>v_grid</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Vertical grid from <code class="docutils literal notranslate"><span class="pre">init_vertical_grid</span></code>.</p>
-</dd>
-<dt><strong>physics_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Physical constants.</p>
-</dd>
-<dt><strong>diffusion_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Hyperviscosity config; must contain <code class="docutils literal notranslate"><span class="pre">&quot;reference_profiles&quot;</span></code> with
-keys <code class="docutils literal notranslate"><span class="pre">&quot;T_ref&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;T_ref_lapse&quot;</span></code>.</p>
-</dd>
-<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier string.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>ref_profiles</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Reference state with keys <code class="docutils literal notranslate"><span class="pre">&quot;d_mass&quot;</span></code>, thermodynamic variable
-(<code class="docutils literal notranslate"><span class="pre">&quot;T&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;theta_v&quot;</span></code>), and optionally <code class="docutils literal notranslate"><span class="pre">&quot;phi_i&quot;</span></code>.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.dynamical_cores.hyperviscosity.init_hypervis_config_const">
-<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.hyperviscosity.</span></span><span class="sig-name descname"><span class="pre">init_hypervis_config_const</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ne</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nu_top</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">250000.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nu_base</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nu_phi</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nu_d_mass</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nu_div_factor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_sponge</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">T_ref</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">288.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">T_ref_lapse</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0065</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.hyperviscosity.init_hypervis_config_const" title="Link to this definition">¶</a></dt>
-<dd><p>Initialize a quasi-uniform hyperviscosity configuration for the 3-D dynamical core.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>ne</strong><span class="classifier">int</span></dt><dd><p>Number of elements along one edge of the cubed-sphere face.</p>
-</dd>
-<dt><strong>physics_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Physics config; must contain <code class="docutils literal notranslate"><span class="pre">radius_earth</span></code>.</p>
-</dd>
-<dt><strong>v_grid</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Vertical grid from <code class="docutils literal notranslate"><span class="pre">init_vertical_grid</span></code>.</p>
-</dd>
-<dt><strong>nu_top</strong><span class="classifier">float, optional</span></dt><dd><p>Sponge-layer viscosity coefficient at the model top (default: 2.5e5).</p>
-</dd>
-<dt><strong>nu_base</strong><span class="classifier">float, optional</span></dt><dd><p>Biharmonic viscosity for horizontal wind (m^4 s^-1).
-Negative values auto-compute from resolution.</p>
-</dd>
-<dt><strong>nu_phi</strong><span class="classifier">float, optional</span></dt><dd><p>Viscosity for geopotential.  Negative values match <code class="docutils literal notranslate"><span class="pre">nu_base</span></code>.</p>
-</dd>
-<dt><strong>nu_d_mass</strong><span class="classifier">float, optional</span></dt><dd><p>Viscosity for layer thickness.  Negative values match <code class="docutils literal notranslate"><span class="pre">nu_base</span></code>.</p>
-</dd>
-<dt><strong>nu_div_factor</strong><span class="classifier">float, optional</span></dt><dd><p>Additional factor for the divergence component (default: 2.5).</p>
-</dd>
-<dt><strong>n_sponge</strong><span class="classifier">int, optional</span></dt><dd><p>Number of levels in the sponge layer (default: 5).</p>
-</dd>
-<dt><strong>T_ref</strong><span class="classifier">float, optional</span></dt><dd><p>Reference temperature for the hyperviscosity reference state (K).</p>
-</dd>
-<dt><strong>T_ref_lapse</strong><span class="classifier">float, optional</span></dt><dd><p>Reference temperature lapse rate (K m^-1).</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>diffusion_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Hyperviscosity configuration dict for the 3-D dynamical core.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.dynamical_cores.hyperviscosity.init_hypervis_config_stub">
-<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.hyperviscosity.</span></span><span class="sig-name descname"><span class="pre">init_hypervis_config_stub</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.hyperviscosity.init_hypervis_config_stub" title="Link to this definition">¶</a></dt>
-<dd><p>Return a minimal diffusion config that disables all hyperviscosity.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>diffusion_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Config dict with the <code class="docutils literal notranslate"><span class="pre">&quot;disable_diffusion&quot;</span></code> flag set.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.dynamical_cores.hyperviscosity.init_hypervis_config_tensor">
-<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.hyperviscosity.</span></span><span class="sig-name descname"><span class="pre">init_hypervis_config_tensor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nu_top</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">250000.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ad_hoc_scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_sponge</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">T_ref</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">288.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">T_ref_lapse</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0065</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.hyperviscosity.init_hypervis_config_tensor" title="Link to this definition">¶</a></dt>
-<dd><p>Initialize a variable-resolution tensor hyperviscosity configuration for the 3-D dynamical core.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal spectral element grid (must contain <code class="docutils literal notranslate"><span class="pre">&quot;hypervis_scaling&quot;</span></code>).</p>
-</dd>
-<dt><strong>v_grid</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Vertical grid from <code class="docutils literal notranslate"><span class="pre">init_vertical_grid</span></code>.</p>
-</dd>
-<dt><strong>dims</strong><span class="classifier">frozendict[str, int]</span></dt><dd><p>Grid dimension parameters.</p>
-</dd>
-<dt><strong>config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Physics config; must contain <code class="docutils literal notranslate"><span class="pre">radius_earth</span></code>.</p>
-</dd>
-<dt><strong>nu_top</strong><span class="classifier">float, optional</span></dt><dd><p>Sponge-layer viscosity at the model top (default: 2.5e5).</p>
-</dd>
-<dt><strong>ad_hoc_scale</strong><span class="classifier">float, optional</span></dt><dd><p>Empirical rescaling factor for the computed viscosity (default: 0.5).</p>
-</dd>
-<dt><strong>n_sponge</strong><span class="classifier">int, optional</span></dt><dd><p>Number of sponge-layer levels (default: 5).</p>
-</dd>
-<dt><strong>T_ref</strong><span class="classifier">float, optional</span></dt><dd><p>Reference temperature for the reference state (K).</p>
-</dd>
-<dt><strong>T_ref_lapse</strong><span class="classifier">float, optional</span></dt><dd><p>Reference temperature lapse rate (K m^-1).</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>diffusion_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Tensor hyperviscosity configuration dict for the 3-D dynamical core.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.dynamical_cores.hyperviscosity.scalar_harmonic_3d">
-<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.hyperviscosity.</span></span><span class="sig-name descname"><span class="pre">scalar_harmonic_3d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scalar</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">apply_tensor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.hyperviscosity.scalar_harmonic_3d" title="Link to this definition">¶</a></dt>
-<dd><p>Apply the weak-form horizontal scalar Laplacian to a 3-D field level-by-level.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>scalar</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>3-D scalar field.</p>
-</dd>
-<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal spectral element grid.</p>
-</dd>
-<dt><strong>physics_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Physical constants; must contain <code class="docutils literal notranslate"><span class="pre">radius_earth</span></code>.</p>
-</dd>
-<dt><strong>apply_tensor</strong><span class="classifier">bool, optional</span></dt><dd><p>If True, use the tensor (variable-resolution) Laplacian weighting
-(default: False).</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>del2</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Weak-form scalar Laplacian at each model level.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.dynamical_cores.hyperviscosity.vector_harmonic_3d">
-<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.hyperviscosity.</span></span><span class="sig-name descname"><span class="pre">vector_harmonic_3d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">vector</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nu_div_factor</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.hyperviscosity.vector_harmonic_3d" title="Link to this definition">¶</a></dt>
-<dd><p>Apply the weak-form horizontal vector Laplacian to a 3-D vector field level-by-level.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>vector</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, 2], Float]</span></dt><dd><p>3-D horizontal vector field.</p>
-</dd>
-<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal spectral element grid.</p>
-</dd>
-<dt><strong>physics_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Physical constants; must contain <code class="docutils literal notranslate"><span class="pre">radius_earth</span></code>.</p>
-</dd>
-<dt><strong>nu_div_factor</strong><span class="classifier">float</span></dt><dd><p>Additional scaling applied to the divergence component of the
-vector Laplacian.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>del2</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, 2], Float]</span></dt><dd><p>Weak-form vector Laplacian at each model level.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
+  <section id="src-dynamical-cores-hyperviscosity-module">
+<h1>src.dynamical_cores.hyperviscosity module<a class="headerlink" href="#src-dynamical-cores-hyperviscosity-module" title="Link to this heading">¶</a></h1>
 </section>
 
 
@@ -404,10 +65,10 @@ vector Laplacian.</p>
 <script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../installation_and_validation.html">Usage</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">How to run the model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../user_friendly_api.html">The pySEs public API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../anatomy_of_a_model_struct.html">How is the atmospheric state represented in pySEs?</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">How are horizontal grids generated and read into pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">Horizontal grid generation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="modules.html">src</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="src.html">src package</a><ul class="current">
@@ -417,20 +78,7 @@ vector Laplacian.</p>
 <li class="toctree-l5"><a class="reference internal" href="src.dynamical_cores.html#subpackages">Subpackages</a></li>
 <li class="toctree-l5 current"><a class="reference internal" href="src.dynamical_cores.html#submodules">Submodules</a><ul class="current">
 <li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.finite_volume_grid.html">src.dynamical_cores.finite_volume_grid module</a></li>
-<li class="toctree-l6 current"><a class="current reference internal" href="#">src.dynamical_cores.hyperviscosity module</a><ul>
-<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.hyperviscosity.advance_sponge_layer"><code class="docutils literal notranslate"><span class="pre">advance_sponge_layer()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.hyperviscosity.diffusion_config_for_tracer_consist"><code class="docutils literal notranslate"><span class="pre">diffusion_config_for_tracer_consist()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.hyperviscosity.eval_hypervis_harmonic"><code class="docutils literal notranslate"><span class="pre">eval_hypervis_harmonic()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.hyperviscosity.eval_hypervis_terms"><code class="docutils literal notranslate"><span class="pre">eval_hypervis_terms()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.hyperviscosity.eval_nu_ramp"><code class="docutils literal notranslate"><span class="pre">eval_nu_ramp()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.hyperviscosity.eval_ref_state"><code class="docutils literal notranslate"><span class="pre">eval_ref_state()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.hyperviscosity.init_hypervis_config_const"><code class="docutils literal notranslate"><span class="pre">init_hypervis_config_const()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.hyperviscosity.init_hypervis_config_stub"><code class="docutils literal notranslate"><span class="pre">init_hypervis_config_stub()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.hyperviscosity.init_hypervis_config_tensor"><code class="docutils literal notranslate"><span class="pre">init_hypervis_config_tensor()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.hyperviscosity.scalar_harmonic_3d"><code class="docutils literal notranslate"><span class="pre">scalar_harmonic_3d()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.hyperviscosity.vector_harmonic_3d"><code class="docutils literal notranslate"><span class="pre">vector_harmonic_3d()</span></code></a></li>
-</ul>
-</li>
+<li class="toctree-l6 current"><a class="current reference internal" href="#">src.dynamical_cores.hyperviscosity module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.initialization.html">src.dynamical_cores.initialization module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.mass_coordinate.html">src.dynamical_cores.mass_coordinate module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.model_config.html">src.dynamical_cores.model_config module</a></li>
@@ -446,7 +94,7 @@ vector Laplacian.</p>
 <li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.vertical_remap.html">src.dynamical_cores.vertical_remap module</a></li>
 </ul>
 </li>
-<li class="toctree-l5"><a class="reference internal" href="src.dynamical_cores.html#module-src.dynamical_cores">Module contents</a></li>
+<li class="toctree-l5"><a class="reference internal" href="src.dynamical_cores.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 <li class="toctree-l4"><a class="reference internal" href="src.mesh_generation.html">src.mesh_generation package</a></li>
@@ -457,7 +105,7 @@ vector Laplacian.</p>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="src.html#submodules">Submodules</a></li>
-<li class="toctree-l3"><a class="reference internal" href="src.html#module-src">Module contents</a></li>
+<li class="toctree-l3"><a class="reference internal" href="src.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 </ul>

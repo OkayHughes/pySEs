@@ -1,4 +1,4 @@
-How to run the model
+Quickstart
 ====================
 
 This page walks through two complete examples of setting up and running a 3-D

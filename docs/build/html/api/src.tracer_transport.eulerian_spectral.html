@@ -33,254 +33,8 @@
 
           <div class="body" role="main">
             
-  <section id="module-src.tracer_transport.eulerian_spectral">
-<span id="src-tracer-transport-eulerian-spectral-module"></span><h1>src.tracer_transport.eulerian_spectral module<a class="headerlink" href="#module-src.tracer_transport.eulerian_spectral" title="Link to this heading">¶</a></h1>
-<dl class="py function">
-<dt class="sig sig-object py" id="src.tracer_transport.eulerian_spectral.advance_tracers_rk2">
-<span class="sig-prename descclassname"><span class="pre">src.tracer_transport.eulerian_spectral.</span></span><span class="sig-name descname"><span class="pre">advance_tracers_rk2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tracer_mass_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_mass_init</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">u_d_mass_avg</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_mass_tend_dyn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">diffusion_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestep_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_mass_hypervis_tend</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_mass_hypervis_avg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.tracer_transport.eulerian_spectral.advance_tracers_rk2" title="Link to this definition">¶</a></dt>
-<dd><p>Advance a batch of tracer-mass fields by one tracer timestep using a 3-stage RK2 scheme.</p>
-<p>The scheme uses three equal substeps of size <code class="docutils literal notranslate"><span class="pre">dt</span> <span class="pre">/</span> <span class="pre">2</span></code>, with a final
-averaging step to give second-order accuracy.  Hyperviscosity is applied
-only in the last substep.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>tracer_mass_in</strong><span class="classifier">Array[tuple[n_tracers, elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Stacked tracer-mass fields at the start of the tracer timestep.</p>
-</dd>
-<dt><strong>d_mass_init</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Layer thickness at the start of the tracer timestep.</p>
-</dd>
-<dt><strong>u_d_mass_avg</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, 2], Float]</span></dt><dd><p>Time-averaged thickness-weighted wind from the dynamics step.</p>
-</dd>
-<dt><strong>d_mass_tend_dyn</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Layer-thickness tendency from the dynamics step.</p>
-</dd>
-<dt><strong>grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal spectral element grid.</p>
-</dd>
-<dt><strong>physics_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Physical constants (e.g. <code class="docutils literal notranslate"><span class="pre">radius_earth</span></code>).</p>
-</dd>
-<dt><strong>diffusion_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Hyperviscosity configuration.</p>
-</dd>
-<dt><strong>timestep_config</strong><span class="classifier">frozendict</span></dt><dd><p>Time-step config; must contain <code class="docutils literal notranslate"><span class="pre">&quot;tracer_advection&quot;</span></code> with <code class="docutils literal notranslate"><span class="pre">&quot;dt&quot;</span></code>.</p>
-</dd>
-<dt><strong>dims</strong><span class="classifier">frozendict[str, int]</span></dt><dd><p>Grid dimension parameters.</p>
-</dd>
-<dt><strong>d_mass_hypervis_tend</strong><span class="classifier">Array or None, optional</span></dt><dd><p>Hyperviscosity layer-thickness tendency for tracer consistency.</p>
-</dd>
-<dt><strong>d_mass_hypervis_avg</strong><span class="classifier">Array or None, optional</span></dt><dd><p>Average layer thickness from the hyperviscosity step, used to scale
-tracer hyperviscosity.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>tracer_mass_out</strong><span class="classifier">Array[tuple[n_tracers, elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Updated stacked tracer-mass fields after one tracer timestep.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.tracer_transport.eulerian_spectral.calc_hypervis_tend_tracer">
-<span class="sig-prename descclassname"><span class="pre">src.tracer_transport.eulerian_spectral.</span></span><span class="sig-name descname"><span class="pre">calc_hypervis_tend_tracer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tracer_mass</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_mass_scale</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">diffusion_config</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.tracer_transport.eulerian_spectral.calc_hypervis_tend_tracer" title="Link to this definition">¶</a></dt>
-<dd><p>Compute the fourth-order hyperviscosity tendency for a batch of tracer-mass fields.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>tracer_mass</strong><span class="classifier">Array[tuple[n_tracers, elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Stacked tracer-mass fields.</p>
-</dd>
-<dt><strong>d_mass_scale</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Layer-thickness scaling applied to the first Laplacian pass.</p>
-</dd>
-<dt><strong>grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal spectral element grid.</p>
-</dd>
-<dt><strong>dims</strong><span class="classifier">frozendict[str, int]</span></dt><dd><p>Grid dimension parameters.</p>
-</dd>
-<dt><strong>dt</strong><span class="classifier">float</span></dt><dd><p>Timestep (seconds) used to scale the tendency.</p>
-</dd>
-<dt><strong>physics_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Physical constants (e.g. <code class="docutils literal notranslate"><span class="pre">radius_earth</span></code>).</p>
-</dd>
-<dt><strong>diffusion_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Hyperviscosity config; must contain <code class="docutils literal notranslate"><span class="pre">&quot;nu_tracer&quot;</span></code>.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>tracer_mass_tend</strong><span class="classifier">Array[tuple[n_tracers, elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Hyperviscosity tendency for each tracer-mass field.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.tracer_transport.eulerian_spectral.calc_minmax">
-<span class="sig-prename descclassname"><span class="pre">src.tracer_transport.eulerian_spectral.</span></span><span class="sig-name descname"><span class="pre">calc_minmax</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tracers</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.tracer_transport.eulerian_spectral.calc_minmax" title="Link to this definition">¶</a></dt>
-<dd><p>Compute DSS-global element-wise min and max for a batch of 3-D tracers.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>tracers</strong><span class="classifier">Array[tuple[n_tracers, elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Stacked tracer fields (mixing ratios).</p>
-</dd>
-<dt><strong>grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal spectral element grid.</p>
-</dd>
-<dt><strong>dims</strong><span class="classifier">frozendict[str, int]</span></dt><dd><p>Grid dimension parameters.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>tracer_elem_lev_mins</strong><span class="classifier">Array[tuple[n_tracers, elem_idx, lev_idx], Float]</span></dt><dd><p>Element-level global minimum for each tracer.</p>
-</dd>
-<dt><strong>tracer_elem_lev_maxs</strong><span class="classifier">Array[tuple[n_tracers, elem_idx, lev_idx], Float]</span></dt><dd><p>Element-level global maximum for each tracer.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.tracer_transport.eulerian_spectral.intermediate_d_mass_dynamics">
-<span class="sig-prename descclassname"><span class="pre">src.tracer_transport.eulerian_spectral.</span></span><span class="sig-name descname"><span class="pre">intermediate_d_mass_dynamics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">d_mass_init</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_mass_tend_avg_cont</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dt_total</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">step</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.tracer_transport.eulerian_spectral.intermediate_d_mass_dynamics" title="Link to this definition">¶</a></dt>
-<dd><p>Estimate the layer thickness at an intermediate RK2 stage.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>d_mass_init</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Layer thickness at the start of the timestep.</p>
-</dd>
-<dt><strong>d_mass_tend_avg_cont</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Projected (C0) layer-thickness tendency from the dynamics step.</p>
-</dd>
-<dt><strong>dt_total</strong><span class="classifier">float</span></dt><dd><p>Full dynamics timestep in seconds.</p>
-</dd>
-<dt><strong>step</strong><span class="classifier">int</span></dt><dd><p>RK substep index (0, 1, or 2).</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>d_mass_intermediate</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Estimated layer thickness at stage <code class="docutils literal notranslate"><span class="pre">step</span></code>.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.tracer_transport.eulerian_spectral.limiter_d_mass">
-<span class="sig-prename descclassname"><span class="pre">src.tracer_transport.eulerian_spectral.</span></span><span class="sig-name descname"><span class="pre">limiter_d_mass</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">d_mass_init</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_mass_tend_avg</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_mass_tend_avg_cont</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dt_total</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">step</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.tracer_transport.eulerian_spectral.limiter_d_mass" title="Link to this definition">¶</a></dt>
-<dd><p>Compute the layer thickness used as the denominator in the flux limiter.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>d_mass_init</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Layer thickness at the start of the timestep.</p>
-</dd>
-<dt><strong>d_mass_tend_avg</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Discontinuous layer-thickness tendency from the dynamics step.</p>
-</dd>
-<dt><strong>d_mass_tend_avg_cont</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Projected (C0) layer-thickness tendency.</p>
-</dd>
-<dt><strong>dt_total</strong><span class="classifier">float</span></dt><dd><p>Full dynamics timestep in seconds.</p>
-</dd>
-<dt><strong>step</strong><span class="classifier">int</span></dt><dd><p>RK substep index (0, 1, or 2).</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>d_mass_limiter</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Layer thickness for use in the limiter denominator at stage <code class="docutils literal notranslate"><span class="pre">step</span></code>.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.tracer_transport.eulerian_spectral.minmax_scalar_3d">
-<span class="sig-prename descclassname"><span class="pre">src.tracer_transport.eulerian_spectral.</span></span><span class="sig-name descname"><span class="pre">minmax_scalar_3d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scalar</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.tracer_transport.eulerian_spectral.minmax_scalar_3d" title="Link to this definition">¶</a></dt>
-<dd><p>Compute the element-local min or max of a 3-D scalar field via DSS.</p>
-<p>Applies <code class="docutils literal notranslate"><span class="pre">minmax_scalar</span></code> level-by-level, gathering the global minimum
-(or maximum) at each GLL node over all elements sharing that node.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>scalar</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>3-D scalar field on the GLL grid.</p>
-</dd>
-<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal spectral element grid.</p>
-</dd>
-<dt><strong>dims</strong><span class="classifier">frozendict[str, int]</span></dt><dd><p>Grid dimension parameters.</p>
-</dd>
-<dt><strong>max</strong><span class="classifier">bool, optional</span></dt><dd><p>If True compute the maximum; if False compute the minimum
-(default: True).</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>result</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Field with each node replaced by the DSS-global min or max.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.tracer_transport.eulerian_spectral.project_tracer_3d">
-<span class="sig-prename descclassname"><span class="pre">src.tracer_transport.eulerian_spectral.</span></span><span class="sig-name descname"><span class="pre">project_tracer_3d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">scalar</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.tracer_transport.eulerian_spectral.project_tracer_3d" title="Link to this definition">¶</a></dt>
-<dd><p>Project a 3-D scalar tracer onto the continuous spectral element space (DSS).</p>
-<p>Applies <code class="docutils literal notranslate"><span class="pre">project_scalar</span></code> level-by-level via <code class="docutils literal notranslate"><span class="pre">vmap_1d_apply</span></code>.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>scalar</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>3-D discontinuous tracer field.</p>
-</dd>
-<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal spectral element grid.</p>
-</dd>
-<dt><strong>dims</strong><span class="classifier">frozendict[str, int]</span></dt><dd><p>Grid dimension parameters.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>scalar_cont</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Globally continuous (C0) tracer field.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.tracer_transport.eulerian_spectral.tracer_euler_step">
-<span class="sig-prename descclassname"><span class="pre">src.tracer_transport.eulerian_spectral.</span></span><span class="sig-name descname"><span class="pre">tracer_euler_step</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tracer_mass_stacked</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">u_d_mass_avg</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interim_d_mass</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_mass_for_limiter</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hypervis_tracer_tend</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.tracer_transport.eulerian_spectral.tracer_euler_step" title="Link to this definition">¶</a></dt>
-<dd><p>Advance a batch of tracer-mass fields by one Euler substep with flux-form advection and limiting.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>tracer_mass_stacked</strong><span class="classifier">Array[tuple[n_tracers, elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Stacked tracer-mass fields (mixing ratio * layer thickness).</p>
-</dd>
-<dt><strong>dt</strong><span class="classifier">float</span></dt><dd><p>Substep size in seconds.</p>
-</dd>
-<dt><strong>u_d_mass_avg</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, 2], Float]</span></dt><dd><p>Time-averaged thickness-weighted wind <code class="docutils literal notranslate"><span class="pre">h</span> <span class="pre">*</span> <span class="pre">u</span></code>.</p>
-</dd>
-<dt><strong>interim_d_mass</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Estimated layer thickness at the interim time level (used to compute velocity).</p>
-</dd>
-<dt><strong>d_mass_for_limiter</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Layer thickness used as the denominator in the flux limiter.</p>
-</dd>
-<dt><strong>hypervis_tracer_tend</strong><span class="classifier">Array[tuple[n_tracers, elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Hyperviscosity tendency to add (set to zeros if not used).</p>
-</dd>
-<dt><strong>physics_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Physical constants (e.g. <code class="docutils literal notranslate"><span class="pre">radius_earth</span></code>).</p>
-</dd>
-<dt><strong>grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal spectral element grid.</p>
-</dd>
-<dt><strong>dims</strong><span class="classifier">frozendict[str, int]</span></dt><dd><p>Grid dimension parameters.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>tracer_mass_out</strong><span class="classifier">Array[tuple[n_tracers, elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Updated stacked tracer-mass fields after one Euler substep.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
+  <section id="src-tracer-transport-eulerian-spectral-module">
+<h1>src.tracer_transport.eulerian_spectral module<a class="headerlink" href="#src-tracer-transport-eulerian-spectral-module" title="Link to this heading">¶</a></h1>
 </section>
 
 
@@ -311,10 +65,10 @@ tracer hyperviscosity.</p>
 <script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../installation_and_validation.html">Usage</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">How to run the model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../user_friendly_api.html">The pySEs public API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../anatomy_of_a_model_struct.html">How is the atmospheric state represented in pySEs?</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">How are horizontal grids generated and read into pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">Horizontal grid generation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="modules.html">src</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="src.html">src package</a><ul class="current">
@@ -327,26 +81,16 @@ tracer hyperviscosity.</p>
 <li class="toctree-l4"><a class="reference internal" href="src.shallow_water_models.html">src.shallow_water_models package</a></li>
 <li class="toctree-l4 current"><a class="reference internal" href="src.tracer_transport.html">src.tracer_transport package</a><ul class="current">
 <li class="toctree-l5 current"><a class="reference internal" href="src.tracer_transport.html#submodules">Submodules</a><ul class="current">
-<li class="toctree-l6 current"><a class="current reference internal" href="#">src.tracer_transport.eulerian_spectral module</a><ul>
-<li class="toctree-l7"><a class="reference internal" href="#src.tracer_transport.eulerian_spectral.advance_tracers_rk2"><code class="docutils literal notranslate"><span class="pre">advance_tracers_rk2()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.tracer_transport.eulerian_spectral.calc_hypervis_tend_tracer"><code class="docutils literal notranslate"><span class="pre">calc_hypervis_tend_tracer()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.tracer_transport.eulerian_spectral.calc_minmax"><code class="docutils literal notranslate"><span class="pre">calc_minmax()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.tracer_transport.eulerian_spectral.intermediate_d_mass_dynamics"><code class="docutils literal notranslate"><span class="pre">intermediate_d_mass_dynamics()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.tracer_transport.eulerian_spectral.limiter_d_mass"><code class="docutils literal notranslate"><span class="pre">limiter_d_mass()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.tracer_transport.eulerian_spectral.minmax_scalar_3d"><code class="docutils literal notranslate"><span class="pre">minmax_scalar_3d()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.tracer_transport.eulerian_spectral.project_tracer_3d"><code class="docutils literal notranslate"><span class="pre">project_tracer_3d()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.tracer_transport.eulerian_spectral.tracer_euler_step"><code class="docutils literal notranslate"><span class="pre">tracer_euler_step()</span></code></a></li>
+<li class="toctree-l6 current"><a class="current reference internal" href="#">src.tracer_transport.eulerian_spectral module</a></li>
 </ul>
 </li>
-</ul>
-</li>
-<li class="toctree-l5"><a class="reference internal" href="src.tracer_transport.html#module-src.tracer_transport">Module contents</a></li>
+<li class="toctree-l5"><a class="reference internal" href="src.tracer_transport.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="src.html#submodules">Submodules</a></li>
-<li class="toctree-l3"><a class="reference internal" href="src.html#module-src">Module contents</a></li>
+<li class="toctree-l3"><a class="reference internal" href="src.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 </ul>

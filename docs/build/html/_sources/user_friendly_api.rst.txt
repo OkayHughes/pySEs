@@ -206,11 +206,11 @@ test case.
 These functions operate on the model state dicts described in
 :doc:`anatomy_of_a_model_struct`.
 
-``model_state.advance_dynamics(states, coeffs, model)``
+``model_state.sum_dynamics(states, coeffs, model)``
     Weighted linear combination of a list of dynamics state dicts (used by
     the Runge–Kutta integrator).
 
-``model_state.advance_tracers(tracer_states, coeffs, model)``
+``model_state.sum_tracers(tracer_states, coeffs, model)``
     Same weighted combination for tracer state dicts.
 
 ``model_state.remap_dynamics(dynamics, static_forcing, v_grid, physics_config, num_lev, model)``

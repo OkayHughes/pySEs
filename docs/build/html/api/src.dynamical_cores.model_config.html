@@ -33,58 +33,8 @@
 
           <div class="body" role="main">
             
-  <section id="module-src.dynamical_cores.model_config">
-<span id="src-dynamical-cores-model-config-module"></span><h1>src.dynamical_cores.model_config module<a class="headerlink" href="#module-src.dynamical_cores.model_config" title="Link to this heading">¶</a></h1>
-<dl class="py attribute">
-<dt class="sig sig-object py" id="src.dynamical_cores.model_config.hypervis_opts">
-<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.model_config.</span></span><span class="sig-name descname"><span class="pre">hypervis_opts</span></span><a class="headerlink" href="#src.dynamical_cores.model_config.hypervis_opts" title="Link to this definition">¶</a></dt>
-<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">hypervis_options</span></code></p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.dynamical_cores.model_config.init_default_config">
-<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.model_config.</span></span><span class="sig-name descname"><span class="pre">init_default_config</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_dt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hypervis_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">hypervis_options.variable_resolution</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.model_config.init_default_config" title="Link to this definition">¶</a></dt>
-<dd><p>Build physics, diffusion, and time-stepping configs with sensible defaults.</p>
-<p>The coupling timestep is estimated as <code class="docutils literal notranslate"><span class="pre">900</span> <span class="pre">*</span> <span class="pre">(30</span> <span class="pre">/</span> <span class="pre">nx)</span></code> seconds (rounded
-to two significant figures) when <code class="docutils literal notranslate"><span class="pre">physics_dt</span> <span class="pre">&lt;</span> <span class="pre">0</span></code>.  The hyperviscosity
-configuration is selected by <code class="docutils literal notranslate"><span class="pre">hypervis_type</span></code>.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>nx</strong><span class="classifier">int</span></dt><dd><p>Number of elements per cube face (cubed-sphere refinement level); used
-to derive the default coupling timestep.</p>
-</dd>
-<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal grid struct; forwarded to hyperviscosity and time-step
-config initializers.</p>
-</dd>
-<dt><strong>v_grid</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Vertical grid struct from <code class="xref py py-func docutils literal notranslate"><span class="pre">init_vertical_grid()</span></code>.</p>
-</dd>
-<dt><strong>dims</strong><span class="classifier">frozendict[str, int]</span></dt><dd><p>Grid dimension tuple forwarded to config initializers.</p>
-</dd>
-<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier forwarded to all sub-config initializers.</p>
-</dd>
-<dt><strong>physics_dt</strong><span class="classifier">float, optional</span></dt><dd><p>Coupling interval in seconds.  If negative (default: <code class="docutils literal notranslate"><span class="pre">-1.0</span></code>) the
-value is derived automatically from <code class="docutils literal notranslate"><span class="pre">nx</span></code>.</p>
-</dd>
-<dt><strong>hypervis_type</strong><span class="classifier">hypervis_opts, optional</span></dt><dd><p>Hyperviscosity variant.  <code class="docutils literal notranslate"><span class="pre">variable_resolution</span></code> (default) uses the
-tensor formulation; <code class="docutils literal notranslate"><span class="pre">quasi_uniform</span></code> uses the constant-coefficient
-formulation; <code class="docutils literal notranslate"><span class="pre">none</span></code> disables diffusion.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>physics_config</strong><span class="classifier">dict</span></dt><dd><p>Physics configuration from <code class="xref py py-func docutils literal notranslate"><span class="pre">init_physics_config()</span></code>.</p>
-</dd>
-<dt><strong>diffusion_config</strong><span class="classifier">dict</span></dt><dd><p>Hyperviscosity/diffusion configuration.</p>
-</dd>
-<dt><strong>timestep_config</strong><span class="classifier">frozendict</span></dt><dd><p>Time-stepping configuration from <code class="xref py py-func docutils literal notranslate"><span class="pre">init_timestep_config()</span></code>.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
+  <section id="src-dynamical-cores-model-config-module">
+<h1>src.dynamical_cores.model_config module<a class="headerlink" href="#src-dynamical-cores-model-config-module" title="Link to this heading">¶</a></h1>
 </section>
 
 
@@ -115,10 +65,10 @@ formulation; <code class="docutils literal notranslate"><span class="pre">none</
 <script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../installation_and_validation.html">Usage</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">How to run the model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../user_friendly_api.html">The pySEs public API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../anatomy_of_a_model_struct.html">How is the atmospheric state represented in pySEs?</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">How are horizontal grids generated and read into pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">Horizontal grid generation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="modules.html">src</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="src.html">src package</a><ul class="current">
@@ -131,11 +81,7 @@ formulation; <code class="docutils literal notranslate"><span class="pre">none</
 <li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.hyperviscosity.html">src.dynamical_cores.hyperviscosity module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.initialization.html">src.dynamical_cores.initialization module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.mass_coordinate.html">src.dynamical_cores.mass_coordinate module</a></li>
-<li class="toctree-l6 current"><a class="current reference internal" href="#">src.dynamical_cores.model_config module</a><ul>
-<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.model_config.hypervis_opts"><code class="docutils literal notranslate"><span class="pre">hypervis_opts</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.model_config.init_default_config"><code class="docutils literal notranslate"><span class="pre">init_default_config()</span></code></a></li>
-</ul>
-</li>
+<li class="toctree-l6 current"><a class="current reference internal" href="#">src.dynamical_cores.model_config module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.model_info.html">src.dynamical_cores.model_info module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.model_state.html">src.dynamical_cores.model_state module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.operators_3d.html">src.dynamical_cores.operators_3d module</a></li>
@@ -148,7 +94,7 @@ formulation; <code class="docutils literal notranslate"><span class="pre">none</
 <li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.vertical_remap.html">src.dynamical_cores.vertical_remap module</a></li>
 </ul>
 </li>
-<li class="toctree-l5"><a class="reference internal" href="src.dynamical_cores.html#module-src.dynamical_cores">Module contents</a></li>
+<li class="toctree-l5"><a class="reference internal" href="src.dynamical_cores.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 <li class="toctree-l4"><a class="reference internal" href="src.mesh_generation.html">src.mesh_generation package</a></li>
@@ -159,7 +105,7 @@ formulation; <code class="docutils literal notranslate"><span class="pre">none</
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="src.html#submodules">Submodules</a></li>
-<li class="toctree-l3"><a class="reference internal" href="src.html#module-src">Module contents</a></li>
+<li class="toctree-l3"><a class="reference internal" href="src.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 </ul>

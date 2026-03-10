@@ -15,7 +15,7 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="How is the atmospheric state represented in pySEs?" href="anatomy_of_a_model_struct.html" />
-    <link rel="prev" title="How to run the model" href="model_run_quickstart.html" />
+    <link rel="prev" title="Quickstart" href="model_run_quickstart.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
@@ -226,10 +226,10 @@ coefficients.  <code class="docutils literal notranslate"><span class="pre">p0</
 <p>These functions operate on the model state dicts described in
 <a class="reference internal" href="anatomy_of_a_model_struct.html"><span class="doc">How is the atmospheric state represented in pySEs?</span></a>.</p>
 <dl class="simple">
-<dt><code class="docutils literal notranslate"><span class="pre">model_state.advance_dynamics(states,</span> <span class="pre">coeffs,</span> <span class="pre">model)</span></code></dt><dd><p>Weighted linear combination of a list of dynamics state dicts (used by
+<dt><code class="docutils literal notranslate"><span class="pre">model_state.sum_dynamics(states,</span> <span class="pre">coeffs,</span> <span class="pre">model)</span></code></dt><dd><p>Weighted linear combination of a list of dynamics state dicts (used by
 the Runge–Kutta integrator).</p>
 </dd>
-<dt><code class="docutils literal notranslate"><span class="pre">model_state.advance_tracers(tracer_states,</span> <span class="pre">coeffs,</span> <span class="pre">model)</span></code></dt><dd><p>Same weighted combination for tracer state dicts.</p>
+<dt><code class="docutils literal notranslate"><span class="pre">model_state.sum_tracers(tracer_states,</span> <span class="pre">coeffs,</span> <span class="pre">model)</span></code></dt><dd><p>Same weighted combination for tracer state dicts.</p>
 </dd>
 <dt><code class="docutils literal notranslate"><span class="pre">model_state.remap_dynamics(dynamics,</span> <span class="pre">static_forcing,</span> <span class="pre">v_grid,</span> <span class="pre">physics_config,</span> <span class="pre">num_lev,</span> <span class="pre">model)</span></code></dt><dd><p>Conservatively remap all dynamics fields onto the reference hybrid-
 coordinate levels using the Zerroukat monotone remapper.</p>
@@ -394,7 +394,7 @@ the final state.</p>
 <script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="installation_and_validation.html">Usage</a></li>
-<li class="toctree-l1"><a class="reference internal" href="model_run_quickstart.html">How to run the model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_run_quickstart.html">Quickstart</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">The pySEs public API</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#pyses-grids-horizontal-grid-generation"><code class="docutils literal notranslate"><span class="pre">pyses.grids</span></code> — Horizontal grid generation</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#init-grid-constructors"><code class="docutils literal notranslate"><span class="pre">init</span></code> — grid constructors</a></li>
@@ -424,7 +424,7 @@ the final state.</p>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="anatomy_of_a_model_struct.html">How is the atmospheric state represented in pySEs?</a></li>
-<li class="toctree-l1"><a class="reference internal" href="grid_generation.html">How are horizontal grids generated and read into pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="grid_generation.html">Horizontal grid generation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/modules.html">src</a></li>
 </ul>
@@ -433,7 +433,7 @@ the final state.</p>
 <h3>Related Topics</h3>
 <ul>
   <li><a href="index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="model_run_quickstart.html" title="previous chapter">How to run the model</a></li>
+      <li>Previous: <a href="model_run_quickstart.html" title="previous chapter">Quickstart</a></li>
       <li>Next: <a href="anatomy_of_a_model_struct.html" title="next chapter">How is the atmospheric state represented in pySEs?</a></li>
   </ul></li>
 </ul>

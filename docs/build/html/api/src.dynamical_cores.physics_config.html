@@ -33,82 +33,8 @@
 
           <div class="body" role="main">
             
-  <section id="module-src.dynamical_cores.physics_config">
-<span id="src-dynamical-cores-physics-config-module"></span><h1>src.dynamical_cores.physics_config module<a class="headerlink" href="#module-src.dynamical_cores.physics_config" title="Link to this heading">¶</a></h1>
-<dl class="py function">
-<dt class="sig sig-object py" id="src.dynamical_cores.physics_config.cp_base">
-<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.physics_config.</span></span><span class="sig-name descname"><span class="pre">cp_base</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dof</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.physics_config.cp_base" title="Link to this definition">¶</a></dt>
-<dd><p>Compute the molar heat capacity at constant pressure for an ideal gas.</p>
-<p>Uses the equipartition theorem: <code class="docutils literal notranslate"><span class="pre">cp</span> <span class="pre">=</span> <span class="pre">R</span> <span class="pre">*</span> <span class="pre">(1</span> <span class="pre">+</span> <span class="pre">f/2)</span></code> where <code class="docutils literal notranslate"><span class="pre">f</span></code> is the
-number of active degrees of freedom for a molecule with <code class="docutils literal notranslate"><span class="pre">dof</span></code> atoms.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>dof</strong><span class="classifier">int</span></dt><dd><p>Number of atoms in the molecule (1, 2, or 3); used to look up the
-degrees of freedom from <code class="docutils literal notranslate"><span class="pre">degrees_of_freedom_igl</span></code>.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>cp_mol</strong><span class="classifier">float</span></dt><dd><p>Molar heat capacity at constant pressure (J mol^-1 K^-1).</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.dynamical_cores.physics_config.init_physics_config">
-<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.physics_config.</span></span><span class="sig-name descname"><span class="pre">init_physics_config</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Rgas</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">287.0423113650487</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">radius_earth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">6371000.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">angular_freq_earth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">7.292e-05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gravity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">9.81</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p0</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100000.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1004.64</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cp_water_vapor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1810.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">R_water_vapor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">461.5046398201599</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.6219705862045155</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dry_air_species</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">['N2',</span> <span class="pre">'O2']</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.physics_config.init_physics_config" title="Link to this definition">¶</a></dt>
-<dd><p>Build the physics configuration dict for a 3-D atmospheric model.</p>
-<p>For CAM-SE models the dict is extended with per-species gas constants and
-heat capacities for the dry-air mixture and for water vapour.  For
-variable-kappa models the dry-air species are treated individually using
-ideal-gas theory; otherwise a single bulk dry-air entry is used.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier; selects which sub-dicts are populated.</p>
-</dd>
-<dt><strong>Rgas</strong><span class="classifier">float, optional</span></dt><dd><p>Specific gas constant for dry air (J kg^-1 K^-1); default derived from
-universal gas constant and the molecular weight of dry air (~287 J kg^-1 K^-1).</p>
-</dd>
-<dt><strong>radius_earth</strong><span class="classifier">float, optional</span></dt><dd><p>Mean Earth radius in metres (default: 6371e3).</p>
-</dd>
-<dt><strong>angular_freq_earth</strong><span class="classifier">float, optional</span></dt><dd><p>Earth’s rotation rate in rad s^-1 (default: 7.292e-5).</p>
-</dd>
-<dt><strong>gravity</strong><span class="classifier">float, optional</span></dt><dd><p>Surface gravitational acceleration in m s^-2 (default: 9.81).</p>
-</dd>
-<dt><strong>p0</strong><span class="classifier">float, optional</span></dt><dd><p>Reference pressure in Pa (default: 1e5).</p>
-</dd>
-<dt><strong>cp</strong><span class="classifier">float, optional</span></dt><dd><p>Specific heat capacity of dry air at constant pressure in J kg^-1 K^-1
-(default: 1004.64).</p>
-</dd>
-<dt><strong>cp_water_vapor</strong><span class="classifier">float, optional</span></dt><dd><p>Specific heat capacity of water vapour at constant pressure in
-J kg^-1 K^-1 (default: 1810).</p>
-</dd>
-<dt><strong>R_water_vapor</strong><span class="classifier">float, optional</span></dt><dd><p>Specific gas constant for water vapour (J kg^-1 K^-1).</p>
-</dd>
-<dt><strong>epsilon</strong><span class="classifier">float, optional</span></dt><dd><p>Ratio of molecular weight of water vapour to dry air (~0.622).</p>
-</dd>
-<dt><strong>dry_air_species</strong><span class="classifier">list[str], optional</span></dt><dd><p>Species names for the dry-air mixture (default: <code class="docutils literal notranslate"><span class="pre">[&quot;N2&quot;,</span> <span class="pre">&quot;O2&quot;]</span></code>);
-used only for variable-kappa CAM-SE models.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>physics_config</strong><span class="classifier">dict</span></dt><dd><p>Dict containing <code class="docutils literal notranslate"><span class="pre">&quot;gravity&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;radius_earth&quot;</span></code>,
-<code class="docutils literal notranslate"><span class="pre">&quot;angular_freq_earth&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;p0&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;epsilon&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;Rgas&quot;</span></code>,
-<code class="docutils literal notranslate"><span class="pre">&quot;cp&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;moisture_species_Rgas&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;moisture_species_cp&quot;</span></code>,
-and (for CAM-SE) <code class="docutils literal notranslate"><span class="pre">&quot;dry_air_species_Rgas&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;dry_air_species_cp&quot;</span></code>.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
+  <section id="src-dynamical-cores-physics-config-module">
+<h1>src.dynamical_cores.physics_config module<a class="headerlink" href="#src-dynamical-cores-physics-config-module" title="Link to this heading">¶</a></h1>
 </section>
 
 
@@ -139,10 +65,10 @@ and (for CAM-SE) <code class="docutils literal notranslate"><span class="pre">&q
 <script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../installation_and_validation.html">Usage</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">How to run the model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../user_friendly_api.html">The pySEs public API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../anatomy_of_a_model_struct.html">How is the atmospheric state represented in pySEs?</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">How are horizontal grids generated and read into pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">Horizontal grid generation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="modules.html">src</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="src.html">src package</a><ul class="current">
@@ -159,11 +85,7 @@ and (for CAM-SE) <code class="docutils literal notranslate"><span class="pre">&q
 <li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.model_info.html">src.dynamical_cores.model_info module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.model_state.html">src.dynamical_cores.model_state module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.operators_3d.html">src.dynamical_cores.operators_3d module</a></li>
-<li class="toctree-l6 current"><a class="current reference internal" href="#">src.dynamical_cores.physics_config module</a><ul>
-<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.physics_config.cp_base"><code class="docutils literal notranslate"><span class="pre">cp_base()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.dynamical_cores.physics_config.init_physics_config"><code class="docutils literal notranslate"><span class="pre">init_physics_config()</span></code></a></li>
-</ul>
-</li>
+<li class="toctree-l6 current"><a class="current reference internal" href="#">src.dynamical_cores.physics_config module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.physics_dynamics_coupling.html">src.dynamical_cores.physics_dynamics_coupling module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.run_dycore.html">src.dynamical_cores.run_dycore module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.time_step.html">src.dynamical_cores.time_step module</a></li>
@@ -172,7 +94,7 @@ and (for CAM-SE) <code class="docutils literal notranslate"><span class="pre">&q
 <li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.vertical_remap.html">src.dynamical_cores.vertical_remap module</a></li>
 </ul>
 </li>
-<li class="toctree-l5"><a class="reference internal" href="src.dynamical_cores.html#module-src.dynamical_cores">Module contents</a></li>
+<li class="toctree-l5"><a class="reference internal" href="src.dynamical_cores.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 <li class="toctree-l4"><a class="reference internal" href="src.mesh_generation.html">src.mesh_generation package</a></li>
@@ -183,7 +105,7 @@ and (for CAM-SE) <code class="docutils literal notranslate"><span class="pre">&q
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="src.html#submodules">Submodules</a></li>
-<li class="toctree-l3"><a class="reference internal" href="src.html#module-src">Module contents</a></li>
+<li class="toctree-l3"><a class="reference internal" href="src.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 </ul>

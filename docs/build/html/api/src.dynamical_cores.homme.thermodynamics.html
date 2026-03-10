@@ -33,161 +33,8 @@
 
           <div class="body" role="main">
             
-  <section id="module-src.dynamical_cores.homme.thermodynamics">
-<span id="src-dynamical-cores-homme-thermodynamics-module"></span><h1>src.dynamical_cores.homme.thermodynamics module<a class="headerlink" href="#module-src.dynamical_cores.homme.thermodynamics" title="Link to this heading">¶</a></h1>
-<dl class="py function">
-<dt class="sig sig-object py" id="src.dynamical_cores.homme.thermodynamics.eval_balanced_geopotential">
-<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.homme.thermodynamics.</span></span><span class="sig-name descname"><span class="pre">eval_balanced_geopotential</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">phi_surf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p_mid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">theta_v_d_mass</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.homme.thermodynamics.eval_balanced_geopotential" title="Link to this definition">¶</a></dt>
-<dd><p>Compute the hydrostatically balanced interface geopotential.</p>
-<p>Integrates the hydrostatic equation upward from the surface using the
-virtual potential temperature and the Exner pressure relationship.  The
-result is the interface geopotential that would be in exact hydrostatic
-balance with the given <code class="docutils literal notranslate"><span class="pre">theta_v_d_mass</span></code> profile.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>phi_surf</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx], Float]</span></dt><dd><p>Surface geopotential (m^2 s^-2).</p>
-</dd>
-<dt><strong>p_mid</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Mid-level pressure (Pa) from <a class="reference internal" href="#src.dynamical_cores.homme.thermodynamics.eval_midlevel_pressure" title="src.dynamical_cores.homme.thermodynamics.eval_midlevel_pressure"><code class="xref py py-func docutils literal notranslate"><span class="pre">eval_midlevel_pressure()</span></code></a>.</p>
-</dd>
-<dt><strong>theta_v_d_mass</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Virtual potential temperature times layer mass.</p>
-</dd>
-<dt><strong>physics_config</strong><span class="classifier">dict</span></dt><dd><p>Physics configuration dict with <code class="docutils literal notranslate"><span class="pre">&quot;Rgas&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;cp&quot;</span></code>, and <code class="docutils literal notranslate"><span class="pre">&quot;p0&quot;</span></code>.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>phi_i</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, ilev_idx], Float]</span></dt><dd><p>Interface geopotential (m^2 s^-2) in hydrostatic balance.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.dynamical_cores.homme.thermodynamics.eval_midlevel_pressure">
-<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.homme.thermodynamics.</span></span><span class="sig-name descname"><span class="pre">eval_midlevel_pressure</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v_grid</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.homme.thermodynamics.eval_midlevel_pressure" title="Link to this definition">¶</a></dt>
-<dd><p>Compute mid-level pressure from the dynamics state using cumulative layer mass.</p>
-<p>Uses the hydrostatic approximation: <code class="docutils literal notranslate"><span class="pre">p_mid[k]</span> <span class="pre">=</span> <span class="pre">sum(d_mass[0:k+1])</span> <span class="pre">+</span>
-<span class="pre">p_top</span> <span class="pre">-</span> <span class="pre">d_mass[k]</span> <span class="pre">/</span> <span class="pre">2</span></code>, where <code class="docutils literal notranslate"><span class="pre">p_top</span> <span class="pre">=</span> <span class="pre">hybrid_a_i[0]</span> <span class="pre">*</span>
-<span class="pre">reference_surface_mass</span></code>.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>state</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Dynamics state dict containing <code class="docutils literal notranslate"><span class="pre">&quot;d_mass&quot;</span></code> with shape
-<code class="docutils literal notranslate"><span class="pre">(elem,</span> <span class="pre">gll,</span> <span class="pre">gll,</span> <span class="pre">lev)</span></code>.</p>
-</dd>
-<dt><strong>v_grid</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Vertical grid struct from <code class="xref py py-func docutils literal notranslate"><span class="pre">init_vertical_grid()</span></code>.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>p_mid</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Hydrostatic mid-level pressure (Pa).</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.dynamical_cores.homme.thermodynamics.eval_mu">
-<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.homme.thermodynamics.</span></span><span class="sig-name descname"><span class="pre">eval_mu</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phi_i</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.homme.thermodynamics.eval_mu" title="Link to this definition">¶</a></dt>
-<dd><p>Compute pressure, Exner function, radial scaling, and the <code class="docutils literal notranslate"><span class="pre">mu</span></code> coefficient.</p>
-<p><code class="docutils literal notranslate"><span class="pre">mu</span></code> is the derivative of the non-hydrostatic pressure with respect to
-layer mass (<code class="docutils literal notranslate"><span class="pre">d</span> <span class="pre">p</span> <span class="pre">/</span> <span class="pre">d</span> <span class="pre">(d_mass)</span></code>), needed for the implicit vertical
-velocity update.  For hydrostatic models <code class="docutils literal notranslate"><span class="pre">mu</span></code> is identically <code class="docutils literal notranslate"><span class="pre">1</span></code>.  For
-deep-atmosphere models the pressure and <code class="docutils literal notranslate"><span class="pre">mu</span></code> are scaled by <code class="docutils literal notranslate"><span class="pre">r_hat^2</span></code>.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>state</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Dynamics state dict containing <code class="docutils literal notranslate"><span class="pre">&quot;theta_v_d_mass&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;d_mass&quot;</span></code>.</p>
-</dd>
-<dt><strong>phi_i</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, ilev_idx], Float]</span></dt><dd><p>Interface geopotential (assumed to be in hydrostatic balance on input).</p>
-</dd>
-<dt><strong>v_grid</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Vertical grid struct from <code class="xref py py-func docutils literal notranslate"><span class="pre">init_vertical_grid()</span></code>.</p>
-</dd>
-<dt><strong>config</strong><span class="classifier">dict</span></dt><dd><p>Physics configuration dict.</p>
-</dd>
-<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier; selects hydrostatic/non-hydrostatic and
-shallow/deep-atmosphere branches.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>p_model</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Mid-level pressure (Pa).</p>
-</dd>
-<dt><strong>exner</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Exner function at mid-levels.</p>
-</dd>
-<dt><strong>r_hat_i</strong><span class="classifier">Array or float</span></dt><dd><p>Interface radial scaling factor; <code class="docutils literal notranslate"><span class="pre">1.0</span></code> for shallow-atmosphere models.</p>
-</dd>
-<dt><strong>d_nh_pressure_d_mass</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, ilev_idx], Float]</span></dt><dd><p><code class="docutils literal notranslate"><span class="pre">mu</span> <span class="pre">=</span> <span class="pre">dp/d(d_mass)</span></code> at interfaces; <code class="docutils literal notranslate"><span class="pre">1.0</span></code> array for hydrostatic models.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.dynamical_cores.homme.thermodynamics.eval_pressure_exner_nonhydrostatic">
-<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.homme.thermodynamics.</span></span><span class="sig-name descname"><span class="pre">eval_pressure_exner_nonhydrostatic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">theta_v_d_mass</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_phi</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">r_hat_sq_avg</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.homme.thermodynamics.eval_pressure_exner_nonhydrostatic" title="Link to this definition">¶</a></dt>
-<dd><p>Compute mid-level pressure and the Exner function for non-hydrostatic HOMME.</p>
-<p>Derives pressure from the non-hydrostatic equation of state relating virtual
-potential temperature, geopotential layer thickness, and the deep-atmosphere
-radial scaling.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>theta_v_d_mass</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Virtual potential temperature times layer mass.</p>
-</dd>
-<dt><strong>d_phi</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Layer geopotential thickness (interface differences of <code class="docutils literal notranslate"><span class="pre">phi_i</span></code>).</p>
-</dd>
-<dt><strong>r_hat_sq_avg</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Layer-averaged squared radial scaling factor from <a class="reference internal" href="#src.dynamical_cores.homme.thermodynamics.eval_r_hat_sq_avg" title="src.dynamical_cores.homme.thermodynamics.eval_r_hat_sq_avg"><code class="xref py py-func docutils literal notranslate"><span class="pre">eval_r_hat_sq_avg()</span></code></a>;
-set to <code class="docutils literal notranslate"><span class="pre">1.0</span></code> for shallow-atmosphere models.</p>
-</dd>
-<dt><strong>config</strong><span class="classifier">dict</span></dt><dd><p>Physics configuration dict with keys <code class="docutils literal notranslate"><span class="pre">&quot;p0&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;Rgas&quot;</span></code>, and <code class="docutils literal notranslate"><span class="pre">&quot;cp&quot;</span></code>.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>nh_pressure</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Non-hydrostatic mid-level pressure (Pa).</p>
-</dd>
-<dt><strong>exner</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Exner function <code class="docutils literal notranslate"><span class="pre">pi</span> <span class="pre">=</span> <span class="pre">(p</span> <span class="pre">/</span> <span class="pre">p0)^(Rgas/cp)</span></code>.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.dynamical_cores.homme.thermodynamics.eval_r_hat_sq_avg">
-<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.homme.thermodynamics.</span></span><span class="sig-name descname"><span class="pre">eval_r_hat_sq_avg</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">r_hat_i</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.homme.thermodynamics.eval_r_hat_sq_avg" title="Link to this definition">¶</a></dt>
-<dd><p>Compute the layer-averaged squared radial scaling factor.</p>
-<p>Uses the exact quadratic average of the interface values:
-<code class="docutils literal notranslate"><span class="pre">r_hat_sq</span> <span class="pre">=</span> <span class="pre">(r_i^2</span> <span class="pre">+</span> <span class="pre">r_i</span> <span class="pre">*</span> <span class="pre">r_{i+1}</span> <span class="pre">+</span> <span class="pre">r_{i+1}^2)</span> <span class="pre">/</span> <span class="pre">3</span></code>.
-This corresponds to the integral average of <code class="docutils literal notranslate"><span class="pre">r^2</span></code> over the layer when
-<code class="docutils literal notranslate"><span class="pre">r</span></code> varies linearly between interfaces.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>r_hat_i</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, ilev_idx], Float]</span></dt><dd><p>Radial scaling factor <code class="docutils literal notranslate"><span class="pre">r_hat</span> <span class="pre">=</span> <span class="pre">r</span> <span class="pre">/</span> <span class="pre">a</span></code> at vertical interfaces, from
-<code class="xref py py-func docutils literal notranslate"><span class="pre">phi_to_r_hat()</span></code>.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>r_hat_sq</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, ilev_idx], Float]</span></dt><dd><p>Layer-averaged <code class="docutils literal notranslate"><span class="pre">r_hat^2</span></code> at mid-levels; used in the non-hydrostatic
-pressure calculation.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
+  <section id="src-dynamical-cores-homme-thermodynamics-module">
+<h1>src.dynamical_cores.homme.thermodynamics module<a class="headerlink" href="#src-dynamical-cores-homme-thermodynamics-module" title="Link to this heading">¶</a></h1>
 </section>
 
 
@@ -218,10 +65,10 @@ pressure calculation.</p>
 <script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../installation_and_validation.html">Usage</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">How to run the model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../user_friendly_api.html">The pySEs public API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../anatomy_of_a_model_struct.html">How is the atmospheric state represented in pySEs?</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">How are horizontal grids generated and read into pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">Horizontal grid generation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="modules.html">src</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="src.html">src package</a><ul class="current">
@@ -234,24 +81,17 @@ pressure calculation.</p>
 <li class="toctree-l7 current"><a class="reference internal" href="src.dynamical_cores.homme.html#submodules">Submodules</a><ul class="current">
 <li class="toctree-l8"><a class="reference internal" href="src.dynamical_cores.homme.explicit_terms.html">src.dynamical_cores.homme.explicit_terms module</a></li>
 <li class="toctree-l8"><a class="reference internal" href="src.dynamical_cores.homme.homme_state.html">src.dynamical_cores.homme.homme_state module</a></li>
-<li class="toctree-l8 current"><a class="current reference internal" href="#">src.dynamical_cores.homme.thermodynamics module</a><ul>
-<li class="toctree-l9"><a class="reference internal" href="#src.dynamical_cores.homme.thermodynamics.eval_balanced_geopotential"><code class="docutils literal notranslate"><span class="pre">eval_balanced_geopotential()</span></code></a></li>
-<li class="toctree-l9"><a class="reference internal" href="#src.dynamical_cores.homme.thermodynamics.eval_midlevel_pressure"><code class="docutils literal notranslate"><span class="pre">eval_midlevel_pressure()</span></code></a></li>
-<li class="toctree-l9"><a class="reference internal" href="#src.dynamical_cores.homme.thermodynamics.eval_mu"><code class="docutils literal notranslate"><span class="pre">eval_mu()</span></code></a></li>
-<li class="toctree-l9"><a class="reference internal" href="#src.dynamical_cores.homme.thermodynamics.eval_pressure_exner_nonhydrostatic"><code class="docutils literal notranslate"><span class="pre">eval_pressure_exner_nonhydrostatic()</span></code></a></li>
-<li class="toctree-l9"><a class="reference internal" href="#src.dynamical_cores.homme.thermodynamics.eval_r_hat_sq_avg"><code class="docutils literal notranslate"><span class="pre">eval_r_hat_sq_avg()</span></code></a></li>
+<li class="toctree-l8 current"><a class="current reference internal" href="#">src.dynamical_cores.homme.thermodynamics module</a></li>
 </ul>
 </li>
-</ul>
-</li>
-<li class="toctree-l7"><a class="reference internal" href="src.dynamical_cores.homme.html#module-src.dynamical_cores.homme">Module contents</a></li>
+<li class="toctree-l7"><a class="reference internal" href="src.dynamical_cores.homme.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 <li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.tracer_advection.html">src.dynamical_cores.tracer_advection package</a></li>
 </ul>
 </li>
 <li class="toctree-l5"><a class="reference internal" href="src.dynamical_cores.html#submodules">Submodules</a></li>
-<li class="toctree-l5"><a class="reference internal" href="src.dynamical_cores.html#module-src.dynamical_cores">Module contents</a></li>
+<li class="toctree-l5"><a class="reference internal" href="src.dynamical_cores.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 <li class="toctree-l4"><a class="reference internal" href="src.mesh_generation.html">src.mesh_generation package</a></li>
@@ -262,7 +102,7 @@ pressure calculation.</p>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="src.html#submodules">Submodules</a></li>
-<li class="toctree-l3"><a class="reference internal" href="src.html#module-src">Module contents</a></li>
+<li class="toctree-l3"><a class="reference internal" href="src.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 </ul>

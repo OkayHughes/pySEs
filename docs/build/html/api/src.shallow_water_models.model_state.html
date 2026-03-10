@@ -33,154 +33,8 @@
 
           <div class="body" role="main">
             
-  <section id="module-src.shallow_water_models.model_state">
-<span id="src-shallow-water-models-model-state-module"></span><h1>src.shallow_water_models.model_state module<a class="headerlink" href="#module-src.shallow_water_models.model_state" title="Link to this heading">¶</a></h1>
-<dl class="py function">
-<dt class="sig sig-object py" id="src.shallow_water_models.model_state.extract_average_dyn">
-<span class="sig-prename descclassname"><span class="pre">src.shallow_water_models.model_state.</span></span><span class="sig-name descname"><span class="pre">extract_average_dyn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state_in</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.shallow_water_models.model_state.extract_average_dyn" title="Link to this definition">¶</a></dt>
-<dd><p>Compute the tracer-consistency flux <code class="docutils literal notranslate"><span class="pre">u</span> <span class="pre">*</span> <span class="pre">h</span></code> from a shallow-water state.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>state_in</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Shallow-water model state with keys <code class="docutils literal notranslate"><span class="pre">&quot;horizontal_wind&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;h&quot;</span></code>.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>tracer_consist</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Dict with key <code class="docutils literal notranslate"><span class="pre">&quot;u_d_mass_avg&quot;</span></code> containing the layer-thickness-weighted
-wind <code class="docutils literal notranslate"><span class="pre">h</span> <span class="pre">*</span> <span class="pre">u</span></code>.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.shallow_water_models.model_state.extract_average_hypervis">
-<span class="sig-prename descclassname"><span class="pre">src.shallow_water_models.model_state.</span></span><span class="sig-name descname"><span class="pre">extract_average_hypervis</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state_tendency</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">diffusion_config</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.shallow_water_models.model_state.extract_average_hypervis" title="Link to this definition">¶</a></dt>
-<dd><p>Compute the tracer-consistency struct from a hyperviscosity tendency.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>state_in</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Shallow-water model state before the hyperviscosity step.</p>
-</dd>
-<dt><strong>state_tendency</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Hyperviscosity tendency struct (output of <code class="docutils literal notranslate"><span class="pre">eval_hypervis_*</span></code>).</p>
-</dd>
-<dt><strong>diffusion_config</strong><span class="classifier">dict[str, Any]</span></dt><dd><p>Hyperviscosity configuration; must contain <code class="docutils literal notranslate"><span class="pre">&quot;nu_d_mass&quot;</span></code>.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>tracer_consist</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Dict with keys <code class="docutils literal notranslate"><span class="pre">&quot;d_mass_hypervis_avg&quot;</span></code> (layer thickness) and
-<code class="docutils literal notranslate"><span class="pre">&quot;d_mass_hypervis_tend&quot;</span></code> (effective mass flux tendency for tracers).</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.shallow_water_models.model_state.project_model_state">
-<span class="sig-prename descclassname"><span class="pre">src.shallow_water_models.model_state.</span></span><span class="sig-name descname"><span class="pre">project_model_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.shallow_water_models.model_state.project_model_state" title="Link to this definition">¶</a></dt>
-<dd><p>Project the shallow-water model state onto the continuous spectral element space (DSS).</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>state</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Shallow-water model state, as returned by <code class="docutils literal notranslate"><span class="pre">wrap_model_state</span></code>.</p>
-</dd>
-<dt><strong>grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal spectral element grid.</p>
-</dd>
-<dt><strong>dims</strong><span class="classifier">dict[str, int]</span></dt><dd><p>Grid dimension parameters.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>state_cont</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Shallow-water model state with all fields projected to be
-globally continuous (C0).</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.shallow_water_models.model_state.sum_avg_struct">
-<span class="sig-prename descclassname"><span class="pre">src.shallow_water_models.model_state.</span></span><span class="sig-name descname"><span class="pre">sum_avg_struct</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">struct_1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">struct_2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coeff_1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coeff_2</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.shallow_water_models.model_state.sum_avg_struct" title="Link to this definition">¶</a></dt>
-<dd><p>Compute a weighted sum of two tracer-consistency structs field-by-field.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>struct_1</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>First struct (e.g. a tracer-consistency accumulator).</p>
-</dd>
-<dt><strong>struct_2</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Second struct with the same keys as <code class="docutils literal notranslate"><span class="pre">struct_1</span></code>.</p>
-</dd>
-<dt><strong>coeff_1</strong><span class="classifier">float</span></dt><dd><p>Scalar weight applied to each field of <code class="docutils literal notranslate"><span class="pre">struct_1</span></code>.</p>
-</dd>
-<dt><strong>coeff_2</strong><span class="classifier">float</span></dt><dd><p>Scalar weight applied to each field of <code class="docutils literal notranslate"><span class="pre">struct_2</span></code>.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>struct_out</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Field-wise weighted sum <code class="docutils literal notranslate"><span class="pre">coeff_1</span> <span class="pre">*</span> <span class="pre">struct_1</span> <span class="pre">+</span> <span class="pre">coeff_2</span> <span class="pre">*</span> <span class="pre">struct_2</span></code>.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.shallow_water_models.model_state.sum_state_series">
-<span class="sig-prename descclassname"><span class="pre">src.shallow_water_models.model_state.</span></span><span class="sig-name descname"><span class="pre">sum_state_series</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">states_in</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coeffs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.shallow_water_models.model_state.sum_state_series" title="Link to this definition">¶</a></dt>
-<dd><p>Compute a weighted linear combination of a sequence of shallow-water states.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>states_in</strong><span class="classifier">list[dict[str, Array]]</span></dt><dd><p>Sequence of shallow-water model states, each as returned by
-<code class="docutils literal notranslate"><span class="pre">wrap_model_state</span></code>. Must have the same length as <code class="docutils literal notranslate"><span class="pre">coeffs</span></code>.</p>
-</dd>
-<dt><strong>coeffs</strong><span class="classifier">list[float]</span></dt><dd><p>Scalar coefficients for each state in <code class="docutils literal notranslate"><span class="pre">states_in</span></code>.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>state_res</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Weighted sum of the input states; surface topography <code class="docutils literal notranslate"><span class="pre">&quot;hs&quot;</span></code> is
-taken from the first state unchanged.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="src.shallow_water_models.model_state.wrap_model_state">
-<span class="sig-prename descclassname"><span class="pre">src.shallow_water_models.model_state.</span></span><span class="sig-name descname"><span class="pre">wrap_model_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">horizontal_wind</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.shallow_water_models.model_state.wrap_model_state" title="Link to this definition">¶</a></dt>
-<dd><p>Assemble the shallow-water model state dict from its prognostic fields.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>horizontal_wind</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, 2], Float]</span></dt><dd><p>Covariant horizontal wind <code class="docutils literal notranslate"><span class="pre">(u,</span> <span class="pre">v)</span></code> in m s^-1.</p>
-</dd>
-<dt><strong>h</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx], Float]</span></dt><dd><p>Free-surface height (m).</p>
-</dd>
-<dt><strong>hs</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx], Float]</span></dt><dd><p>Surface topography (m).</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>state</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Shallow-water model state with keys <code class="docutils literal notranslate"><span class="pre">&quot;horizontal_wind&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;h&quot;</span></code>,
-and <code class="docutils literal notranslate"><span class="pre">&quot;hs&quot;</span></code>.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
+  <section id="src-shallow-water-models-model-state-module">
+<h1>src.shallow_water_models.model_state module<a class="headerlink" href="#src-shallow-water-models-model-state-module" title="Link to this heading">¶</a></h1>
 </section>
 
 
@@ -211,10 +65,10 @@ and <code class="docutils literal notranslate"><span class="pre">&quot;hs&quot;<
 <script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../installation_and_validation.html">Usage</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">How to run the model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../user_friendly_api.html">The pySEs public API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../anatomy_of_a_model_struct.html">How is the atmospheric state represented in pySEs?</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">How are horizontal grids generated and read into pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">Horizontal grid generation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="modules.html">src</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="src.html">src package</a><ul class="current">
@@ -230,29 +84,21 @@ and <code class="docutils literal notranslate"><span class="pre">&quot;hs&quot;<
 <li class="toctree-l6"><a class="reference internal" href="src.shallow_water_models.explicit_terms.html">src.shallow_water_models.explicit_terms module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.shallow_water_models.galewsky_init.html">src.shallow_water_models.galewsky_init module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.shallow_water_models.hyperviscosity.html">src.shallow_water_models.hyperviscosity module</a></li>
-<li class="toctree-l6 current"><a class="current reference internal" href="#">src.shallow_water_models.model_state module</a><ul>
-<li class="toctree-l7"><a class="reference internal" href="#src.shallow_water_models.model_state.extract_average_dyn"><code class="docutils literal notranslate"><span class="pre">extract_average_dyn()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.shallow_water_models.model_state.extract_average_hypervis"><code class="docutils literal notranslate"><span class="pre">extract_average_hypervis()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.shallow_water_models.model_state.project_model_state"><code class="docutils literal notranslate"><span class="pre">project_model_state()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.shallow_water_models.model_state.sum_avg_struct"><code class="docutils literal notranslate"><span class="pre">sum_avg_struct()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.shallow_water_models.model_state.sum_state_series"><code class="docutils literal notranslate"><span class="pre">sum_state_series()</span></code></a></li>
-<li class="toctree-l7"><a class="reference internal" href="#src.shallow_water_models.model_state.wrap_model_state"><code class="docutils literal notranslate"><span class="pre">wrap_model_state()</span></code></a></li>
-</ul>
-</li>
+<li class="toctree-l6 current"><a class="current reference internal" href="#">src.shallow_water_models.model_state module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.shallow_water_models.run_shallow_water.html">src.shallow_water_models.run_shallow_water module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.shallow_water_models.time_stepping.html">src.shallow_water_models.time_stepping module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.shallow_water_models.tracers.html">src.shallow_water_models.tracers module</a></li>
 <li class="toctree-l6"><a class="reference internal" href="src.shallow_water_models.williamson_init.html">src.shallow_water_models.williamson_init module</a></li>
 </ul>
 </li>
-<li class="toctree-l5"><a class="reference internal" href="src.shallow_water_models.html#module-src.shallow_water_models">Module contents</a></li>
+<li class="toctree-l5"><a class="reference internal" href="src.shallow_water_models.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 <li class="toctree-l4"><a class="reference internal" href="src.tracer_transport.html">src.tracer_transport package</a></li>
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="src.html#submodules">Submodules</a></li>
-<li class="toctree-l3"><a class="reference internal" href="src.html#module-src">Module contents</a></li>
+<li class="toctree-l3"><a class="reference internal" href="src.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 </ul>

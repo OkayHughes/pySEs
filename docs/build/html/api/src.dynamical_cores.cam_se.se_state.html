@@ -33,54 +33,8 @@
 
           <div class="body" role="main">
             
-  <section id="module-src.dynamical_cores.cam_se.se_state">
-<span id="src-dynamical-cores-cam-se-se-state-module"></span><h1>src.dynamical_cores.cam_se.se_state module<a class="headerlink" href="#module-src.dynamical_cores.cam_se.se_state" title="Link to this heading">¶</a></h1>
-<dl class="py function">
-<dt class="sig sig-object py" id="src.dynamical_cores.cam_se.se_state.init_model_struct">
-<span class="sig-prename descclassname"><span class="pre">src.dynamical_cores.cam_se.se_state.</span></span><span class="sig-name descname"><span class="pre">init_model_struct</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">u</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">T</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_mass</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phi_surf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">moisture_species</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tracers</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dry_air_species</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.dynamical_cores.cam_se.se_state.init_model_struct" title="Link to this definition">¶</a></dt>
-<dd><p>Initialise the full CAM-SE model state from raw prognostic arrays.</p>
-<p>Assembles the dynamics, static forcing, and tracer sub-structs and wraps
-them into the top-level model state dict.  For models that do not use
-variable-kappa dry-air species the <code class="docutils literal notranslate"><span class="pre">dry_air_species</span></code> argument is ignored
-and replaced with a uniform <code class="docutils literal notranslate"><span class="pre">{&quot;dry_air&quot;:</span> <span class="pre">ones}</span></code> array.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><dl class="simple">
-<dt><strong>u</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, 2], Float]</span></dt><dd><p>Horizontal wind components <code class="docutils literal notranslate"><span class="pre">(u,</span> <span class="pre">v)</span></code>.</p>
-</dd>
-<dt><strong>T</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Temperature (K); the CAM-SE thermodynamic prognostic variable.</p>
-</dd>
-<dt><strong>d_mass</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]</span></dt><dd><p>Dry-air layer mass (Pa).</p>
-</dd>
-<dt><strong>phi_surf</strong><span class="classifier">Array[tuple[elem_idx, gll_idx, gll_idx], Float]</span></dt><dd><p>Surface geopotential (m^2 s^-2).</p>
-</dd>
-<dt><strong>moisture_species</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Moisture mixing-ratio fields (kg moisture / kg dry air) keyed by
-species name.</p>
-</dd>
-<dt><strong>tracers</strong><span class="classifier">dict[str, Array]</span></dt><dd><p>Passive tracer fields keyed by tracer name.</p>
-</dd>
-<dt><strong>h_grid</strong><span class="classifier">SpectralElementGrid</span></dt><dd><p>Horizontal grid struct.</p>
-</dd>
-<dt><strong>dims</strong><span class="classifier">frozendict[str, int]</span></dt><dd><p>Grid dimension tuple; static JIT argument.</p>
-</dd>
-<dt><strong>physics_config</strong><span class="classifier">dict</span></dt><dd><p>Physics configuration dict.</p>
-</dd>
-<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Model identifier; static JIT argument.</p>
-</dd>
-<dt><strong>dry_air_species</strong><span class="classifier">dict[str, Array] or None, optional</span></dt><dd><p>Dry-air species mass-fraction fields keyed by species name; only used
-for variable-kappa models.  Defaults to <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
-</dd>
-</dl>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><dl class="simple">
-<dt><strong>state</strong><span class="classifier">dict</span></dt><dd><p>Top-level model state dict from <code class="xref py py-func docutils literal notranslate"><span class="pre">wrap_model_state()</span></code>.</p>
-</dd>
-</dl>
-</dd>
-</dl>
-</dd></dl>
-
+  <section id="src-dynamical-cores-cam-se-se-state-module">
+<h1>src.dynamical_cores.cam_se.se_state module<a class="headerlink" href="#src-dynamical-cores-cam-se-se-state-module" title="Link to this heading">¶</a></h1>
 </section>
 
 
@@ -111,10 +65,10 @@ for variable-kappa models.  Defaults to <code class="docutils literal notranslat
 <script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../installation_and_validation.html">Usage</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">How to run the model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">Quickstart</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../user_friendly_api.html">The pySEs public API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../anatomy_of_a_model_struct.html">How is the atmospheric state represented in pySEs?</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">How are horizontal grids generated and read into pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">Horizontal grid generation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="modules.html">src</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="src.html">src package</a><ul class="current">
@@ -125,14 +79,11 @@ for variable-kappa models.  Defaults to <code class="docutils literal notranslat
 <li class="toctree-l6 current"><a class="reference internal" href="src.dynamical_cores.cam_se.html">src.dynamical_cores.cam_se package</a><ul class="current">
 <li class="toctree-l7 current"><a class="reference internal" href="src.dynamical_cores.cam_se.html#submodules">Submodules</a><ul class="current">
 <li class="toctree-l8"><a class="reference internal" href="src.dynamical_cores.cam_se.explicit_terms.html">src.dynamical_cores.cam_se.explicit_terms module</a></li>
-<li class="toctree-l8 current"><a class="current reference internal" href="#">src.dynamical_cores.cam_se.se_state module</a><ul>
-<li class="toctree-l9"><a class="reference internal" href="#src.dynamical_cores.cam_se.se_state.init_model_struct"><code class="docutils literal notranslate"><span class="pre">init_model_struct()</span></code></a></li>
-</ul>
-</li>
+<li class="toctree-l8 current"><a class="current reference internal" href="#">src.dynamical_cores.cam_se.se_state module</a></li>
 <li class="toctree-l8"><a class="reference internal" href="src.dynamical_cores.cam_se.thermodynamics.html">src.dynamical_cores.cam_se.thermodynamics module</a></li>
 </ul>
 </li>
-<li class="toctree-l7"><a class="reference internal" href="src.dynamical_cores.cam_se.html#module-src.dynamical_cores.cam_se">Module contents</a></li>
+<li class="toctree-l7"><a class="reference internal" href="src.dynamical_cores.cam_se.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 <li class="toctree-l6"><a class="reference internal" href="src.dynamical_cores.homme.html">src.dynamical_cores.homme package</a></li>
@@ -140,7 +91,7 @@ for variable-kappa models.  Defaults to <code class="docutils literal notranslat
 </ul>
 </li>
 <li class="toctree-l5"><a class="reference internal" href="src.dynamical_cores.html#submodules">Submodules</a></li>
-<li class="toctree-l5"><a class="reference internal" href="src.dynamical_cores.html#module-src.dynamical_cores">Module contents</a></li>
+<li class="toctree-l5"><a class="reference internal" href="src.dynamical_cores.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 <li class="toctree-l4"><a class="reference internal" href="src.mesh_generation.html">src.mesh_generation package</a></li>
@@ -151,7 +102,7 @@ for variable-kappa models.  Defaults to <code class="docutils literal notranslat
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="src.html#submodules">Submodules</a></li>
-<li class="toctree-l3"><a class="reference internal" href="src.html#module-src">Module contents</a></li>
+<li class="toctree-l3"><a class="reference internal" href="src.html#module-contents">Module contents</a></li>
 </ul>
 </li>
 </ul>
