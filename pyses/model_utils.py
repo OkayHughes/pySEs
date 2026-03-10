@@ -11,52 +11,52 @@ _be = _get_backend()
 
 
 class mass_coordinate:
-  init_vertical_grid = _mass_coordinate.init_vertical_grid
-  surface_mass_to_interface_mass = _mass_coordinate.surface_mass_to_interface_mass
-  surface_mass_to_midlevel_mass = _mass_coordinate.surface_mass_to_midlevel_mass
-  d_mass_to_surface_mass = _mass_coordinate.d_mass_to_surface_mass
+  init_vertical_grid = staticmethod(_mass_coordinate.init_vertical_grid)
+  surface_mass_to_interface_mass = staticmethod(_mass_coordinate.surface_mass_to_interface_mass)
+  surface_mass_to_midlevel_mass = staticmethod(_mass_coordinate.surface_mass_to_midlevel_mass)
+  d_mass_to_surface_mass = staticmethod(_mass_coordinate.d_mass_to_surface_mass)
 
 
 class model_state:
-  sum_dynamics = _model_state.sum_dynamics_series
-  sum_tracers = _model_state.sum_tracers_series
+  sum_dynamics = staticmethod(_model_state.sum_dynamics_series)
+  sum_tracers = staticmethod(_model_state.sum_tracers_series)
 
-  remap_tracers = _model_state.remap_tracers
-  remap_dynamics = _model_state.remap_dynamics
+  remap_tracers = staticmethod(_model_state.remap_tracers)
+  remap_dynamics = staticmethod(_model_state.remap_dynamics)
 
-  wrap_dynamics = _model_state.wrap_dynamics
-  wrap_static_forcing = _model_state.wrap_static_forcing
-  wrap_tracers = _model_state.wrap_tracers
-  wrap_model_state = _model_state.wrap_model_state
+  wrap_dynamics = staticmethod(_model_state.wrap_dynamics)
+  wrap_static_forcing = staticmethod(_model_state.wrap_static_forcing)
+  wrap_tracers = staticmethod(_model_state.wrap_tracers)
+  wrap_model_state = staticmethod(_model_state.wrap_model_state)
 
-  copy_dynamics = _model_state.copy_dynamics
-  copy_tracers = _model_state.copy_tracers
-  copy_model_state = _model_state.copy_model_state
+  copy_dynamics = staticmethod(_model_state.copy_dynamics)
+  copy_tracers = staticmethod(_model_state.copy_tracers)
+  copy_model_state = staticmethod(_model_state.copy_model_state)
 
-  project_dynamics = _model_state.project_dynamics
+  project_dynamics = staticmethod(_model_state.project_dynamics)
 
-  check_dynamics_nan = _model_state.check_dynamics_nan
-  check_tracers_nan = _model_state.check_tracers_nan
+  check_dynamics_nan = staticmethod(_model_state.check_dynamics_nan)
+  check_tracers_nan = staticmethod(_model_state.check_tracers_nan)
 
 
 class model_config:
-  init_default_config = _model_config.init_default_config
+  init_default_config = staticmethod(_model_config.init_default_config)
   hypervis_opts = _model_config.hypervis_opts
-  init_physics_config = _physics_config.init_physics_config
-  init_timestep_config = _time_stepping.init_timestep_config
-  init_diffusion_config = _hyperviscosity.init_hypervis_config_tensor
+  init_physics_config = staticmethod(_physics_config.init_physics_config)
+  init_timestep_config = staticmethod(_time_stepping.init_timestep_config)
+  init_diffusion_config = staticmethod(_hyperviscosity.init_hypervis_config_tensor)
 
 
 class parallel_utils:
-  get_global_array = _be.get_global_array
-  device_wrapper = _be.array
-  device_unwrapper = _be.unwrap
+  get_global_array = staticmethod(_be.get_global_array)
+  device_wrapper = staticmethod(_be.array)
+  device_unwrapper = staticmethod(_be.unwrap)
 
 
 class operators:
-  project_scalar_3d = _model_state.project_scalar_3d
-  horizontal_gradient_3d = _operators_3d.horizontal_gradient_3d
-  horizontal_divergence_3d = _operators_3d.horizontal_divergence_3d
-  horizontal_vorticity_3d = _operators_3d.horizontal_vorticity_3d
-  horizontal_weak_laplacian_3d = _operators_3d.horizontal_weak_laplacian_3d
-  horizontal_weak_vector_laplacian_3d = _operators_3d.horizontal_weak_vector_laplacian_3d
+  project_scalar_3d = staticmethod(_model_state.project_scalar_3d)
+  horizontal_gradient_3d = staticmethod(_operators_3d.horizontal_gradient_3d)
+  horizontal_divergence_3d = staticmethod(_operators_3d.horizontal_divergence_3d)
+  horizontal_vorticity_3d = staticmethod(_operators_3d.horizontal_vorticity_3d)
+  horizontal_weak_laplacian_3d = staticmethod(_operators_3d.horizontal_weak_laplacian_3d)
+  horizontal_weak_vector_laplacian_3d = staticmethod(_operators_3d.horizontal_weak_vector_laplacian_3d)

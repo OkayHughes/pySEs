@@ -9,25 +9,25 @@ simulate_shallow_water = _run_shallow_water.simulate_shallow_water
 
 
 class configure:
-  init_hypervis_config_quasi_uniform = _hyperviscosity_sw.init_hypervis_config_const
-  init_hypervis_config_variable_res = _hyperviscosity_sw.init_hypervis_config_tensor
-  init_timestep_config = _time_stepping_sw.init_timestep_config
+  init_hypervis_config_quasi_uniform = staticmethod(_hyperviscosity_sw.init_hypervis_config_const)
+  init_hypervis_config_variable_res = staticmethod(_hyperviscosity_sw.init_hypervis_config_tensor)
+  init_timestep_config = staticmethod(_time_stepping_sw.init_timestep_config)
 
 
 class model_state:
-  wrap_model_state = _model_state_sw.wrap_model_state
-  project_model_state = _model_state_sw.project_model_state
+  wrap_model_state = staticmethod(_model_state_sw.wrap_model_state)
+  project_model_state = staticmethod(_model_state_sw.project_model_state)
 
 
 class galewsky_init:
-  init_galewsky_config = _galewsky_init.init_galewsky_config
-  eval_galewky_wind = _galewsky_init.eval_galewsky_wind
-  eval_galewky_h = _galewsky_init.eval_galewsky_h
-  eval_galewky_hs = _galewsky_init.eval_galewsky_hs
+  init_galewsky_config = staticmethod(_galewsky_init.init_galewsky_config)
+  eval_galewky_wind = staticmethod(_galewsky_init.eval_galewsky_wind)
+  eval_galewky_h = staticmethod(_galewsky_init.eval_galewsky_h)
+  eval_galewky_hs = staticmethod(_galewsky_init.eval_galewsky_hs)
 
 
 class williamson_init:
-  init_williamson_steady_config = _williamson_init.init_williamson_steady_config
-  init_williamson_tc2_wind = _williamson_init.eval_williamson_tc2_u
-  init_williamson_tc2_h = _williamson_init.eval_williamson_tc2_h
-  init_williamson_tc2_hs = _williamson_init.eval_williamson_tc2_hs
+  init_williamson_steady_config = staticmethod(_williamson_init.init_williamson_steady_config)
+  init_williamson_tc2_wind = staticmethod(_williamson_init.eval_williamson_tc2_u)
+  init_williamson_tc2_h = staticmethod(_williamson_init.eval_williamson_tc2_h)
+  init_williamson_tc2_hs = staticmethod(_williamson_init.eval_williamson_tc2_hs)
