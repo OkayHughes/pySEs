@@ -1,8 +1,4 @@
 from .._config import get_backend as _get_backend
-_be = _get_backend()
-jit = _be.jit
-jnp = _be.np
-DEBUG = _be.debug
 from .model_state import project_dynamics, sum_dynamics_series, sum_consistency_struct
 from .homme.explicit_terms import eval_explicit_tendency as eval_explicit_tendency_homme
 from .cam_se.explicit_terms import eval_explicit_tendency as eval_explicit_tendency_se
@@ -14,6 +10,10 @@ from functools import partial
 from frozendict import frozendict
 from .physics_dynamics_coupling import coupling_types
 from .model_info import cam_se_models, homme_models
+_be = _get_backend()
+jit = _be.jit
+jnp = _be.np
+DEBUG = _be.debug
 
 
 @partial(jit, static_argnames=["dims", "model"])

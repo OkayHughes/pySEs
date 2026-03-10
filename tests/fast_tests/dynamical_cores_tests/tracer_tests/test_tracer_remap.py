@@ -1,6 +1,4 @@
 from src._config import get_backend as _get_backend
-_be = _get_backend()
-jnp = _be.np
 import numpy as np
 from src.mesh_generation.equiangular_metric import init_quasi_uniform_grid
 from src.analytic_initialization.moist_baroclinic_wave import init_baroclinic_wave_config, init_baroclinic_wave_state
@@ -10,6 +8,9 @@ from src.dynamical_cores.physics_config import init_physics_config
 from src.dynamical_cores.mass_coordinate import d_mass_to_surface_mass, surface_mass_to_d_mass
 from src.dynamical_cores.model_state import remap_tracers
 from ....test_data.mass_coordinate_grids import cam30
+_be = _get_backend()
+jnp = _be.np
+
 
 def test_remap_tracers():
   npt = 4
@@ -23,16 +24,18 @@ def test_remap_tracers():
   model_config = init_physics_config(model)
   test_config = init_baroclinic_wave_config(model_config=model_config)
   model_state = init_baroclinic_wave_state(h_grid,
-                                            v_grid,
-                                            model_config,
-                                            test_config,
-                                            dims,
-                                            model,
-                                            mountain=False,
-                                            moist=True,
-                                            eps=1e-3)
-  model_state["tracers"]["josh"] = jnp.array(np.random.uniform(size=model_state["tracers"]["moisture_species"]["water_vapor"].shape))
-  model_state["dynamics"]["d_mass"] *= jnp.array(np.random.uniform(size=model_state["dynamics"]["d_mass"].shape, high=1.05, low=0.95))
+                                           v_grid,
+                                           model_config,
+                                           test_config,
+                                           dims,
+                                           model,
+                                           mountain=False,
+                                           moist=True,
+                                           eps=1e-3)
+  rand1 = np.random.uniform(size=model_state["tracers"]["moisture_species"]["water_vapor"].shape)
+  model_state["tracers"]["josh"] = jnp.array(rand1)
+  rand2 = np.random.uniform(size=model_state["dynamics"]["d_mass"].shape, high=1.05, low=0.95)
+  model_state["dynamics"]["d_mass"] *= jnp.array(rand2)
   surface_mass = d_mass_to_surface_mass(model_state["dynamics"]["d_mass"], v_grid)
   d_mass = model_state["dynamics"]["d_mass"]
   d_mass_ref = surface_mass_to_d_mass(surface_mass, v_grid)

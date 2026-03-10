@@ -1,9 +1,4 @@
 from src._config import get_backend as _get_backend
-_be = _get_backend()
-jnp = _be.np
-DEBUG = _be.debug
-device_unwrapper = _be.unwrap
-device_wrapper = _be.array
 import numpy as np
 from src.shallow_water_models.run_shallow_water import simulate_shallow_water
 from src.shallow_water_models.model_state import wrap_model_state
@@ -11,13 +6,13 @@ from src.shallow_water_models.constants import init_physics_config_shallow_water
 from src.shallow_water_models.time_stepping import init_timestep_config
 from src.shallow_water_models.hyperviscosity import init_hypervis_config_const, init_hypervis_config_tensor
 from src.shallow_water_models.williamson_init import (init_williamson_steady_config,
-                                                         eval_williamson_tc2_h,
-                                                         eval_williamson_tc2_hs,
-                                                         eval_williamson_tc2_u)
+                                                      eval_williamson_tc2_h,
+                                                      eval_williamson_tc2_hs,
+                                                      eval_williamson_tc2_u)
 from src.shallow_water_models.galewsky_init import (init_galewsky_config,
-                                                       eval_galewsky_wind,
-                                                       eval_galewsky_hs,
-                                                       eval_galewsky_h)
+                                                    eval_galewsky_wind,
+                                                    eval_galewsky_hs,
+                                                    eval_galewsky_h)
 from src.mesh_generation.equiangular_metric import init_quasi_uniform_grid
 from src.mesh_generation.element_local_metric import init_stretched_grid_elem_local
 from src.operations_2d.operators import inner_product, horizontal_vorticity
@@ -25,6 +20,13 @@ from src.operations_2d.local_assembly import project_scalar
 from ..context import get_figdir, plot_grid
 from os import makedirs
 from os.path import join
+
+_be = _get_backend()
+jnp = _be.np
+DEBUG = _be.debug
+device_unwrapper = _be.unwrap
+device_wrapper = _be.array
+
 
 if DEBUG:
   import matplotlib.pyplot as plt
@@ -58,7 +60,6 @@ def test_sw_model():
                                        physics_config, diffusion_config, timestep_config,
                                        dims, diffusion=False, tracers_in=tracers_in)
   dynamics = final_state["dynamics"]
-  tracers = final_state["tracers"]
   diff_u = u_init - dynamics["horizontal_wind"]
   diff_h = h_init - dynamics["h"]
   assert (inner_product(diff_u[:, :, :, 0], diff_u[:, :, :, 0], grid) < 1e-5)
@@ -108,7 +109,7 @@ def test_galewsky():
   test_config = init_galewsky_config(physics_config)
 
   dt = 300
-  T = (144 * 3600)*4
+  T = (144 * 3600) * 4
   u_init = device_wrapper(eval_galewsky_wind(grid["physical_coords"][:, :, :, 0],
                                              grid["physical_coords"][:, :, :, 1],
                                              test_config))
@@ -126,10 +127,9 @@ def test_galewsky():
   timestep_config = init_timestep_config(dt, grid, dims, physics_config,
                                          diffusion_config, sphere=True)
   final_struct = simulate_shallow_water(T, init_state, grid,
-                                       physics_config, diffusion_config, timestep_config,
-                                       dims, diffusion=True, tracers_in=tracers_in)
+                                        physics_config, diffusion_config, timestep_config,
+                                        dims, diffusion=True, tracers_in=tracers_in)
   final_state = final_struct["dynamics"]
-  tracers = final_struct["tracers"]
 
   # mass_init = inner_product(h_init, h_init, grid)
   # mass_final = inner_product(final_state["h"], final_state["h"], grid)
@@ -143,7 +143,11 @@ def test_galewsky():
     lon = device_unwrapper(grid["physical_coords"][:, :, :, 1])
     lat = device_unwrapper(grid["physical_coords"][:, :, :, 0])
     levels = np.arange(-10 + 1e-4, 101, 10)
-    vort = project_scalar(horizontal_vorticity(final_state["horizontal_wind"], grid, a=physics_config["radius_earth"]), grid, dims)
+    vort = project_scalar(horizontal_vorticity(final_state["horizontal_wind"],
+                                               grid,
+                                               a=physics_config["radius_earth"]),
+                          grid,
+                          dims)
     plt.figure()
     plt.title(f"U at time {T}s")
     plt.tricontourf(lon.flatten(), lat.flatten(),

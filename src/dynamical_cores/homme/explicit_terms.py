@@ -1,12 +1,7 @@
 import numpy as np
 from ..._config import get_backend as _get_backend
-_be = _get_backend()
-jnp = _be.np
-jit = _be.jit
-device_wrapper = _be.array
 from ..utils_3d import (midlevel_to_interface_vel,
                         midlevel_to_interface,
-
                         interface_to_midlevel,
                         interface_to_midlevel_vec)
 from ..utils_3d import phi_to_z, z_to_g, phi_to_g, physical_dot_product
@@ -16,7 +11,10 @@ from ..model_state import wrap_dynamics, wrap_tracer_consist_dynamics
 from ..model_state import project_scalar_3d
 from functools import partial
 from ..model_info import hydrostatic_models, deep_atmosphere_models
-
+_be = _get_backend()
+jnp = _be.np
+jit = _be.jit
+device_wrapper = _be.array
 
 
 @partial(jit, static_argnames=["model"])

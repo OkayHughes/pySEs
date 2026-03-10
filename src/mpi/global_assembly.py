@@ -1,13 +1,13 @@
 import numpy as np
 from .._config import get_backend as _get_backend
+from .global_communication import exchange_buffers, _exchange_buffers_stub
+from functools import partial
 _be = _get_backend()
 jnp = _be.np
 use_wrapper = _be.use_wrapper
 wrapper_type = _be.wrapper_type
 jit = _be.jit
 mpi_rank = _be.mpi_rank
-from .global_communication import exchange_buffers, _exchange_buffers_stub
-from functools import partial
 
 
 def sum_into(fijk_field,

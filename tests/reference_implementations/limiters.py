@@ -1,6 +1,7 @@
 from src._config import get_backend as _get_backend
-_be = _get_backend()
 import numpy as np
+_be = _get_backend()
+
 
 def clip_and_sum_limiter_for(tracer_like_tend_in, mass_matrix_in, tracer_min_in, tracer_max_in, d_mass_in):
   tracer_like_tend = np.copy(tracer_like_tend_in)
@@ -32,7 +33,7 @@ def clip_and_sum_limiter_for(tracer_like_tend_in, mass_matrix_in, tracer_min_in,
       tracer_max[k] = mass / sumc
     addmass = 0.0
     modified = False
-    
+
     for k1 in range(npt * npt):
       if x[k1] > tracer_max[k]:
         modified = True
@@ -52,7 +53,7 @@ def clip_and_sum_limiter_for(tracer_like_tend_in, mass_matrix_in, tracer_min_in,
         v = x - tracer_min[k]
       den = np.sum(v * c)
       if den > 0:
-        x += (addmass/den) * v
+        x += (addmass / den) * v
     k1 = 0
     for i in range(npt):
       for j in range(npt):
@@ -60,7 +61,13 @@ def clip_and_sum_limiter_for(tracer_like_tend_in, mass_matrix_in, tracer_min_in,
         k1 += 1
   return tracer_like_tend_out
 
-def full_limiter_for(tracer_like_tend_in, mass_matrix_in, tracer_min_in, tracer_max_in, d_mass_in, tol_limiter = 1e-10):
+
+def full_limiter_for(tracer_like_tend_in,
+                     mass_matrix_in,
+                     tracer_min_in,
+                     tracer_max_in,
+                     d_mass_in,
+                     tol_limiter=1e-10):
   tracer_like_tend = np.copy(tracer_like_tend_in)
   mass_matrix = np.copy(mass_matrix_in)
   tracer_max = np.copy(tracer_max_in)
@@ -96,8 +103,8 @@ def full_limiter_for(tracer_like_tend_in, mass_matrix_in, tracer_min_in, tracer_
       tracer_max[k] = mass / sumc
 
     for iter in range(npt * npt - 1):
-      addmass=0.0
-      
+      addmass = 0.0
+
       for k1 in range(npt * npt):
         if x[k1] > tracer_max[k]:
           addmass += (x[k1] - tracer_max[k]) * c[k1]

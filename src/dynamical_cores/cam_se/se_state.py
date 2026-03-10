@@ -1,10 +1,10 @@
 from ..._config import get_backend as _get_backend
-_be = _get_backend()
-jit = _be.jit
-jnp = _be.np
 from functools import partial
 from ..model_state import wrap_dynamics, init_static_forcing, wrap_tracers, wrap_model_state
 from ..model_info import variable_kappa_models
+_be = _get_backend()
+jit = _be.jit
+jnp = _be.np
 
 
 @partial(jit, static_argnames=["dims", "model"])

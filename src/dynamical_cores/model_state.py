@@ -1,26 +1,26 @@
 import numpy as np
 from .._config import get_backend as _get_backend
+from functools import partial
+from ..operations_2d.operators import horizontal_gradient
+from ..mpi.global_assembly import project_scalar_global
+from ..operations_2d.local_assembly import project_scalar
+from .model_info import (f_plane_models,
+                         deep_atmosphere_models,
+                         thermodynamic_variable_names,
+                         hydrostatic_models,
+                         cam_se_models,
+                         moist_mixing_ratio_models)
+from .mass_coordinate import surface_mass_to_d_mass, surface_mass_to_midlevel_mass
+from .homme.thermodynamics import eval_balanced_geopotential, eval_midlevel_pressure
+from .utils_3d import interface_to_delta, cumulative_sum, phi_to_g
+from .vertical_remap import zerroukat_remap
+from ..mpi.global_communication import global_sum
 _be = _get_backend()
 jnp = _be.np
 jit = _be.jit
 flip = _be.flip
 do_mpi_communication = _be.do_mpi_communication
 vmap_1d_apply = _be.vmap_1d_apply
-from functools import partial
-from ..operations_2d.operators import horizontal_gradient
-from ..mpi.global_assembly import project_scalar_global
-from ..operations_2d.local_assembly import project_scalar
-from .model_info import (f_plane_models,
-                          deep_atmosphere_models,
-                          thermodynamic_variable_names,
-                          hydrostatic_models,
-                          cam_se_models,
-                          moist_mixing_ratio_models)
-from .mass_coordinate import surface_mass_to_d_mass, surface_mass_to_midlevel_mass
-from .homme.thermodynamics import eval_balanced_geopotential, eval_midlevel_pressure
-from .utils_3d import interface_to_delta, cumulative_sum, phi_to_g
-from .vertical_remap import zerroukat_remap
-from ..mpi.global_communication import global_sum
 
 
 @partial(jit, static_argnames=["is_dry_air_species"])
@@ -57,9 +57,9 @@ def sum_tracers(state1,
 
 
 @partial(jit, static_argnames=["model"])
-def advance_tracers(tracer_states,
-                    coeffs,
-                    model):
+def sum_tracers_series(tracer_states,
+                       coeffs,
+                       model):
   """
   Compute a weighted linear combination of a list of tracer states.
 
@@ -252,7 +252,8 @@ def remap_tracers(dynamics,
   d_mass_ref = surface_mass_to_d_mass(pi_surf,
                                       v_grid)
   tracer_mass = jnp.stack(tracer_list, axis=-1) * dynamics["d_mass"][:, :, :, :, jnp.newaxis]
-  tracers_out = zerroukat_remap(tracer_mass, dynamics["d_mass"], d_mass_ref, num_lev, filter=True) / d_mass_ref[:, :, :, :, jnp.newaxis]
+  tracers_out = zerroukat_remap(tracer_mass, dynamics["d_mass"],
+                                d_mass_ref, num_lev, filter=True) / d_mass_ref[:, :, :, :, jnp.newaxis]
   ct = 0
   if model in cam_se_models:
     for species_name in dry_air_species.keys():
@@ -443,9 +444,9 @@ def copy_model_state(state,
 
 @partial(jit, static_argnames=["model"])
 def _wrap_tracer_like(moisture_species,
-                 tracers,
-                 model,
-                 dry_air_species=None):
+                      tracers,
+                      model,
+                      dry_air_species=None):
   """
   Build a tracer-like dict and attach the mixing-ratio convention flag.
 
@@ -547,9 +548,9 @@ def wrap_tracer_mass(moisture_species_mass,
       Tracer mass dict with key ``"mass_quantity": 1.0``.
   """
   tracer_mass = _wrap_tracer_like(moisture_species_mass,
-                                    tracers_mass,
-                                    model,
-                                    dry_air_species=dry_air_species_mass)
+                                  tracers_mass,
+                                  model,
+                                  dry_air_species=dry_air_species_mass)
   tracer_mass["mass_quantity"] = 1.0
   return tracer_mass
 

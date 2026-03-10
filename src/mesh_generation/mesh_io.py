@@ -39,27 +39,25 @@ def exodus_to_pyses_grid_corners(cart_coords, connect_map, element_permutation):
   # note: we are using pyses edge conventions
   num_elem = element_permutation.shape[0]
   edges_forward = [(0, 1),
-                  (0, 2),
-                  (1, 3),
-                  (2, 3)]
+                   (0, 2),
+                   (1, 3),
+                   (2, 3)]
 
   edges_backward = [(x[1], x[0]) for x in edges_forward]
 
   exo_vert_to_pyses = [2, 3, 1, 0]
 
-
   node_elem_map = {}
+
   def wrap(node_idx):
     if node_idx not in node_elem_map.keys():
       node_elem_map[node_idx] = set()
-
 
   for elem_idx in range(connect_map.shape[0]):
     for node_idx in range(connect_map.shape[1]):
       node_num = connect_map[elem_idx, node_idx]
       wrap(node_num)
       node_elem_map[node_num].add((exo_vert_to_pyses[node_idx], element_permutation[elem_idx]))
-
 
   # here we make the assumption that at most one edge is shared between elements
   # (paired_elem_idx, paired_edge_idx, is_reversed) = edge_info[elem_idx, edge_idx, :]
@@ -69,11 +67,11 @@ def exodus_to_pyses_grid_corners(cart_coords, connect_map, element_permutation):
     for node_idx in range(connect_map.shape[1]):
       elem_idx_loc = element_permutation[elem_idx]
       current_node = connect_map[elem_idx, node_idx]
-      next_node = connect_map[elem_idx, (node_idx+1)%4]
+      next_node = connect_map[elem_idx, (node_idx + 1) % 4]
       pyses_vert = exo_vert_to_pyses[node_idx]
-      vert_pos[elem_idx_loc-1, pyses_vert, :] = cart_coords[:, current_node-1]
+      vert_pos[elem_idx_loc - 1, pyses_vert, :] = cart_coords[:, current_node - 1]
       pyses_edge = (exo_vert_to_pyses[node_idx],
-                    exo_vert_to_pyses[(node_idx+1)%4])
+                    exo_vert_to_pyses[(node_idx + 1) % 4])
       if pyses_edge in edges_backward:
         local_edge_idx = edges_backward.index(pyses_edge)
       else:
@@ -90,9 +88,9 @@ def exodus_to_pyses_grid_corners(cart_coords, connect_map, element_permutation):
               remote_edge_idx = edges_forward.index(edge_pair)
             remote_is_backwards = edge_pair in edges_backward
             local_is_backwards = pyses_edge in edges_backward
-            edge_info[elem_idx_loc-1, local_edge_idx, 0] = edge_pair_elem_idx - 1
-            edge_info[elem_idx_loc-1, local_edge_idx, 1] = remote_edge_idx
-            edge_info[elem_idx_loc-1, local_edge_idx, 2] = 1 - (remote_is_backwards ^ local_is_backwards)
+            edge_info[elem_idx_loc - 1, local_edge_idx, 0] = edge_pair_elem_idx - 1
+            edge_info[elem_idx_loc - 1, local_edge_idx, 1] = remote_edge_idx
+            edge_info[elem_idx_loc - 1, local_edge_idx, 2] = 1 - (remote_is_backwards ^ local_is_backwards)
             break
 
   if DEBUG:

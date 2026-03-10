@@ -1,4 +1,13 @@
 from src._config import get_backend as _get_backend
+import numpy as np
+from src.mesh_generation.cubed_sphere import init_cube_topo
+from src.mesh_generation.mesh import init_element_corner_vert_redundancy
+from src.mesh_generation.equiangular_metric import init_grid_from_topo
+from src.analytic_initialization.moist_baroclinic_wave import (init_baroclinic_wave_config,
+                                                               eval_pressure_temperature,
+                                                               eval_state)
+from src.dynamical_cores.utils_3d import z_to_g
+from src.dynamical_cores.model_info import models
 _be = _get_backend()
 jnp = _be.np
 device_unwrapper = _be.unwrap
@@ -6,16 +15,6 @@ device_wrapper = _be.array
 use_wrapper = _be.use_wrapper
 wrapper_type = _be.wrapper_type
 get_global_array = _be.get_global_array
-import numpy as np
-
-from src.mesh_generation.cubed_sphere import init_cube_topo
-from src.mesh_generation.mesh import init_element_corner_vert_redundancy
-from src.mesh_generation.equiangular_metric import init_grid_from_topo
-from src.analytic_initialization.moist_baroclinic_wave import (init_baroclinic_wave_config,
-                                                                  eval_pressure_temperature,
-                                                                  eval_state)
-from src.dynamical_cores.utils_3d import z_to_g
-from src.dynamical_cores.model_info import models
 
 
 def test_shallow():

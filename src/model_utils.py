@@ -1,15 +1,13 @@
 from ._config import get_backend as _get_backend
-_be = _get_backend()
 from .dynamical_cores import mass_coordinate as _mass_coordinate
 from .dynamical_cores import model_state as _model_state
-from .dynamical_cores import utils_3d as _utils_3d
 from .dynamical_cores import operators_3d as _operators_3d
 from .dynamical_cores import model_config as _model_config
 from .dynamical_cores import time_stepping as _time_stepping
 from .dynamical_cores import physics_config as _physics_config
 from .dynamical_cores import hyperviscosity as _hyperviscosity
-
 from .dynamical_cores import model_info
+_be = _get_backend()
 
 
 class mass_coordinate:
@@ -20,8 +18,8 @@ class mass_coordinate:
 
 
 class model_state:
-  advance_dynamics = _model_state.sum_dynamics_series
-  advance_tracers = _model_state.advance_tracers
+  sum_dynamics = _model_state.sum_dynamics_series
+  sum_tracers = _model_state.sum_tracers_series
 
   remap_tracers = _model_state.remap_tracers
   remap_dynamics = _model_state.remap_dynamics
@@ -53,6 +51,7 @@ class parallel_utils:
   get_global_array = _be.get_global_array
   device_wrapper = _be.array
   device_unwrapper = _be.unwrap
+
 
 class operators:
   project_scalar_3d = _model_state.project_scalar_3d

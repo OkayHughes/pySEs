@@ -1,11 +1,11 @@
 from .._config import get_backend as _get_backend
+from ..mpi.global_assembly import project_scalar_global
+from ..operations_2d.local_assembly import project_scalar
+from functools import partial
 _be = _get_backend()
 jit = _be.jit
 jnp = _be.np
 do_mpi_communication = _be.do_mpi_communication
-from ..mpi.global_assembly import project_scalar_global
-from ..operations_2d.local_assembly import project_scalar
-from functools import partial
 
 
 def wrap_model_state(horizontal_wind,
@@ -56,12 +56,10 @@ def project_model_state(state,
       Shallow-water model state with all fields projected to be
       globally continuous (C0).
   """
-  if "half_h" in state.keys():
-    h_name = "half_h"
-  else:
-    h_name = "h"
   if do_mpi_communication:
-    u, v, h = project_scalar_global([state["horizontal_wind"][:, :, :, 0], state["horizontal_wind"][:, :, :, 1], state["h"][:, :, :]],
+    u, v, h = project_scalar_global([state["horizontal_wind"][:, :, :, 0],
+                                     state["horizontal_wind"][:, :, :, 1],
+                                     state["h"][:, :, :]],
                                     grid, dims, two_d=True)
   else:
     u = project_scalar(state["horizontal_wind"][:, :, :, 0], grid, dims)

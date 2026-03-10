@@ -1,8 +1,8 @@
 from src._config import get_backend as _get_backend
-_be = _get_backend()
 import numpy as np
 from src.mesh_generation.spectral import _gll_points
 from src.mesh_generation.periodic_plane import metric_terms_to_grid
+_be = _get_backend()
 # (1, 3, 3)||(1, 0, 3)(1, 1, 3)(1, 2, 3)(1, 3, 3)||(1, 0, 3)
 # =========||====================================||=========
 # (0, 3, 0)||(0, 0, 0)(0, 1, 0)(0, 2, 0)(0, 3, 0)||(0, 0, 0)

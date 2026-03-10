@@ -1,9 +1,4 @@
 from src._config import get_backend as _get_backend
-_be = _get_backend()
-jnp = _be.np
-device_wrapper = _be.array
-use_wrapper = _be.use_wrapper
-get_global_array = _be.get_global_array
 import numpy as np
 from src.mesh_generation.cubed_sphere import init_cube_topo
 from src.mesh_generation.mesh import init_element_corner_vert_redundancy
@@ -11,10 +6,15 @@ from src.operations_2d.horizontal_grid import shard_grid
 from src.mesh_generation.equiangular_metric import init_grid_from_topo
 from src.mesh_generation.mesh import vert_red_flat_to_hierarchy
 from src.operations_2d.local_assembly import (project_scalar_wrapper,
-                                                 project_scalar,
-                                                 init_shard_extraction_map,
-                                                 minmax_scalar)
-from ...context import test_npts, pretty_print_scalar
+                                              project_scalar,
+                                              init_shard_extraction_map,
+                                              minmax_scalar)
+from ...context import test_npts
+_be = _get_backend()
+jnp = _be.np
+device_wrapper = _be.array
+use_wrapper = _be.use_wrapper
+get_global_array = _be.get_global_array
 
 
 def project_scalar_for(f,
@@ -248,6 +248,7 @@ def test_minmax():
                                               vert_redundancy,
                                               npt,
                                               wrapped=False)
+
       def add_one_point(field, f, i, j):
         axis_1 = jnp.eye(field.shape[0])[f, :].squeeze()
         axis_2 = jnp.eye(field.shape[1])[i, :].squeeze()
@@ -255,6 +256,7 @@ def test_minmax():
         return (axis_1[:, jnp.newaxis, jnp.newaxis] *
                 axis_2[jnp.newaxis, :, jnp.newaxis] *
                 axis_3[jnp.newaxis, jnp.newaxis, :])
+
       vert_redundancy_gll = vert_red_flat_to_hierarchy(grid_nowrapper["vertex_redundancy"])
       for is_max, extremal_op in zip([True, False], [max, min]):
         for face_idx in range(grid["physical_coords"].shape[0]):
@@ -269,7 +271,7 @@ def test_minmax():
                     extremal_face_idx = extremal_op(remote_face_id, extremal_face_idx)
                     fn += add_one_point(fn, remote_face_id, remote_i, remote_j) * remote_face_id
               fn_out = jnp.zeros_like(grid["physical_coords"][:, :, :, 0])
-              fn_out += add_one_point(fn, face_idx, i_idx, j_idx) * extremal_face_idx 
+              fn_out += add_one_point(fn, face_idx, i_idx, j_idx) * extremal_face_idx
               if face_idx in vert_redundancy_gll.keys():
                 if (i_idx, j_idx) in vert_redundancy_gll[face_idx].keys():
                   for remote_face_id, remote_i, remote_j in vert_redundancy_gll[face_idx][(i_idx, j_idx)]:

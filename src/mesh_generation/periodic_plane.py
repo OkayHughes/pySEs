@@ -1,11 +1,11 @@
 import numpy as np
 from .._config import get_backend as _get_backend
-_be = _get_backend()
-use_wrapper = _be.use_wrapper
-do_sharding = _be.do_sharding
 from .spectral import init_spectral
 from ..operations_2d.horizontal_grid import init_spectral_element_grid, shard_grid, smooth_tensor
 from .mesh import vert_red_hierarchy_to_flat
+_be = _get_backend()
+use_wrapper = _be.use_wrapper
+do_sharding = _be.do_sharding
 
 
 def init_periodic_plane(nx,

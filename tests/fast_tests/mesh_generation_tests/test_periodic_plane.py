@@ -1,10 +1,10 @@
 from src.mesh_generation.periodic_plane import init_periodic_plane, metric_terms_to_grid
 from src._config import get_backend as _get_backend
+import numpy as np
+from ...context import test_npts
 _be = _get_backend()
 jnp = _be.np
 get_global_array = _be.get_global_array
-import numpy as np
-from ...context import test_npts
 
 
 def test_init_periodic_plane():

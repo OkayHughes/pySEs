@@ -1,10 +1,10 @@
 from .._config import get_backend as _get_backend
+from ..operations_2d.operators import horizontal_divergence, horizontal_vorticity
+from ..operations_2d.operators import horizontal_gradient, horizontal_weak_laplacian, horizontal_weak_vector_laplacian
 _be = _get_backend()
 partial = _be.partial
 jit = _be.jit
 vmap_1d_apply = _be.vmap_1d_apply
-from ..operations_2d.operators import horizontal_divergence, horizontal_vorticity
-from ..operations_2d.operators import horizontal_gradient, horizontal_weak_laplacian, horizontal_weak_vector_laplacian
 
 
 @jit

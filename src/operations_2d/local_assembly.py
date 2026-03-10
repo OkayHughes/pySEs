@@ -1,5 +1,8 @@
 import numpy as np
 from .._config import get_backend as _get_backend
+from ..mpi.processor_decomposition import global_to_local, elem_idx_global_to_proc_idx
+from scipy.sparse import coo_array
+from functools import partial
 _be = _get_backend()
 jnp = _be.np
 use_wrapper = _be.use_wrapper
@@ -13,11 +16,8 @@ projection_sharding = _be.projection_sharding
 extraction_sharding = _be.extraction_sharding
 usual_scalar_sharding = _be.usual_scalar_sharding
 do_sharding = _be.do_sharding
-from ..mpi.processor_decomposition import global_to_local, elem_idx_global_to_proc_idx
-from scipy.sparse import coo_array
-from functools import partial
 if use_wrapper and wrapper_type == "jax":
-  from jax.sharding import explicit_axes, PartitionSpec
+  from jax.sharding import PartitionSpec
   import jax
   shard_map_extract = partial(jax.shard_map,
                               in_specs=(PartitionSpec("f", None, None, None),
@@ -118,13 +118,11 @@ def segment_max(field,
       arrays into which segments have been summed.
   """
 
-  # This is really bad. Need more work to figure out how to make this 
-  # numpy-like.
-
   data = np.asarray(data)
   s = np.copy(field)
   np.maximum.at(s, (segment_ids[0], segment_ids[1], segment_ids[2]), data)
   return s
+
 
 @shard_map_extract
 def do_sum_manual_sharding(scaled_f, elem_idx, i_idx, j_idx, relevant_data):
@@ -248,6 +246,7 @@ def do_max_manual_sharding(scaled_f, elem_idx, i_idx, j_idx, relevant_data):
   scaled_f = scaled_f.at[0, elem_idx, i_idx, j_idx].max(relevant_data)
   return scaled_f
 
+
 @partial(jit, static_argnames=["dims", "max"])
 def minmax_scalar(f,
                   grid,
@@ -310,6 +309,7 @@ def minmax_scalar(f,
   if not max:
     scaled_f = -1.0 * scaled_f
   return scaled_f
+
 
 project_scalar = project_scalar_wrapper
 

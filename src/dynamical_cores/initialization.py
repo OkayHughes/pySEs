@@ -1,24 +1,23 @@
 import numpy as np
 from .._config import get_backend as _get_backend
-_be = _get_backend()
-jnp = _be.np
-device_wrapper = _be.array
-DEBUG = _be.debug
 from .homme.homme_state import init_model_struct as init_model_struct_homme
 from .cam_se.se_state import init_model_struct as init_model_struct_se
 from .homme.thermodynamics import eval_balanced_geopotential
 from .utils_3d import interface_to_delta
 from .mass_coordinate import (surface_mass_to_midlevel_mass,
-                                              surface_mass_to_interface_mass,
-                                              eval_top_interface_mass)
+                              surface_mass_to_interface_mass,
+                              eval_top_interface_mass)
 from .physics_config import typical_mass_ratios
 from .model_info import (hydrostatic_models,
                          moist_mixing_ratio_models,
                          cam_se_models,
                          homme_models,
                          dry_mixing_ratio_models,
-                         variable_kappa_models,
-                         deep_atmosphere_models)
+                         variable_kappa_models)
+_be = _get_backend()
+jnp = _be.np
+device_wrapper = _be.array
+DEBUG = _be.debug
 
 gauss_points = (jnp.array([-0.97390652851717,
                            -0.865063366689,
@@ -365,5 +364,3 @@ def init_model_pressure(z_pi_surf_func,
                                             phi_i=phi_i,
                                             w_i=w_i)
   return initial_state
-
-

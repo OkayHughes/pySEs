@@ -3,20 +3,22 @@ from src.operations_2d.operators import horizontal_gradient
 from src.operations_2d.local_assembly import project_scalar
 from ...test_data.mass_coordinate_grids import cam30
 from src.dynamical_cores.mass_coordinate import (init_vertical_grid,
-                                                    surface_mass_to_interface_mass)
-from src.dynamical_cores.initialization import z_from_p_monotonic_moist, z_from_p_monotonic_dry, integrate_weight_of_vapor
+                                                 surface_mass_to_interface_mass)
+from src.dynamical_cores.initialization import (z_from_p_monotonic_moist,
+                                                z_from_p_monotonic_dry,
+                                                integrate_weight_of_vapor)
 from src.dynamical_cores.physics_config import init_physics_config
 from src.dynamical_cores.utils_3d import interface_to_delta
 from src._config import get_backend as _get_backend
-_be = _get_backend()
-jnp = _be.np
-device_wrapper = _be.array
-get_global_array = _be.get_global_array
 from src.analytic_initialization.moist_baroclinic_wave import (init_baroclinic_wave_config,
                                                                eval_surface_state,
                                                                init_baroclinic_wave_state)
 from src.dynamical_cores.model_info import models
 from ...context import allclose_global
+_be = _get_backend()
+jnp = _be.np
+device_wrapper = _be.array
+get_global_array = _be.get_global_array
 
 
 def test_z_p_func():

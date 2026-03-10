@@ -51,8 +51,8 @@ def init_baroclinic_wave_config(T0E=310,
                                 mountain_lon_widths=[7.0 * np.pi / 180.0,
                                                      7.0 * np.pi / 180.0]):
   """
-  Create a struct containing all parameters necessary to initialize the 
-  moist/dry baroclinic wave 
+  Create a struct containing all parameters necessary to initialize the
+  moist/dry baroclinic wave
 
   Parameters
   ----------
@@ -102,7 +102,7 @@ def init_baroclinic_wave_config(T0E=310,
     Nominal constant strength of gravity at the surface (m s^-2)
   model_config :
     physics_config struct for your dynamical core. This allows
-    other coefficients like Rgas to be read directly from your 
+    other coefficients like Rgas to be read directly from your
     simulation configuration.
   alpha : float
     Skamarock, Ong, and Klemp correction for small-planet simulations.

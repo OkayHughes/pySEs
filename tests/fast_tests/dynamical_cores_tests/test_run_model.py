@@ -1,14 +1,17 @@
 from ...test_data.mass_coordinate_grids import cam30
 from src._config import get_backend as _get_backend
-_be = _get_backend()
-jnp = _be.np
-from src.analytic_initialization.moist_baroclinic_wave import init_baroclinic_wave_config, perturbation_opts, init_baroclinic_wave_state
+from src.analytic_initialization.moist_baroclinic_wave import (init_baroclinic_wave_config,
+                                                               perturbation_opts,
+                                                               init_baroclinic_wave_state)
 from src.dynamical_cores.run_dycore import init_simulator
 from src.mesh_generation.element_local_metric import init_quasi_uniform_grid_elem_local
 from src.dynamical_cores.mass_coordinate import init_vertical_grid
 from src.dynamical_cores.model_info import models
 from src.dynamical_cores.model_config import init_default_config, hypervis_opts
 from ...context import get_figdir
+_be = _get_backend()
+jnp = _be.np
+
 
 def test_theta_steady_state():
   for model in [models.homme_hydrostatic, models.cam_se]:

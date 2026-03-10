@@ -1,12 +1,12 @@
 import numpy as np
 from ..._config import get_backend as _get_backend
+from ..utils_3d import midlevel_to_interface, interface_to_delta, phi_to_r_hat
+from functools import partial
+from ..model_info import hydrostatic_models, deep_atmosphere_models
 _be = _get_backend()
 jnp = _be.np
 jit = _be.jit
 flip = _be.flip
-from ..utils_3d import midlevel_to_interface, interface_to_delta, phi_to_r_hat
-from functools import partial
-from ..model_info import hydrostatic_models, deep_atmosphere_models
 
 
 @jit

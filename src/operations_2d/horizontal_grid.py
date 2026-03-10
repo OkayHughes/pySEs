@@ -1,5 +1,17 @@
 import numpy as np
 from .._config import get_backend as _get_backend
+from frozendict import frozendict
+from .local_assembly import (triage_vert_redundancy_flat,
+                             init_assembly_global,
+                             init_assembly_local,
+                             project_scalar,
+                             init_shard_extraction_map)
+from ..mpi.processor_decomposition import init_decomp
+from ..mesh_generation.bilinear_utils import eval_bilinear_mapping
+from ..mpi.global_communication import global_max, global_min
+from .tensor_hyperviscosity import eval_hypervis_tensor
+from ..mesh_generation.spectral import init_spectral
+from math import floor
 _be = _get_backend()
 device_wrapper = _be.array
 use_wrapper = _be.use_wrapper
@@ -10,18 +22,6 @@ get_global_array = _be.get_global_array
 DEBUG = _be.debug
 do_mpi_communication = _be.do_mpi_communication
 mpi_size = _be.mpi_size
-from frozendict import frozendict
-from .local_assembly import (triage_vert_redundancy_flat,
-                                           init_assembly_global,
-                                           init_assembly_local,
-                                           project_scalar,
-                                           init_shard_extraction_map)
-from ..mpi.processor_decomposition import init_decomp
-from ..mesh_generation.bilinear_utils import eval_bilinear_mapping
-from ..mpi.global_communication import global_max, global_min
-from .tensor_hyperviscosity import eval_hypervis_tensor
-from ..mesh_generation.spectral import init_spectral
-from math import floor
 
 
 def reorder_parallel_axis(var, element_reordering=None, wrapped=use_wrapper):

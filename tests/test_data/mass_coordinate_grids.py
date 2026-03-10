@@ -1,8 +1,9 @@
 from src._config import get_backend as _get_backend
+import numpy as np
 _be = _get_backend()
 jnp = _be.np
 device_wrapper = _be.array
-import numpy as np
+
 
 cam30 = {"hybrid_a_i": device_wrapper(np.array([0.00225523952394724, 0.00503169186413288, 0.0101579474285245,
                                                 0.0185553170740604, 0.0306691229343414, 0.0458674766123295,

@@ -1,5 +1,6 @@
 import numpy as np
 from .._config import get_backend as _get_backend
+from functools import partial
 _be = _get_backend()
 jnp = _be.np
 jit = _be.jit
@@ -8,7 +9,6 @@ take_along_axis = _be.take_along_axis
 cast_type = _be.cast_type
 flip = _be.flip
 device_wrapper = _be.array
-from functools import partial
 
 
 @partial(jit, static_argnames=["num_lev", "filter", "tiny", "qmax"])

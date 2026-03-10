@@ -1,11 +1,11 @@
 from ..._config import get_backend as _get_backend
-_be = _get_backend()
-jit = _be.jit
-jnp = _be.np
 from functools import partial
 from ..operators_3d import horizontal_divergence_3d
 from ...tracer_transport.eulerian_spectral import advance_tracers_rk2
-from ..model_info import cam_se_models, homme_models
+from ..model_info import cam_se_models
+_be = _get_backend()
+jit = _be.jit
+jnp = _be.np
 
 
 @partial(jit, static_argnames=["model"])

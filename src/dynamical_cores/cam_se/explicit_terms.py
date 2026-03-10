@@ -2,9 +2,6 @@ from ..operators_3d import horizontal_gradient_3d, horizontal_vorticity_3d, hori
 from ..utils_3d import physical_dot_product
 import numpy as np
 from ..._config import get_backend as _get_backend
-_be = _get_backend()
-jnp = _be.np
-jit = _be.jit
 from .thermodynamics import (eval_sum_species,
                              eval_midlevel_pressure,
                              eval_interface_pressure,
@@ -17,6 +14,9 @@ from .thermodynamics import eval_virtual_temperature
 from ..model_state import wrap_dynamics, wrap_tracer_consist_dynamics
 from enum import Enum
 from functools import partial
+_be = _get_backend()
+jnp = _be.np
+jit = _be.jit
 
 pressure_gradient_options = Enum('pressure_gradient_options',
                                  [("basic", 1),

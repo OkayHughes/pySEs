@@ -1,11 +1,4 @@
 from src._config import get_backend as _get_backend
-_be = _get_backend()
-jnp = _be.np
-eps = _be.eps
-device_wrapper = _be.array
-device_unwrapper = _be.unwrap
-mpi_rank = _be.mpi_rank
-mpi_size = _be.mpi_size
 import numpy as np
 from src.mesh_generation.equiangular_metric import init_quasi_uniform_grid
 from src.operations_2d.local_assembly import project_scalar
@@ -19,6 +12,13 @@ from src.mpi.global_assembly import project_scalar_global
 from src.mpi.global_communication import global_sum
 from src.mpi.processor_decomposition import init_decomp
 from ...context import test_npts, seed
+_be = _get_backend()
+jnp = _be.np
+eps = _be.eps
+device_wrapper = _be.array
+device_unwrapper = _be.unwrap
+mpi_rank = _be.mpi_rank
+mpi_size = _be.mpi_size
 
 
 def test_vector_identites_sphere():

@@ -1,9 +1,9 @@
 from ..._config import get_backend as _get_backend
+from ..model_state import wrap_model_state, wrap_tracers, init_static_forcing, wrap_dynamics
+from functools import partial
 _be = _get_backend()
 jnp = _be.np
 jit = _be.jit
-from ..model_state import wrap_model_state, wrap_tracers, init_static_forcing, wrap_dynamics
-from functools import partial
 
 
 @partial(jit, static_argnames=["dims", "model"])

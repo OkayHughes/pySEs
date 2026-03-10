@@ -1,17 +1,17 @@
 from src.mesh_generation.equiangular_metric import init_quasi_uniform_grid
 from src.mesh_generation.element_local_metric import (init_quasi_uniform_grid_elem_local,
-                                                         init_stretched_grid_elem_local)
+                                                      init_stretched_grid_elem_local)
 from src.operations_2d.horizontal_grid import eval_hypervis_tensor, get_global_array, smooth_tensor
 from src.operations_2d.operators import horizontal_weak_laplacian
 from src.operations_2d.local_assembly import project_scalar
 from src._config import get_backend as _get_backend
-_be = _get_backend()
-jnp = _be.np
-device_wrapper = _be.array
 import numpy as np
 from ...context import test_npts
 from ...reference_implementations.tensor_hypervis_ref import tensor_hypervis_ref
 from scipy.special import sph_harm_y
+_be = _get_backend()
+jnp = _be.np
+device_wrapper = _be.array
 
 
 def test_hypervisc_tensor():

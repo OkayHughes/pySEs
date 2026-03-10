@@ -1,19 +1,18 @@
 from .time_stepping import (advance_dynamics_euler,
-                                            advance_hypervis_euler,
-                                            advance_dynamics_ullrich_5stage,
-                                            advance_sponge_euler)
+                            advance_hypervis_euler,
+                            advance_dynamics_ullrich_5stage,
+                            advance_sponge_euler)
 from .model_state import remap_dynamics
 from .time_step import time_step_options
 from .model_state import (sum_dynamics_series,
-                                          advance_tracers,
-                                          wrap_model_state,
-                                          check_dynamics_nan,
-                                          check_tracers_nan,
-                                          sum_consistency_struct)
+                          sum_tracers_series,
+                          wrap_model_state,
+                          check_dynamics_nan,
+                          check_tracers_nan,
+                          sum_consistency_struct)
 from .physics_dynamics_coupling import coupling_types
 from .tracer_advection.eulerian_spectral import advance_tracers
 from .model_info import cam_se_models
-
 
 
 def advance_coupling_step(state_in,
@@ -73,17 +72,17 @@ def advance_coupling_step(state_in,
                       physics_dynamics_coupling == coupling_types.lump_tracers_dribble_dynamics)
 
   if (physics_dynamics_coupling == coupling_types.lump_tracers_dribble_dynamics) and physics_forcing is not None:
-    tracer_state = advance_tracers([tracer_state, physics_forcing["tracers"]],
-                                   [1.0, timestep_config["physics_dt"]],
-                                   model)
+    tracer_state = sum_tracers_series([tracer_state, physics_forcing["tracers"]],
+                                      [1.0, timestep_config["physics_dt"]],
+                                      model)
 
-  if physics_dynamics_coupling == coupling_types.lump_all  and physics_forcing is not None:
+  if physics_dynamics_coupling == coupling_types.lump_all and physics_forcing is not None:
     dynamics_state = sum_dynamics_series([dynamics_state, physics_forcing["dynamics"]],
                                          [1.0, timestep_config["physics_dt"]],
                                          model)
-    tracer_state = advance_tracers([tracer_state, physics_forcing["tracers"]],
-                                   [1.0, timestep_config["physics_dt"]],
-                                   model)
+    tracer_state = sum_tracers_series([tracer_state, physics_forcing["tracers"]],
+                                      [1.0, timestep_config["physics_dt"]],
+                                      model)
   for q_split in range(timestep_config["tracer_subcycle"]):
     dynamics_state = remap_dynamics(dynamics_state,
                                     state_in["static_forcing"],
@@ -96,10 +95,10 @@ def advance_coupling_step(state_in,
       dynamics_state = sum_dynamics_series([dynamics_state, physics_forcing["dynamics"]],
                                            [1.0, timestep_config["tracer_advection"]["dt"]],
                                            model)
-    if physics_dynamics_coupling == coupling_types.dribble_all  and physics_forcing is not None:
-      tracer_state = advance_tracers([tracer_state, physics_forcing["tracers"]],
-                                     [1.0, timestep_config["physics_dt"]],
-                                     model)
+    if physics_dynamics_coupling == coupling_types.dribble_all and physics_forcing is not None:
+      tracer_state = sum_tracers_series([tracer_state, physics_forcing["tracers"]],
+                                        [1.0, timestep_config["physics_dt"]],
+                                        model)
 
     for n_split in range(timestep_config["dynamics_subcycle"]):
       if model in cam_se_models:
@@ -145,14 +144,14 @@ def advance_coupling_step(state_in,
                                                                       model)
           if n_split > 0:
             tracer_consist_visc_total = sum_consistency_struct(tracer_consist_visc_total,
-                                                              tracer_consist_visc,
-                                                              1.0,
-                                                              1.0 / timestep_config["dynamics_subcycle"])
+                                                               tracer_consist_visc,
+                                                               1.0,
+                                                               1.0 / timestep_config["dynamics_subcycle"])
           else:
             tracer_consist_visc_total = sum_consistency_struct(tracer_consist_visc,
-                                                              tracer_consist_visc,
-                                                              1.0 / timestep_config["dynamics_subcycle"],
-                                                              0.0)
+                                                               tracer_consist_visc,
+                                                               1.0 / timestep_config["dynamics_subcycle"],
+                                                               0.0)
         if "enable_sponge_layer" in diffusion_config.keys():
           dynamics_next = advance_sponge_euler(dynamics_next,
                                                h_grid,

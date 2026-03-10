@@ -1,6 +1,6 @@
 from src.dynamical_cores.model_info import (models, moist_mixing_ratio_models, dry_mixing_ratio_models,
-                               f_plane_models, spherical_models,
-                               cam_se_models, homme_models)
+                                            f_plane_models, spherical_models,
+                                            cam_se_models, homme_models)
 
 
 def test_all_eqns_classified():

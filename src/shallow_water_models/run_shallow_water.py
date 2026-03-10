@@ -1,12 +1,12 @@
 from .._config import get_backend as _get_backend
-_be = _get_backend()
-jnp = _be.np
-versatile_assert = _be.assert_true
-is_main_proc = _be.is_main_proc
 from .time_stepping import advance_step_euler, advance_step_ssprk3, advance_hypervis_euler
 from .tracers import advance_tracers_shallow_water
 from ..dynamical_cores.time_step import time_step_options
 from sys import stdout
+_be = _get_backend()
+jnp = _be.np
+versatile_assert = _be.assert_true
+is_main_proc = _be.is_main_proc
 
 
 def simulate_shallow_water(end_time,
@@ -67,7 +67,11 @@ def simulate_shallow_water(end_time,
       elif step_type == time_step_options.Euler:
         state_tmp, tracer_consist_dyn = advance_step_euler(state_n, grid, physics_config, timestep_config, dims)
       if diffusion:
-        state_np1, tracer_consist_hypervis = advance_hypervis_euler(state_tmp, grid, physics_config, diffusion_config, timestep_config, dims)
+        state_np1, tracer_consist_hypervis = advance_hypervis_euler(state_tmp, grid,
+                                                                    physics_config,
+                                                                    diffusion_config,
+                                                                    timestep_config,
+                                                                    dims)
       else:
         state_np1 = state_tmp
         tracer_consist_hypervis = None
@@ -83,7 +87,6 @@ def simulate_shallow_water(end_time,
                                                   timestep_config,
                                                   tracer_consist_hypervis=tracer_consist_hypervis)
 
-
       state_n, state_np1 = state_np1, state_n
 
       versatile_assert(jnp.logical_not(jnp.any(jnp.isnan(state_n["horizontal_wind"]))))
@@ -93,5 +96,3 @@ def simulate_shallow_water(end_time,
   if tracers_in is not None:
     ret["tracers"] = tracers_n
   return ret
-
-

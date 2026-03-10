@@ -1,35 +1,34 @@
 from src._config import get_backend as _get_backend
+import numpy as np
+from src.dynamical_cores.model_info import (models,
+                                            cam_se_models,
+                                            thermodynamic_variable_names,
+                                            hydrostatic_models,
+                                            deep_atmosphere_models)
+from src.mesh_generation.equiangular_metric import init_quasi_uniform_grid
+from src.dynamical_cores.physics_config import init_physics_config
+from src.analytic_initialization.moist_baroclinic_wave import init_baroclinic_wave_config, init_baroclinic_wave_state
+from src.dynamical_cores.mass_coordinate import init_vertical_grid
+from src.dynamical_cores.model_state import (sum_tracers,
+                                             sum_tracers_series,
+                                             wrap_dynamics,
+                                             wrap_static_forcing,
+                                             init_static_forcing,
+                                             wrap_model_state,
+                                             wrap_tracers,
+                                             project_dynamics,
+                                             sum_dynamics_series,
+                                             sum_dynamics,
+                                             check_dynamics_nan,
+                                             check_tracers_nan,
+                                             copy_model_state)
+from .test_assembly_3d import is_3d_field_c0
+from ...test_data.mass_coordinate_grids import cam30
+from ...context import allclose_global
 _be = _get_backend()
 jnp = _be.np
 device_wrapper = _be.array
 get_global_array = _be.get_global_array
-import numpy as np
-from src.dynamical_cores.model_info import (models,
-                               cam_se_models,
-                               thermodynamic_variable_names,
-                               hydrostatic_models,
-                               deep_atmosphere_models)
-from src.mesh_generation.equiangular_metric import init_quasi_uniform_grid
-from src.dynamical_cores.physics_config import init_physics_config
-from src.analytic_initialization.moist_baroclinic_wave import init_baroclinic_wave_config, init_baroclinic_wave_state
-from src.dynamical_cores.mass_coordinate import init_vertical_grid, d_mass_to_surface_mass, surface_mass_to_d_mass
-from src.dynamical_cores.model_state import (sum_tracers,
-                                                advance_tracers,
-                                                wrap_dynamics,
-                                                wrap_static_forcing,
-                                                init_static_forcing,
-                                                wrap_model_state,
-                                                wrap_tracers,
-                                                project_dynamics,
-                                                sum_dynamics_series,
-                                                sum_dynamics,
-                                                check_dynamics_nan,
-                                                check_tracers_nan,
-                                                copy_model_state,
-                                                remap_tracers)
-from .test_assembly_3d import is_3d_field_c0
-from ...test_data.mass_coordinate_grids import cam30
-from ...context import allclose_global
 
 
 def test_copy_state():
@@ -56,7 +55,9 @@ def test_copy_state():
   water_vapor = model_state["tracers"]["moisture_species"]["water_vapor"]
   model_state["tracers"]["tracers"][trac_name] = 1.0 * jnp.ones_like(water_vapor)
   model_state_new = copy_model_state(model_state, model)
-  assert allclose_global(model_state_new["dynamics"]["horizontal_wind"], model_state["dynamics"]["horizontal_wind"], dims)
+  assert allclose_global(model_state_new["dynamics"]["horizontal_wind"],
+                         model_state["dynamics"]["horizontal_wind"],
+                         dims)
   assert allclose_global(model_state_new["dynamics"]["T"], model_state["dynamics"]["T"], dims)
   assert allclose_global(model_state_new["dynamics"]["d_mass"], model_state["dynamics"]["d_mass"], dims)
   tracers_new = model_state_new["tracers"]
@@ -135,7 +136,7 @@ def test_tracer_sums():
       for tracer_name in tracer_sum.keys():
         tracer_total += tracer_sum[tracer_name]
       assert jnp.allclose(get_global_array(tracer_total, dims), 1.0)
-    tracers_advance = advance_tracers([model_state_1["tracers"], model_state_2["tracers"]], [coeff_1, coeff_2], model)
+    tracers_advance = sum_tracers_series([model_state_1["tracers"], model_state_2["tracers"]], [coeff_1, coeff_2], model)
     assert jnp.allclose(get_global_array(tracers_advance["moisture_species"]["water_vapor"], dims), total)
     assert jnp.allclose(get_global_array(tracers_advance["tracers"][trac_name], dims), total)
     if model in cam_se_models:

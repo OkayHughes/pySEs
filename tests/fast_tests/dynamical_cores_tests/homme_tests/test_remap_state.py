@@ -2,15 +2,15 @@ from src.analytic_initialization.moist_baroclinic_wave import init_baroclinic_wa
 from src.dynamical_cores.physics_config import init_physics_config
 from src.mesh_generation.equiangular_metric import init_quasi_uniform_grid
 from src._config import get_backend as _get_backend
-_be = _get_backend()
-jnp = _be.np
-device_wrapper = _be.array
 import numpy as np
 from ....test_data.mass_coordinate_grids import cam30
 from src.dynamical_cores.utils_3d import phi_to_g
 from src.dynamical_cores.mass_coordinate import init_vertical_grid
 from src.dynamical_cores.model_state import remap_dynamics
 from src.dynamical_cores.model_info import models
+_be = _get_backend()
+jnp = _be.np
+device_wrapper = _be.array
 
 
 def test_remap_state():

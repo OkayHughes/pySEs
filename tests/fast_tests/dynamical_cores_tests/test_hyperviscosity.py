@@ -1,35 +1,39 @@
-from src.dynamical_cores.model_info import models, cam_se_models, hydrostatic_models, homme_models, thermodynamic_variable_names
+from src.dynamical_cores.model_info import (models,
+                                            cam_se_models,
+                                            hydrostatic_models,
+                                            homme_models,
+                                            thermodynamic_variable_names)
 from src._config import get_backend as _get_backend
-_be = _get_backend()
-jnp = _be.np
-device_wrapper = _be.array
 import numpy as np
 from src.dynamical_cores.physics_config import init_physics_config
 from src.analytic_initialization.moist_baroclinic_wave import init_baroclinic_wave_config, init_baroclinic_wave_state
 from src.operations_2d.local_assembly import project_scalar
 from src.operations_2d.operators import horizontal_weak_laplacian, inner_product
 from src.mesh_generation.element_local_metric import (init_quasi_uniform_grid_elem_local,
-                                                         init_stretched_grid_elem_local)
+                                                      init_stretched_grid_elem_local)
 from src.dynamical_cores.mass_coordinate import init_vertical_grid
 from src.dynamical_cores.hyperviscosity import (vector_harmonic_3d,
-                                                   scalar_harmonic_3d,
-                                                   init_hypervis_config_const,
-                                                   eval_ref_state,
-                                                   eval_hypervis_harmonic,
-                                                   advance_sponge_layer,
-                                                   eval_nu_ramp,
-                                                   eval_hypervis_terms,
-                                                   init_hypervis_config_tensor)
+                                                scalar_harmonic_3d,
+                                                init_hypervis_config_const,
+                                                eval_ref_state,
+                                                eval_hypervis_harmonic,
+                                                advance_sponge_layer,
+                                                eval_nu_ramp,
+                                                eval_hypervis_terms,
+                                                init_hypervis_config_tensor)
 from src.dynamical_cores.model_state import (project_scalar_3d,
-                                                project_dynamics,
-                                                sum_dynamics_series,
-                                                check_dynamics_nan,
-                                                copy_dynamics,
-                                                wrap_dynamics)
+                                             project_dynamics,
+                                             sum_dynamics_series,
+                                             check_dynamics_nan,
+                                             copy_dynamics,
+                                             wrap_dynamics)
 from src.dynamical_cores.time_stepping import advance_hypervis_euler
 from src.dynamical_cores.time_stepping import init_timestep_config
 from ...test_data.mass_coordinate_grids import cam30, vertical_grid_finite_diff
 from pytest import fixture
+_be = _get_backend()
+jnp = _be.np
+device_wrapper = _be.array
 
 
 def make_grid(model):
@@ -267,7 +271,8 @@ def test_sponge_layer_energy_estimate(homme_hydrostatic_noisy,
       for k_idx in range(n_sponge):
         for field in fields:
           if field == "horizontal_wind":
-            vals = 0.5 * (dynamics_new["horizontal_wind"][:, :, :, k_idx, 0]**2 + dynamics_new["horizontal_wind"][:, :, :, k_idx, 1]**2)
+            vals = 0.5 * (dynamics_new["horizontal_wind"][:, :, :, k_idx, 0]**2 +
+                          dynamics_new["horizontal_wind"][:, :, :, k_idx, 1]**2)
           else:
             vals = dynamics_new[field][:, :, :, k_idx]
           total = inner_product(vals, vals, h_grid)
@@ -333,7 +338,8 @@ def test_hypervis_energy_estimate_quasi_uniform(homme_hydrostatic_noisy,
         for k_idx in range(nlev):
           for field in fields:
             if field == "horizontal_wind":
-              u_pert = dynamics_new["horizontal_wind"][:, :, :, k_idx, :] - dynamics_base["horizontal_wind"][:, :, :, k_idx, :]
+              u_pert = (dynamics_new["horizontal_wind"][:, :, :, k_idx, :] -
+                        dynamics_base["horizontal_wind"][:, :, :, k_idx, :])
               vals = 0.5 * (u_pert[:, :, :, 0]**2 + u_pert[:, :, :, 1]**2)
             elif field == "theta_v_d_mass":
               theta_v_pert = dynamics_new["theta_v_d_mass"][:, :, :, k_idx]
@@ -417,7 +423,8 @@ def test_hypervis_energy_estimate_mobius():
       for k_idx in range(nlev):
         for field in fields:
           if field == "horizontal_wind":
-            u_pert = dynamics_new["horizontal_wind"][:, :, :, k_idx, :] - dynamics_base["horizontal_wind"][:, :, :, k_idx, :]
+            u_pert = (dynamics_new["horizontal_wind"][:, :, :, k_idx, :] -
+                      dynamics_base["horizontal_wind"][:, :, :, k_idx, :])
             vals = 0.5 * (u_pert[:, :, :, 0]**2 + u_pert[:, :, :, 1]**2)
           elif field == "theta_v_d_mass":
             theta_v_pert = dynamics_new["theta_v_d_mass"][:, :, :, k_idx]

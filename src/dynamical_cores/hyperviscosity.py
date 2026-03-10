@@ -1,10 +1,5 @@
 import numpy as np
 from .._config import get_backend as _get_backend
-_be = _get_backend()
-vmap_1d_apply = _be.vmap_1d_apply
-jit = _be.jit
-jnp = _be.np
-device_wrapper = _be.array
 from ..operations_2d.operators import horizontal_weak_vector_laplacian, horizontal_weak_laplacian
 from ..operations_2d.tensor_hyperviscosity import (eval_quasi_uniform_hypervisc_coeff,
                                                    eval_variable_resolution_hypervisc_coeff)
@@ -15,6 +10,11 @@ from .homme.thermodynamics import eval_balanced_geopotential
 from .mass_coordinate import surface_mass_to_interface_mass
 from functools import partial
 from .model_info import hydrostatic_models, thermodynamic_variable_names, homme_models, cam_se_models
+_be = _get_backend()
+vmap_1d_apply = _be.vmap_1d_apply
+jit = _be.jit
+jnp = _be.np
+device_wrapper = _be.array
 
 
 @partial(jit, static_argnames=["apply_tensor"])

@@ -1,17 +1,19 @@
 from .._config import get_backend as _get_backend
+from .explicit_terms import eval_explicit_terms
+from .model_state import (project_model_state,
+                          sum_state_series,
+                          extract_average_dyn,
+                          extract_average_hypervis,
+                          sum_avg_struct)
+from .hyperviscosity import eval_hypervis_quasi_uniform, eval_hypervis_variable_resolution
+from ..dynamical_cores.time_step import time_step_options, stability_info
+from ..operations_2d.horizontal_grid import eval_cfl
+from frozendict import frozendict
+from functools import partial
 _be = _get_backend()
 jit = _be.jit
 DEBUG = _be.debug
 jnp = _be.np
-from .explicit_terms import eval_explicit_terms
-from .model_state import project_model_state, sum_state_series, extract_average_dyn, extract_average_hypervis, sum_avg_struct
-from .hyperviscosity import eval_hypervis_quasi_uniform, eval_hypervis_variable_resolution
-from ..dynamical_cores.time_step import time_step_options, stability_info
-from ..operations_2d.operators import horizontal_divergence, horizontal_gradient
-from ..operations_2d.local_assembly import project_scalar, minmax_scalar
-from ..operations_2d.horizontal_grid import eval_cfl
-from frozendict import frozendict
-from functools import partial
 
 
 @partial(jit, static_argnames=["dims", "timestep_config"])
@@ -48,7 +50,8 @@ def advance_step_euler(state_in,
                                    grid,
                                    physics_config)
   state_tend_c0 = project_model_state(state_tend, grid, dims)
-  return sum_state_series([state_in, state_tend_c0], [1.0, timestep_config["dynamics"]["dt"]]), extract_average(state_tend_c0)
+  return (sum_state_series([state_in, state_tend_c0], [1.0, timestep_config["dynamics"]["dt"]]),
+          extract_average_dyn(state_tend_c0))
 
 
 @partial(jit, static_argnames=["dims", "timestep_config"])
@@ -148,7 +151,10 @@ def advance_hypervis_euler(state_in,
       avg = extract_average_hypervis(next_step, hvis_tend, diffusion_config)
       avg = sum_avg_struct(avg, avg, 0.0, 1.0 / timestep_config["hypervis_subcycle"])
     else:
-      avg = sum_avg_struct(avg, extract_average_hypervis(next_step, hvis_tend, diffusion_config), 1.0, 1.0 / timestep_config["hypervis_subcycle"])
+      avg = sum_avg_struct(avg,
+                           extract_average_hypervis(next_step, hvis_tend, diffusion_config),
+                           1.0,
+                           1.0 / timestep_config["hypervis_subcycle"])
     next_step = sum_state_series([next_step, hvis_tend], [1.0, -timestep_config["hyperviscosity"]["dt"]])
   return next_step, avg
 

@@ -1,6 +1,6 @@
 from src._config import get_backend as _get_backend
-_be = _get_backend()
 import numpy as np
+_be = _get_backend()
 
 
 def for_loop_remap(Qdp, dp1, dp2, filter=False):

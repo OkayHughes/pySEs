@@ -1,7 +1,8 @@
 from .._config import get_backend as _get_backend
+from .model_info import cam_se_models, variable_kappa_models
 _be = _get_backend()
 device_wrapper = _be.array
-from .model_info import cam_se_models, variable_kappa_models
+
 
 boltzmann = 1.38065e-23
 avogadro = 6.02214e26

@@ -1,9 +1,4 @@
 from .._config import get_backend as _get_backend
-_be = _get_backend()
-jit = _be.jit
-jnp = _be.np
-device_wrapper = _be.array
-do_mpi_communication = _be.do_mpi_communication
 from ..operations_2d.operators import horizontal_weak_vector_laplacian, horizontal_weak_laplacian
 from ..operations_2d.tensor_hyperviscosity import (eval_quasi_uniform_hypervisc_coeff,
                                                    eval_variable_resolution_hypervisc_coeff)
@@ -12,6 +7,11 @@ from .model_state import project_model_state, wrap_model_state
 from ..mpi.global_assembly import project_scalar_global
 from ..operations_2d.local_assembly import project_scalar
 from functools import partial
+_be = _get_backend()
+jit = _be.jit
+jnp = _be.np
+device_wrapper = _be.array
+do_mpi_communication = _be.do_mpi_communication
 
 
 def diffusion_config_for_tracer_consist(diffusion_config,

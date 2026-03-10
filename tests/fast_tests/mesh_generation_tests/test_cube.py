@@ -1,5 +1,4 @@
 from src._config import get_backend as _get_backend
-_be = _get_backend()
 import numpy as np
 from src.mesh_generation.cubed_sphere import face_topo, init_cube_topo
 from src.mesh_generation.mesh import init_element_corner_vert_redundancy, edge_to_vert
@@ -7,6 +6,7 @@ from src.mesh_generation.mesh_definitions import TOP_FACE, BOTTOM_FACE, FRONT_FA
 from src.mesh_generation.mesh_definitions import LEFT_FACE, RIGHT_FACE
 from src.mesh_generation.cubed_sphere import inv_elem_id_fn, elem_id_fn
 from src.mesh_generation.mesh_definitions import TOP_EDGE, LEFT_EDGE, RIGHT_EDGE, BOTTOM_EDGE
+_be = _get_backend()
 
 
 def test_elem_id_fns():

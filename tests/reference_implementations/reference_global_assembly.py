@@ -1,7 +1,7 @@
 from src._config import get_backend as _get_backend
-_be = _get_backend()
 import numpy as np
 from src.mpi.global_communication import _exchange_buffers_stub, exchange_buffers
+_be = _get_backend()
 
 
 def summation_local_for(f, grid, *args):

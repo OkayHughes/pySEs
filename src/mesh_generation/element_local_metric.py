@@ -1,7 +1,5 @@
 import numpy as np
 from .._config import get_backend as _get_backend
-_be = _get_backend()
-use_wrapper = _be.use_wrapper
 from .mesh import (init_element_corner_vert_redundancy,
                    init_spectral_grid_redundancy,
                    mesh_to_cart_bilinear,
@@ -11,6 +9,8 @@ from .cubed_sphere import init_cube_topo
 from .spherical_coord_utils import (unit_sphere_to_cart_coords,
                                     cart_to_unit_sphere_coords_jacobian,
                                     cart_to_unit_sphere_coords)
+_be = _get_backend()
+use_wrapper = _be.use_wrapper
 
 
 def eval_metric_terms_elem_local(latlon_corners,
@@ -298,4 +298,3 @@ def init_unstructured_grid(face_connectivity,
                               npt,
                               calc_smooth_tensor=calc_smooth_tensor,
                               wrapped=wrapped)
-

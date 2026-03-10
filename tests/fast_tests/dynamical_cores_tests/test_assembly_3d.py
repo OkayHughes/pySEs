@@ -1,9 +1,4 @@
 from src._config import get_backend as _get_backend
-_be = _get_backend()
-jnp = _be.np
-device_wrapper = _be.array
-use_wrapper = _be.use_wrapper
-get_global_array = _be.get_global_array
 import numpy as np
 from src.mesh_generation.cubed_sphere import init_cube_topo
 from src.mesh_generation.mesh import init_element_corner_vert_redundancy
@@ -11,6 +6,11 @@ from src.mesh_generation.equiangular_metric import init_grid_from_topo
 from src.dynamical_cores.model_state import project_scalar_3d
 from src.mesh_generation.mesh import vert_red_flat_to_hierarchy
 from ..operations_2d_tests.test_local_assembly import project_scalar_for
+_be = _get_backend()
+jnp = _be.np
+device_wrapper = _be.array
+use_wrapper = _be.use_wrapper
+get_global_array = _be.get_global_array
 
 
 def is_3d_field_c0(field_in, h_grid, dims):

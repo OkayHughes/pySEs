@@ -1,12 +1,12 @@
 import numpy as np
 from .._config import get_backend as _get_backend
-_be = _get_backend()
-DEBUG = _be.debug
-use_wrapper = _be.use_wrapper
 from .mesh import mesh_to_cart_bilinear, init_spectral_grid_redundancy, metric_terms_to_grid
 from .mesh_definitions import TOP_FACE, BOTTOM_FACE, FRONT_FACE, BACK_FACE, LEFT_FACE, RIGHT_FACE
 from .cubed_sphere import init_cube_topo
 from .mesh import init_element_corner_vert_redundancy
+_be = _get_backend()
+DEBUG = _be.debug
+use_wrapper = _be.use_wrapper
 
 
 def eval_metric_terms_equiangular(face_mask,

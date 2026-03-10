@@ -1,9 +1,9 @@
 import numpy as np
 from .._config import get_backend as _get_backend
+from .model_info import moist_mixing_ratio_models
 _be = _get_backend()
 jit = _be.jit
 jnp = _be.np
-from .model_info import moist_mixing_ratio_models
 
 
 def init_vertical_grid(hybrid_a_i,

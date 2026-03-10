@@ -1,10 +1,10 @@
 from src._config import get_backend as _get_backend
-_be = _get_backend()
-get_global_array = _be.get_global_array
 import numpy as np
 from src.mesh_generation.element_local_metric import (init_quasi_uniform_grid_elem_local,
-                                                         init_stretched_grid_elem_local)
+                                                      init_stretched_grid_elem_local)
 from ...context import test_npts
+_be = _get_backend()
+get_global_array = _be.get_global_array
 
 
 def test_gen_metric():

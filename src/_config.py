@@ -32,7 +32,7 @@ the first call or use ``_reset_backend()`` after patching the environment.
 import os
 import functools
 import numpy as np
-from typing import Callable, Protocol, runtime_checkable, Hashable, Literal
+from typing import Callable, Protocol, runtime_checkable, Literal
 
 
 # ---------------------------------------------------------------------------
@@ -107,18 +107,41 @@ class Backend(Protocol):
     do_sharding: bool
     num_devices: int
 
-    def array(self, x, dtype=None, elem_sharding_axis: int | None = None): ...
-    def unwrap(self, x) -> np.ndarray: ...
-    def get_global_array(self, x, dims, elem_sharding_axis: int = 0) -> np.ndarray: ...
-    def jit(self, func: Callable) -> Callable: ...
-    def shard_map(self, func: Callable, *args, **kwargs) -> Callable: ...
-    def partial(self, func: Callable, *args, **kwargs) -> Callable: ...
-    def vmap_1d_apply(self, func: Callable, vector, in_axis: int, out_axis: int): ...
-    def flip(self, array, axis: int): ...
-    def remainder(self, array, divisor): ...
-    def take_along_axis(self, array, idxs, axis: int): ...
-    def cast_type(self, arr, dtype): ...
-    def assert_true(self, condition: bool) -> None: ...
+    def array(self, x, dtype=None, elem_sharding_axis: int | None = None):
+        ...
+
+    def unwrap(self, x) -> np.ndarray:
+        ...
+
+    def get_global_array(self, x, dims, elem_sharding_axis: int = 0) -> np.ndarray:
+        ...
+
+    def jit(self, func: Callable) -> Callable:
+        ...
+
+    def shard_map(self, func: Callable, *args, **kwargs) -> Callable:
+        ...
+
+    def partial(self, func: Callable, *args, **kwargs) -> Callable:
+        ...
+
+    def vmap_1d_apply(self, func: Callable, vector, in_axis: int, out_axis: int):
+        ...
+
+    def flip(self, array, axis: int):
+        ...
+
+    def remainder(self, array, divisor):
+        ...
+
+    def take_along_axis(self, array, idxs, axis: int):
+        ...
+
+    def cast_type(self, arr, dtype):
+        ...
+
+    def assert_true(self, condition: bool) -> None:
+        ...
 
 
 # ---------------------------------------------------------------------------
@@ -355,11 +378,11 @@ class JaxBackend:
 
 def _build_backend() -> Backend:
     backend_name = os.environ.get("PYSES_BACKEND", "numpy").strip().lower()
-    use_double   = _env_bool("PYSES_USE_DOUBLE", default=True)
-    debug        = _env_bool("PYSES_DEBUG",      default=False)
-    use_mpi      = _env_bool("PYSES_USE_MPI",    default=False)
-    use_cpu      = _env_bool("PYSES_USE_CPU",    default=True)
-    shard_count  = _env_int("PYSES_SHARD_CPU_COUNT", default=1)
+    use_double = _env_bool("PYSES_USE_DOUBLE", default=True)
+    debug = _env_bool("PYSES_DEBUG", default=False)
+    use_mpi = _env_bool("PYSES_USE_MPI", default=False)
+    use_cpu = _env_bool("PYSES_USE_CPU", default=True)
+    shard_count = _env_int("PYSES_SHARD_CPU_COUNT", default=1)
 
     # MPI state
     if use_mpi and _has_mpi_lib:

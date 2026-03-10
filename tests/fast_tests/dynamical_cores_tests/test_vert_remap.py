@@ -1,11 +1,11 @@
 from src._config import get_backend as _get_backend
-_be = _get_backend()
-jnp = _be.np
-device_wrapper = _be.array
 import numpy as np
 from ...reference_implementations.vert_remap_reference import for_loop_remap
 from src.dynamical_cores.vertical_remap import zerroukat_remap
 from ...context import seed as global_seed
+_be = _get_backend()
+jnp = _be.np
+device_wrapper = _be.array
 
 
 def get_testbed(seed=True, random=False, wrap=False):

@@ -1,11 +1,11 @@
 import numpy as np
 from .._config import get_backend as _get_backend
+from ..operations_2d.operators import horizontal_vorticity, horizontal_gradient, horizontal_divergence
+from .model_state import wrap_model_state
 _be = _get_backend()
 jit = _be.jit
 jnp = _be.np
-from ..operations_2d.operators import horizontal_vorticity, horizontal_gradient, horizontal_divergence
-from .model_state import wrap_model_state
-from functools import partial
+
 
 @jit
 def eval_explicit_terms(state_in,

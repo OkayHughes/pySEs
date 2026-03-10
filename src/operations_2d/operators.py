@@ -1,10 +1,10 @@
 import numpy as np
 from .._config import get_backend as _get_backend
+from functools import partial
 _be = _get_backend()
 jnp = _be.np
 jit = _be.jit
 flip = _be.flip
-from functools import partial
 
 
 @jit

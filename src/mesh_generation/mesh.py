@@ -1,14 +1,14 @@
 import numpy as np
 from .._config import get_backend as _get_backend
-_be = _get_backend()
-DEBUG = _be.debug
-use_wrapper = _be.use_wrapper
-do_sharding = _be.do_sharding
 from .bilinear_utils import eval_bilinear_mapping, eval_bilinear_jacobian
 from .mesh_definitions import TOP_EDGE, LEFT_EDGE, RIGHT_EDGE, BOTTOM_EDGE, FORWARDS, MAX_VERT_DEGREE_UNSTRUCTURED
 from .spectral import init_spectral
 from ..operations_2d.horizontal_grid import init_spectral_element_grid, smooth_tensor, shard_grid
 from .spherical_coord_utils import unit_sphere_to_cart_coords_jacobian
+_be = _get_backend()
+DEBUG = _be.debug
+use_wrapper = _be.use_wrapper
+do_sharding = _be.do_sharding
 
 
 def edge_to_vert(edge_id,

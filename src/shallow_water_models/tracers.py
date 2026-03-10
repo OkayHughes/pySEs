@@ -1,10 +1,11 @@
 from .._config import get_backend as _get_backend
-_be = _get_backend()
-jit = _be.jit
-jnp = _be.np
 from ..operations_2d.operators import horizontal_divergence
 from ..tracer_transport.eulerian_spectral import advance_tracers_rk2
 from functools import partial
+_be = _get_backend()
+jit = _be.jit
+jnp = _be.np
+
 
 @jit
 def stack_tracers_shallow_water(tracer_like):
