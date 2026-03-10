@@ -1,13 +1,13 @@
-from src.dynamical_cores.mass_coordinate import (init_vertical_grid,
+from pyses.dynamical_cores.mass_coordinate import (init_vertical_grid,
                                                  surface_mass_to_midlevel_mass,
                                                  surface_mass_to_interface_mass,
                                                  surface_mass_to_d_mass,
                                                  d_mass_to_surface_mass,
                                                  eval_top_interface_mass)
-from src._config import get_backend as _get_backend
+from pyses._config import get_backend as _get_backend
 import numpy as np
 from ...test_data.mass_coordinate_grids import cam30
-from src.dynamical_cores.model_info import models
+from pyses.dynamical_cores.model_info import models
 _be = _get_backend()
 jnp = _be.np
 

@@ -1,16 +1,16 @@
-from src._config import get_backend as _get_backend
+from pyses._config import get_backend as _get_backend
 import numpy as np
-from src.mesh_generation.equiangular_metric import init_quasi_uniform_grid
-from src.operations_2d.local_assembly import project_scalar
-from src.operations_2d.horizontal_grid import extract_subset_parallel_dim, make_grid_mpi_ready
-from src.operations_2d.operators import (horizontal_gradient,
+from pyses.mesh_generation.equiangular_metric import init_quasi_uniform_grid
+from pyses.operations_2d.local_assembly import project_scalar
+from pyses.operations_2d.horizontal_grid import extract_subset_parallel_dim, make_grid_mpi_ready
+from pyses.operations_2d.operators import (horizontal_gradient,
                                          horizontal_divergence,
                                          horizontal_vorticity,
                                          inner_product)
-from src.mesh_generation.periodic_plane import init_uniform_grid
-from src.mpi.global_assembly import project_scalar_global
-from src.mpi.global_communication import global_sum
-from src.mpi.processor_decomposition import init_decomp
+from pyses.mesh_generation.periodic_plane import init_uniform_grid
+from pyses.mpi.global_assembly import project_scalar_global
+from pyses.mpi.global_communication import global_sum
+from pyses.mpi.processor_decomposition import init_decomp
 from ...context import test_npts, seed
 _be = _get_backend()
 jnp = _be.np

@@ -1,18 +1,18 @@
-from src.dynamical_cores.model_info import (models,
+from pyses.dynamical_cores.model_info import (models,
                                             cam_se_models,
                                             hydrostatic_models,
                                             homme_models,
                                             thermodynamic_variable_names)
-from src._config import get_backend as _get_backend
+from pyses._config import get_backend as _get_backend
 import numpy as np
-from src.dynamical_cores.physics_config import init_physics_config
-from src.analytic_initialization.moist_baroclinic_wave import init_baroclinic_wave_config, init_baroclinic_wave_state
-from src.operations_2d.local_assembly import project_scalar
-from src.operations_2d.operators import horizontal_weak_laplacian, inner_product
-from src.mesh_generation.element_local_metric import (init_quasi_uniform_grid_elem_local,
+from pyses.dynamical_cores.physics_config import init_physics_config
+from pyses.analytic_initialization.moist_baroclinic_wave import init_baroclinic_wave_config, init_baroclinic_wave_state
+from pyses.operations_2d.local_assembly import project_scalar
+from pyses.operations_2d.operators import horizontal_weak_laplacian, inner_product
+from pyses.mesh_generation.element_local_metric import (init_quasi_uniform_grid_elem_local,
                                                       init_stretched_grid_elem_local)
-from src.dynamical_cores.mass_coordinate import init_vertical_grid
-from src.dynamical_cores.hyperviscosity import (vector_harmonic_3d,
+from pyses.dynamical_cores.mass_coordinate import init_vertical_grid
+from pyses.dynamical_cores.hyperviscosity import (vector_harmonic_3d,
                                                 scalar_harmonic_3d,
                                                 init_hypervis_config_const,
                                                 eval_ref_state,
@@ -21,14 +21,14 @@ from src.dynamical_cores.hyperviscosity import (vector_harmonic_3d,
                                                 eval_nu_ramp,
                                                 eval_hypervis_terms,
                                                 init_hypervis_config_tensor)
-from src.dynamical_cores.model_state import (project_scalar_3d,
+from pyses.dynamical_cores.model_state import (project_scalar_3d,
                                              project_dynamics,
                                              sum_dynamics_series,
                                              check_dynamics_nan,
                                              copy_dynamics,
                                              wrap_dynamics)
-from src.dynamical_cores.time_stepping import advance_hypervis_euler
-from src.dynamical_cores.time_stepping import init_timestep_config
+from pyses.dynamical_cores.time_stepping import advance_hypervis_euler
+from pyses.dynamical_cores.time_stepping import init_timestep_config
 from ...test_data.mass_coordinate_grids import cam30, vertical_grid_finite_diff
 from pytest import fixture
 _be = _get_backend()

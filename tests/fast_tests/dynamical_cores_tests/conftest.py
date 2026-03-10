@@ -1,9 +1,9 @@
-from src.dynamical_cores.model_info import models
-from src.mesh_generation.equiangular_metric import init_quasi_uniform_grid
-from src.dynamical_cores.mass_coordinate import init_vertical_grid
-from src.dynamical_cores.physics_config import init_physics_config
+from pyses.dynamical_cores.model_info import models
+from pyses.mesh_generation.equiangular_metric import init_quasi_uniform_grid
+from pyses.dynamical_cores.mass_coordinate import init_vertical_grid
+from pyses.dynamical_cores.physics_config import init_physics_config
 from ...test_data.mass_coordinate_grids import cam30
-from src.analytic_initialization.moist_baroclinic_wave import init_baroclinic_wave_config, init_baroclinic_wave_state
+from pyses.analytic_initialization.moist_baroclinic_wave import init_baroclinic_wave_config, init_baroclinic_wave_state
 from pytest import fixture
 
 

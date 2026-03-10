@@ -1,6 +1,6 @@
-from src.dynamical_cores.physics_config import init_physics_config, typical_mass_ratios
-from src.dynamical_cores.model_info import models
-from src._config import get_backend as _get_backend
+from pyses.dynamical_cores.physics_config import init_physics_config, typical_mass_ratios
+from pyses.dynamical_cores.model_info import models
+from pyses._config import get_backend as _get_backend
 import numpy as np
 _be = _get_backend()
 

@@ -1,5 +1,5 @@
-from src.mesh_generation.periodic_plane import init_periodic_plane, metric_terms_to_grid
-from src._config import get_backend as _get_backend
+from pyses.mesh_generation.periodic_plane import init_periodic_plane, metric_terms_to_grid
+from pyses._config import get_backend as _get_backend
 import numpy as np
 from ...context import test_npts
 _be = _get_backend()

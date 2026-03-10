@@ -1,12 +1,12 @@
-from src._config import get_backend as _get_backend
+from pyses._config import get_backend as _get_backend
 import numpy as np
-from src.mesh_generation.equiangular_metric import init_quasi_uniform_grid
-from src.analytic_initialization.moist_baroclinic_wave import init_baroclinic_wave_config, init_baroclinic_wave_state
-from src.dynamical_cores.model_info import models
-from src.dynamical_cores.mass_coordinate import init_vertical_grid
-from src.dynamical_cores.physics_config import init_physics_config
-from src.dynamical_cores.mass_coordinate import d_mass_to_surface_mass, surface_mass_to_d_mass
-from src.dynamical_cores.model_state import remap_tracers
+from pyses.mesh_generation.equiangular_metric import init_quasi_uniform_grid
+from pyses.analytic_initialization.moist_baroclinic_wave import init_baroclinic_wave_config, init_baroclinic_wave_state
+from pyses.dynamical_cores.model_info import models
+from pyses.dynamical_cores.mass_coordinate import init_vertical_grid
+from pyses.dynamical_cores.physics_config import init_physics_config
+from pyses.dynamical_cores.mass_coordinate import d_mass_to_surface_mass, surface_mass_to_d_mass
+from pyses.dynamical_cores.model_state import remap_tracers
 from ....test_data.mass_coordinate_grids import cam30
 _be = _get_backend()
 jnp = _be.np

@@ -1,4 +1,4 @@
-from src._config import get_backend as _get_backend
+from pyses._config import get_backend as _get_backend
 import numpy as np
 _be = _get_backend()
 

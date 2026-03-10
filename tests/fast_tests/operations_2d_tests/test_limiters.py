@@ -1,8 +1,8 @@
-from src._config import get_backend as _get_backend
+from pyses._config import get_backend as _get_backend
 import numpy as np
-from src.operations_2d.limiters import clip_and_sum_limiter, full_limiter
+from pyses.operations_2d.limiters import clip_and_sum_limiter, full_limiter
 from ...reference_implementations.limiters import clip_and_sum_limiter_for, full_limiter_for
-from src.mesh_generation.spectral import init_spectral
+from pyses.mesh_generation.spectral import init_spectral
 _be = _get_backend()
 jnp = _be.np
 

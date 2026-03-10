@@ -43,7 +43,7 @@ seed = 0
 
 
 def allclose_global(sharded_array_1, sharded_array_2, dims):
-  from src._config import get_backend as _get_backend
+  from pyses._config import get_backend as _get_backend
   _be = _get_backend()
   return _be.np.allclose(_be.get_global_array(sharded_array_1, dims),
                          _be.get_global_array(sharded_array_2, dims))

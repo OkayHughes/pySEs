@@ -1,13 +1,13 @@
-from src._config import get_backend as _get_backend
+from pyses._config import get_backend as _get_backend
 import numpy as np
-from src.mesh_generation.cubed_sphere import init_cube_topo
-from src.mesh_generation.mesh import init_element_corner_vert_redundancy
-from src.mesh_generation.equiangular_metric import init_grid_from_topo
-from src.analytic_initialization.moist_baroclinic_wave import (init_baroclinic_wave_config,
+from pyses.mesh_generation.cubed_sphere import init_cube_topo
+from pyses.mesh_generation.mesh import init_element_corner_vert_redundancy
+from pyses.mesh_generation.equiangular_metric import init_grid_from_topo
+from pyses.analytic_initialization.moist_baroclinic_wave import (init_baroclinic_wave_config,
                                                                eval_pressure_temperature,
                                                                eval_state)
-from src.dynamical_cores.utils_3d import z_to_g
-from src.dynamical_cores.model_info import models
+from pyses.dynamical_cores.utils_3d import z_to_g
+from pyses.dynamical_cores.model_info import models
 _be = _get_backend()
 jnp = _be.np
 device_unwrapper = _be.unwrap

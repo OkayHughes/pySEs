@@ -1,29 +1,29 @@
 from ...test_data.mass_coordinate_grids import cam30
-from src._config import get_backend as _get_backend
+from pyses._config import get_backend as _get_backend
 import numpy as np
-from src.dynamical_cores.physics_config import init_physics_config
-from src.analytic_initialization.moist_baroclinic_wave import init_baroclinic_wave_config, init_baroclinic_wave_state
-from src.mesh_generation.element_local_metric import init_quasi_uniform_grid_elem_local
-from src.dynamical_cores.mass_coordinate import init_vertical_grid
-from src.dynamical_cores.utils_3d import physical_dot_product
-from src.dynamical_cores.model_info import models
-from src.dynamical_cores.cam_se.explicit_terms import (eval_energy_gradient_term,
+from pyses.dynamical_cores.physics_config import init_physics_config
+from pyses.analytic_initialization.moist_baroclinic_wave import init_baroclinic_wave_config, init_baroclinic_wave_state
+from pyses.mesh_generation.element_local_metric import init_quasi_uniform_grid_elem_local
+from pyses.dynamical_cores.mass_coordinate import init_vertical_grid
+from pyses.dynamical_cores.utils_3d import physical_dot_product
+from pyses.dynamical_cores.model_info import models
+from pyses.dynamical_cores.cam_se.explicit_terms import (eval_energy_gradient_term,
                                                        eval_temperature_horiz_advection_term,
                                                        eval_temperature_vertical_advection_term,
                                                        pressure_gradient_options,
                                                        eval_pressure_gradient_force_term)
-from src.dynamical_cores.homme.explicit_terms import (eval_grad_kinetic_energy_h_term,
+from pyses.dynamical_cores.homme.explicit_terms import (eval_grad_kinetic_energy_h_term,
                                                       eval_pgrad_phi_term,
                                                       eval_theta_v_divergence_term,
                                                       eval_pgrad_pressure_term)
-from src.dynamical_cores.cam_se.thermodynamics import eval_exner_function, eval_virtual_temperature, eval_sum_species
-from src.dynamical_cores.cam_se.explicit_terms import init_common_variables as init_common_variables_se
-from src.dynamical_cores.cam_se.explicit_terms import eval_d_mass_divergence_term as eval_d_mass_divergence_term_se
-from src.dynamical_cores.cam_se.explicit_terms import eval_vorticity_term as eval_vorticity_term_se
-from src.dynamical_cores.homme.explicit_terms import init_common_variables as init_common_variables_homme
-from src.dynamical_cores.homme.explicit_terms import eval_d_mass_divergence_term as eval_d_mass_divergence_term_homme
-from src.dynamical_cores.homme.explicit_terms import eval_vorticity_term as eval_vorticity_term_homme
-from src.operations_2d.operators import inner_product
+from pyses.dynamical_cores.cam_se.thermodynamics import eval_exner_function, eval_virtual_temperature, eval_sum_species
+from pyses.dynamical_cores.cam_se.explicit_terms import init_common_variables as init_common_variables_se
+from pyses.dynamical_cores.cam_se.explicit_terms import eval_d_mass_divergence_term as eval_d_mass_divergence_term_se
+from pyses.dynamical_cores.cam_se.explicit_terms import eval_vorticity_term as eval_vorticity_term_se
+from pyses.dynamical_cores.homme.explicit_terms import init_common_variables as init_common_variables_homme
+from pyses.dynamical_cores.homme.explicit_terms import eval_d_mass_divergence_term as eval_d_mass_divergence_term_homme
+from pyses.dynamical_cores.homme.explicit_terms import eval_vorticity_term as eval_vorticity_term_homme
+from pyses.operations_2d.operators import inner_product
 _be = _get_backend()
 jnp = _be.np
 

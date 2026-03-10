@@ -1,5 +1,5 @@
 import numpy as np
-from src.mpi.processor_decomposition import (init_decomp,
+from pyses.mpi.processor_decomposition import (init_decomp,
                                              sphere_coord_to_face_idx_pos,
                                              init_mapping)
 from ...context import get_figdir

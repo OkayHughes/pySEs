@@ -1,8 +1,8 @@
-from src._config import get_backend as _get_backend
-from src.dynamical_cores.time_step import time_step_options
-from src.dynamical_cores.model_state import sum_dynamics, copy_dynamics
-from src.dynamical_cores.model_info import models, cam_se_models, homme_models
-from src.dynamical_cores.time_stepping import advance_dynamics_euler, advance_dynamics_ullrich_5stage
+from pyses._config import get_backend as _get_backend
+from pyses.dynamical_cores.time_step import time_step_options
+from pyses.dynamical_cores.model_state import sum_dynamics, copy_dynamics
+from pyses.dynamical_cores.model_info import models, cam_se_models, homme_models
+from pyses.dynamical_cores.time_stepping import advance_dynamics_euler, advance_dynamics_ullrich_5stage
 from frozendict import frozendict
 _be = _get_backend()
 jnp = _be.np

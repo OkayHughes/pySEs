@@ -1,18 +1,18 @@
-from src._config import get_backend as _get_backend
+from pyses._config import get_backend as _get_backend
 import numpy as np
-from src.shallow_water_models.model_state import wrap_model_state
-from src.shallow_water_models.constants import init_physics_config_shallow_water
-from src.shallow_water_models.hyperviscosity import (init_hypervis_config_const,
+from pyses.shallow_water_models.model_state import wrap_model_state
+from pyses.shallow_water_models.constants import init_physics_config_shallow_water
+from pyses.shallow_water_models.hyperviscosity import (init_hypervis_config_const,
                                                      init_hypervis_config_tensor,
                                                      eval_hypervis_quasi_uniform,
                                                      eval_hypervis_variable_resolution)
-from src.shallow_water_models.time_stepping import init_timestep_config
-from src.shallow_water_models.run_shallow_water import simulate_shallow_water
-from src.shallow_water_models.galewsky_init import (init_galewsky_config,
+from pyses.shallow_water_models.time_stepping import init_timestep_config
+from pyses.shallow_water_models.run_shallow_water import simulate_shallow_water
+from pyses.shallow_water_models.galewsky_init import (init_galewsky_config,
                                                     eval_galewsky_wind,
                                                     eval_galewsky_hs,
                                                     eval_galewsky_h)
-from src.mesh_generation.element_local_metric import init_quasi_uniform_grid_elem_local
+from pyses.mesh_generation.element_local_metric import init_quasi_uniform_grid_elem_local
 _be = _get_backend()
 jnp = _be.np
 device_wrapper = _be.array

@@ -1,9 +1,9 @@
-from src._config import get_backend as _get_backend
+from pyses._config import get_backend as _get_backend
 import numpy as np
-from src.mesh_generation.cubed_sphere import init_cube_topo
-from src.mesh_generation.mesh import init_element_corner_vert_redundancy
-from src.mesh_generation.equiangular_metric import eval_metric_terms_equiangular, init_grid_from_topo
-from src.mesh_generation.mesh import mesh_to_cart_bilinear, init_spectral_grid_redundancy
+from pyses.mesh_generation.cubed_sphere import init_cube_topo
+from pyses.mesh_generation.mesh import init_element_corner_vert_redundancy
+from pyses.mesh_generation.equiangular_metric import eval_metric_terms_equiangular, init_grid_from_topo
+from pyses.mesh_generation.mesh import mesh_to_cart_bilinear, init_spectral_grid_redundancy
 from ...context import test_npts
 _be = _get_backend()
 

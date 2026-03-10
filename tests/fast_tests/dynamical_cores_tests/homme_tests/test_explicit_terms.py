@@ -1,15 +1,15 @@
-from src.mesh_generation.equiangular_metric import init_quasi_uniform_grid
+from pyses.mesh_generation.equiangular_metric import init_quasi_uniform_grid
 from ....test_data.mass_coordinate_grids import cam30
-from src.dynamical_cores.model_state import project_dynamics
-from src.dynamical_cores.mass_coordinate import init_vertical_grid
-from src.analytic_initialization.moist_baroclinic_wave import init_baroclinic_wave_config, init_baroclinic_wave_state
-from src._config import get_backend as _get_backend
+from pyses.dynamical_cores.model_state import project_dynamics
+from pyses.dynamical_cores.mass_coordinate import init_vertical_grid
+from pyses.analytic_initialization.moist_baroclinic_wave import init_baroclinic_wave_config, init_baroclinic_wave_state
+from pyses._config import get_backend as _get_backend
 import numpy as np
-from src.dynamical_cores.physics_config import init_physics_config
-from src.dynamical_cores.homme.explicit_terms import eval_energy_quantities
-from src.operations_2d.operators import inner_product
-from src.operations_2d.local_assembly import project_scalar
-from src.dynamical_cores.model_info import models
+from pyses.dynamical_cores.physics_config import init_physics_config
+from pyses.dynamical_cores.homme.explicit_terms import eval_energy_quantities
+from pyses.operations_2d.operators import inner_product
+from pyses.operations_2d.local_assembly import project_scalar
+from pyses.dynamical_cores.model_info import models
 _be = _get_backend()
 jnp = _be.np
 device_wrapper = _be.array

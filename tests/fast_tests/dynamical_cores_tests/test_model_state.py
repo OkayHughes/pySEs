@@ -1,15 +1,15 @@
-from src._config import get_backend as _get_backend
+from pyses._config import get_backend as _get_backend
 import numpy as np
-from src.dynamical_cores.model_info import (models,
+from pyses.dynamical_cores.model_info import (models,
                                             cam_se_models,
                                             thermodynamic_variable_names,
                                             hydrostatic_models,
                                             deep_atmosphere_models)
-from src.mesh_generation.equiangular_metric import init_quasi_uniform_grid
-from src.dynamical_cores.physics_config import init_physics_config
-from src.analytic_initialization.moist_baroclinic_wave import init_baroclinic_wave_config, init_baroclinic_wave_state
-from src.dynamical_cores.mass_coordinate import init_vertical_grid
-from src.dynamical_cores.model_state import (sum_tracers,
+from pyses.mesh_generation.equiangular_metric import init_quasi_uniform_grid
+from pyses.dynamical_cores.physics_config import init_physics_config
+from pyses.analytic_initialization.moist_baroclinic_wave import init_baroclinic_wave_config, init_baroclinic_wave_state
+from pyses.dynamical_cores.mass_coordinate import init_vertical_grid
+from pyses.dynamical_cores.model_state import (sum_tracers,
                                              sum_tracers_series,
                                              wrap_dynamics,
                                              wrap_static_forcing,

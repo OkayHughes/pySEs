@@ -1,5 +1,5 @@
 import numpy as np
-from src.mesh_generation.spectral import init_spectral, _gll_points
+from pyses.mesh_generation.spectral import init_spectral, _gll_points
 
 
 def test_quadrature():

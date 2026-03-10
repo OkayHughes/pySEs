@@ -1,9 +1,9 @@
-from src.dynamical_cores.model_info import models, cam_se_models, variable_kappa_models
-from src._config import get_backend as _get_backend
-from src.mesh_generation.element_local_metric import init_quasi_uniform_grid_elem_local
-from src.dynamical_cores.mass_coordinate import init_vertical_grid
-from src.dynamical_cores.physics_config import init_physics_config
-from src.dynamical_cores.cam_se.thermodynamics import (eval_Rgas_dry,
+from pyses.dynamical_cores.model_info import models, cam_se_models, variable_kappa_models
+from pyses._config import get_backend as _get_backend
+from pyses.mesh_generation.element_local_metric import init_quasi_uniform_grid_elem_local
+from pyses.dynamical_cores.mass_coordinate import init_vertical_grid
+from pyses.dynamical_cores.physics_config import init_physics_config
+from pyses.dynamical_cores.cam_se.thermodynamics import (eval_Rgas_dry,
                                                        eval_cp_dry,
                                                        eval_cp_moist,
                                                        eval_virtual_temperature,
@@ -13,11 +13,11 @@ from src.dynamical_cores.cam_se.thermodynamics import (eval_Rgas_dry,
                                                        eval_midlevel_pressure,
                                                        eval_exner_function,
                                                        eval_balanced_geopotential)
-from src.dynamical_cores.mass_coordinate import eval_top_interface_mass
-from src.analytic_initialization.moist_baroclinic_wave import (eval_pressure_temperature,
+from pyses.dynamical_cores.mass_coordinate import eval_top_interface_mass
+from pyses.analytic_initialization.moist_baroclinic_wave import (eval_pressure_temperature,
                                                                init_baroclinic_wave_config,
                                                                init_baroclinic_wave_state)
-from src.dynamical_cores.initialization import z_from_p_monotonic_moist
+from pyses.dynamical_cores.initialization import z_from_p_monotonic_moist
 from ....test_data.mass_coordinate_grids import cam30, vertical_grid_finite_diff
 from ....context import allclose_global
 _be = _get_backend()

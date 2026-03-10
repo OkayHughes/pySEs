@@ -1,13 +1,13 @@
 from ...test_data.mass_coordinate_grids import cam30
-from src._config import get_backend as _get_backend
-from src.analytic_initialization.moist_baroclinic_wave import (init_baroclinic_wave_config,
+from pyses._config import get_backend as _get_backend
+from pyses.analytic_initialization.moist_baroclinic_wave import (init_baroclinic_wave_config,
                                                                perturbation_opts,
                                                                init_baroclinic_wave_state)
-from src.dynamical_cores.run_dycore import init_simulator
-from src.mesh_generation.element_local_metric import init_quasi_uniform_grid_elem_local
-from src.dynamical_cores.mass_coordinate import init_vertical_grid
-from src.dynamical_cores.model_info import models
-from src.dynamical_cores.model_config import init_default_config, hypervis_opts
+from pyses.dynamical_cores.run_dycore import init_simulator
+from pyses.mesh_generation.element_local_metric import init_quasi_uniform_grid_elem_local
+from pyses.dynamical_cores.mass_coordinate import init_vertical_grid
+from pyses.dynamical_cores.model_info import models
+from pyses.dynamical_cores.model_config import init_default_config, hypervis_opts
 from ...context import get_figdir
 _be = _get_backend()
 jnp = _be.np

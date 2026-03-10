@@ -1,11 +1,11 @@
-from src._config import get_backend as _get_backend
+from pyses._config import get_backend as _get_backend
 import numpy as np
-from src.mesh_generation.cubed_sphere import init_cube_topo
-from src.mesh_generation.mesh import init_element_corner_vert_redundancy
-from src.operations_2d.horizontal_grid import shard_grid
-from src.mesh_generation.equiangular_metric import init_grid_from_topo
-from src.mesh_generation.mesh import vert_red_flat_to_hierarchy
-from src.operations_2d.local_assembly import (project_scalar_wrapper,
+from pyses.mesh_generation.cubed_sphere import init_cube_topo
+from pyses.mesh_generation.mesh import init_element_corner_vert_redundancy
+from pyses.operations_2d.horizontal_grid import shard_grid
+from pyses.mesh_generation.equiangular_metric import init_grid_from_topo
+from pyses.mesh_generation.mesh import vert_red_flat_to_hierarchy
+from pyses.operations_2d.local_assembly import (project_scalar_wrapper,
                                               project_scalar,
                                               init_shard_extraction_map,
                                               minmax_scalar)

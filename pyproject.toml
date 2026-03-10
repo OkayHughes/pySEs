@@ -3,7 +3,6 @@ name = "pyses"
 version = "0.0.2"
 description = "A highly readable, well documented, well tested set of atmospheric dynamical cores with support for variable resolution meshes, as well as automatic differentiation for machine learning and data assimilation."
 readme = "README.md"
-license = { text = "LGPL" }  
 authors = [{ name = "Owen Hughes", email = "okayhughes@gmail.com" }]
 requires-python = ">=3.10"
 dependencies = [
@@ -11,12 +10,16 @@ dependencies = [
     "numpy>=2.2.6",
     "jax>=0.6.2",
     "setuptools>=80.9.0",
+    "jaxlib>=0.6.2",
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: LGPL-2.1-only",
     "Operating System :: OS Independent",
-    "Topic :: Scientific/Engineering :: Atmospheric Science :: Machine Learning",
+    "Topic :: Scientific/Engineering :: Atmospheric Science",
+]
+license = "LGPL-2.1-or-later"
+license-files = [
+    "LICENSE",
 ]
 [project.optional-dependencies]
 mpi = [
@@ -40,3 +43,5 @@ doc = [
     "sphinx>=8.1.3",
 ]
 
+[tool.setuptools.packages.find]
+include = ["pyses*"]  # ["*"] by default
