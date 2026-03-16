@@ -267,7 +267,7 @@ def remap_tracers(dynamics,
   for species_name in moisture_species.keys():
     moisture_species[species_name] = tracers_out[:, :, :, :, moisture_species[species_name]]
   for species_name in tracers_new.keys():
-    tracers_new[species_name] = tracers[:, :, :, :, tracers_new[species_name]]
+    tracers_new[species_name] = tracers_out[:, :, :, :, tracers_new[species_name]]
   return wrap_tracers(moisture_species,
                       tracers_new,
                       model,
