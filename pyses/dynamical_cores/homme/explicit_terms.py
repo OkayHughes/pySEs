@@ -10,7 +10,7 @@ from ..operators_3d import horizontal_gradient_3d, horizontal_vorticity_3d, hori
 from ..model_state import wrap_dynamics, wrap_tracer_consist_dynamics
 from ..model_state import project_scalar_3d
 from functools import partial
-from ..model_info import hydrostatic_models, deep_atmosphere_models
+from ..model_info import hydrostatic_models, deep_atmosphere_models, vertically_buoyant_models
 _be = _get_backend()
 jnp = _be.np
 jit = _be.jit
@@ -87,10 +87,10 @@ def init_common_variables(dynamics,
     w_m = None
     grad_w_i = None
 
-  grad_exner = horizontal_gradient_3d(exner, h_grid, physics_config) / r_hat_m
+  grad_exner = horizontal_gradient_3d(exner, h_grid, physics_config) / r_hat_m[:, :, :, :, jnp.newaxis]
   theta_v = theta_v_d_mass / d_mass
   grad_phi_i = horizontal_gradient_3d(phi_i, h_grid, physics_config)
-  v_over_r_hat_i = midlevel_to_interface_vel(u / r_hat_m[:, :, :, np.newaxis],
+  v_over_r_hat_i = midlevel_to_interface_vel(u / r_hat_m[:, :, :, :, np.newaxis],
                                              d_mass,
                                              d_mass_i)
   div_dp = horizontal_divergence_3d(d_mass[:, :, :, :, np.newaxis] * u /
@@ -190,7 +190,7 @@ def eval_grad_kinetic_energy_h_term(common_variables,
   u = common_variables["horizontal_wind"]
   grad_kinetic_energy = horizontal_gradient_3d((u[:, :, :, :, 0]**2 +
                                                 u[:, :, :, :, 1]**2) / 2.0, h_grid, config)
-  return -grad_kinetic_energy / common_variables["r_hat_m"]
+  return -grad_kinetic_energy / common_variables["r_hat_m"][:, :, :, :, jnp.newaxis]
 
 
 @jit
@@ -221,7 +221,7 @@ def eval_grad_kinetic_energy_v_term(common_variables,
   """
   w_i = common_variables["w_i"]
   w_sq_m = interface_to_midlevel(w_i * w_i) / 2.0
-  w2_grad_sph = horizontal_gradient_3d(w_sq_m, h_grid, config) / common_variables["r_hat_m"]
+  w2_grad_sph = horizontal_gradient_3d(w_sq_m, h_grid, config) / common_variables["r_hat_m"][:, :, :, :, jnp.newaxis]
   return -w2_grad_sph
 
 
@@ -271,7 +271,7 @@ def eval_u_metric_term(common_variables):
       Metric correction to the horizontal wind tendency.
   """
   return -(common_variables["w_m"][:, :, :, :, np.newaxis] * common_variables["horizontal_wind"] /
-           common_variables["r_m"][:, :, :, np.newaxis])
+           common_variables["r_m"][:, :, :, :, np.newaxis])
 
 
 @jit
@@ -328,8 +328,8 @@ def eval_pgrad_pressure_term(common_variables,
   exner = common_variables["exner"]
   r_hat_m = common_variables["r_hat_m"]
   grad_p_term_1 = config["cp"] * theta_v[:, :, :, :, np.newaxis] * common_variables["grad_exner"]
-  grad_theta_v_exner = horizontal_gradient_3d(theta_v * exner, h_grid, config) / r_hat_m
-  grad_theta_v = horizontal_gradient_3d(theta_v, h_grid, config) / r_hat_m
+  grad_theta_v_exner = horizontal_gradient_3d(theta_v * exner, h_grid, config) / r_hat_m[:, :, :, :, jnp.newaxis]
+  grad_theta_v = horizontal_gradient_3d(theta_v, h_grid, config) / r_hat_m[:, :, :, :, jnp.newaxis]
   grad_p_term_2 = config["cp"] * (grad_theta_v_exner - exner[:, :, :, :, np.newaxis] * grad_theta_v)
   return -(grad_p_term_1 + grad_p_term_2) / 2.0
 
@@ -406,7 +406,7 @@ def eval_w_metric_term(common_variables):
   w_metric : Array[tuple[elem_idx, gll_idx, gll_idx, ilev_idx], Float]
       Metric correction to the interface vertical-velocity tendency.
   """
-  v_sq_over_r_i = midlevel_to_interface_vel(common_variables["horizontal_wind"]**2 / common_variables["r_m"],
+  v_sq_over_r_i = midlevel_to_interface_vel(common_variables["horizontal_wind"]**2 / common_variables["r_m"][:, :, :, :, jnp.newaxis],
                                             common_variables["d_mass"],
                                             common_variables["d_mass_i"])
   return (v_sq_over_r_i[:, :, :, :, 0] + v_sq_over_r_i[:, :, :, :, 1])
@@ -542,10 +542,10 @@ def eval_theta_v_divergence_term(common_variables,
   div_d_mass = common_variables["div_d_mass"]
   d_mass = common_variables["d_mass"]
   v_theta_v = common_variables["horizontal_wind"] * common_variables["theta_v_d_mass"][:, :, :, :, np.newaxis]
-  v_theta_v /= r_hat_m
+  v_theta_v /= r_hat_m[:, :, :, :, jnp.newaxis]
   div_v_theta_v = horizontal_divergence_3d(v_theta_v, h_grid, config) / 2.0
   grad_theta_v = horizontal_gradient_3d(theta_v, h_grid, config)
-  grad_theta_v /= r_hat_m
+  grad_theta_v /= r_hat_m[:, :, :, :, jnp.newaxis]
 
   div_v_theta_v += (theta_v * div_d_mass + (d_mass * (u[:, :, :, :, 0] * grad_theta_v[:, :, :, :, 0] +
                                                       u[:, :, :, :, 1] * grad_theta_v[:, :, :, :, 1]))) / 2.0
@@ -594,7 +594,7 @@ def eval_tracer_velocity_term(common_variables):
       Mass-weighted horizontal tracer-consistency flux.
   """
   return (common_variables["d_mass"][:, :, :, :, jnp.newaxis] *
-          common_variables["horizontal_wind"] / common_variables["r_hat_m"])
+          common_variables["horizontal_wind"] / common_variables["r_hat_m"][:, :, :, :, jnp.newaxis])
 
 
 @partial(jit, static_argnames=["model"])

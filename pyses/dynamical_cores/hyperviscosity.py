@@ -9,7 +9,7 @@ from .utils_3d import interface_to_delta, interface_to_midlevel
 from .homme.thermodynamics import eval_balanced_geopotential
 from .mass_coordinate import surface_mass_to_interface_mass
 from functools import partial
-from .model_info import hydrostatic_models, thermodynamic_variable_names, homme_models, cam_se_models
+from .model_info import hydrostatic_models, thermodynamic_variable_names, homme_models, cam_se_models, shallow_water_models
 _be = _get_backend()
 vmap_1d_apply = _be.vmap_1d_apply
 jit = _be.jit
@@ -157,17 +157,11 @@ def eval_hypervis_harmonic(dynamics,
     hyperdiff_phi_i = None
     hyperdiff_w_i = None
 
-  if model in homme_models:
-    # THIS IS THE ONE POINT IN THE CODE WHERE dynamics["theta_v_d_mass"] MAY BE theta_v
-    hyperdiff_thermo = scalar_harmonic_3d(dynamics["theta_v_d_mass"],
-                                          h_grid,
-                                          physics_config,
-                                          apply_tensor=apply_tensor)
-  else:
-    hyperdiff_thermo = scalar_harmonic_3d(dynamics["T"],
-                                          h_grid,
-                                          physics_config,
-                                          apply_tensor=apply_tensor)
+
+  hyperdiff_thermo = scalar_harmonic_3d(dynamics[thermodynamic_variable_names[model]],
+                                        h_grid,
+                                        physics_config,
+                                        apply_tensor=apply_tensor)
   hypervis_tend = wrap_dynamics(nu_default * hyperdiff_u,
                                 nu_default * hyperdiff_thermo,
                                 nu_d_mass * hyperdiff_d_mass,
@@ -520,8 +514,10 @@ def eval_hypervis_terms(dynamics,
 
   if model in cam_se_models:
     thermo_var = dynamics["T"] - ref_state["T"]
-  else:
+  elif model in homme_models:
     thermo_var = dynamics["theta_v_d_mass"] / dynamics["d_mass"] - ref_state["theta_v"]
+  elif model in shallow_water_models:
+    thermo_var = jnp.zeros_like(dynamics[thermodynamic_variable_names[model]])
 
   hypervis_state = wrap_dynamics(dynamics["horizontal_wind"],
                                  thermo_var,
@@ -619,6 +615,9 @@ def eval_ref_state(phi_surf,
   elif model in homme_models:
     thermo_var_name = "theta_v"
     thermo_profile = theta_ref
+  elif model in shallow_water_models:
+    thermo_var_name = thermodynamic_variable_names[model]
+    thermo_profile = jnp.zeros_like(theta_ref)
   ref_profiles = {"d_mass": d_mass_ref,
                   thermo_var_name: thermo_profile}
   if model not in hydrostatic_models:

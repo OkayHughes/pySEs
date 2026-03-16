@@ -2,7 +2,7 @@ import numpy as np
 from ..._config import get_backend as _get_backend
 from ..utils_3d import midlevel_to_interface, interface_to_delta, phi_to_r_hat
 from functools import partial
-from ..model_info import hydrostatic_models, deep_atmosphere_models
+from ..model_info import hydrostatic_models, deep_atmosphere_models, quasi_hydrostatic_models
 _be = _get_backend()
 jnp = _be.np
 jit = _be.jit
@@ -125,8 +125,8 @@ def eval_mu(state,
     r_hat_i = 1.0
     r_hat_sq_avg = 1.0
   p_model, exner = eval_pressure_exner_nonhydrostatic(theta_v_d_mass, d_phi, r_hat_sq_avg, config)
-  if model in hydrostatic_models:
-    d_nh_pressure_d_mass = jnp.ones_like(phi_i)
+  if model in hydrostatic_models or model in quasi_hydrostatic_models:
+      d_nh_pressure_d_mass = jnp.ones_like(phi_i)
   else:
     p_top = v_grid["hybrid_a_i"][0] * v_grid["reference_surface_mass"]
     if model in deep_atmosphere_models:
@@ -139,6 +139,7 @@ def eval_mu(state,
                                             d_nh_pressure_d_mass_int,
                                             d_nh_pressure_d_mass_bottom[:, :, :, np.newaxis]),
                                            axis=-1)
+    # note: due to construction of quasi-hydrostatic models 
     if model in deep_atmosphere_models:
       d_nh_pressure_d_mass *= r_hat_i**2
   return p_model, exner, r_hat_i, d_nh_pressure_d_mass

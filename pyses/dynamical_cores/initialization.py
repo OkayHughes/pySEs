@@ -2,7 +2,9 @@ import numpy as np
 from .._config import get_backend as _get_backend
 from .homme.homme_state import init_model_struct as init_model_struct_homme
 from .cam_se.se_state import init_model_struct as init_model_struct_se
+from .shallow_water_3d.shallow_water_state import init_model_struct as init_model_struct_sw
 from .homme.thermodynamics import eval_balanced_geopotential
+from .shallow_water_3d.thermodynamics import eval_geopotential as eval_geopotential_sw
 from .utils_3d import interface_to_delta
 from .mass_coordinate import (surface_mass_to_midlevel_mass,
                               surface_mass_to_interface_mass,
@@ -363,4 +365,75 @@ def init_model_pressure(z_pi_surf_func,
                                             model,
                                             phi_i=phi_i,
                                             w_i=w_i)
+  return initial_state
+
+
+def init_model_shallow_water(z_surf_h_total_func,
+                             u_func,
+                             v_func,
+                             h_grid,
+                             v_grid,
+                             config,
+                             dims,
+                             model):
+  """
+  Initialise a 3-D shallow water model state by specifying the atmospheric fields as
+  functions of latitude, longitude, and height.
+
+  Parameters
+  ----------
+  z_surf_h_total_func : callable
+      Function ``(lat, lon) -> (z_surf, surface_mass)`` returning the
+      surface geopotential height (m) and free surface height.
+  u_func : callable
+      Function ``(lat, lon, z) -> u`` returning the zonal wind (m/s).
+  v_func : callable
+      Function ``(lat, lon, z) -> v`` returning the meridional wind (m/s).
+  h_grid : `SpectralElementGrid`
+      Horizontal spectral element grid struct.
+  v_grid : `dict`
+      Vertical grid struct containing hybrid coordinate coefficients.
+  config : `dict`
+      Model physics configuration dict.
+  dims : frozendict[str, int]
+      Grid dimension metadata.
+  model : model_info.models
+      Dynamical core identifier (from ``model_info.models``).
+
+  Notes
+  -----
+  So that we can share infrastructure between the shallow water model as
+  well as primitive equation dynamical cores, we assume a constant
+  density rho_0 = 1 , so that 1 Pa of pressure differential exactly
+  corresponds to a difference of 1 m^2 s^{-2} (but in the opposite direction,
+  i.e. g dphi  = - dp ).
+
+  Returns
+  -------
+  initial_state : model state struct
+      Fully initialised model state struct suitable for passing to the
+      time-stepping routines.
+  """
+  lat = h_grid["physical_coords"][:, :, :, 0]
+  lon = h_grid["physical_coords"][:, :, :, 1]
+  z_surf, total_height = z_surf_h_total_func(lat, lon)
+
+  # note: this is pressure integrated from
+  # the upper free surface, assuming rho = 1
+  p_int = surface_mass_to_interface_mass(total_height * config["gravity"], v_grid)
+
+  phi_surf = z_surf * config["gravity"]
+  d_mass = interface_to_delta(p_int)
+  u = u_func(lat, lon, v_grid)
+  v = v_func(lat, lon, v_grid)
+  wind = jnp.stack((u, v), axis=-1)
+
+  initial_state = init_model_struct_sw(device_wrapper(wind),
+                                       device_wrapper(d_mass),
+                                       device_wrapper(phi_surf),
+                                       {},
+                                       h_grid,
+                                       dims,
+                                       config,
+                                       model)
   return initial_state

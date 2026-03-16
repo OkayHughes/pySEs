@@ -50,7 +50,11 @@ def flatten_tracers(tracers, model):
       tracers_flat.append(tracers["dry_air_species"][species_name])
       tracer_map["dry_air_species"][species_name] = ct
       ct += 1
-  return jnp.stack(tracers_flat, axis=0), tracer_map
+  if ct > 0:
+    ret = jnp.stack(tracers_flat, axis=0)
+  else:
+    ret = jnp.zeros(1)
+  return ret, tracer_map
 
 
 @partial(jit, static_argnames=["model"])

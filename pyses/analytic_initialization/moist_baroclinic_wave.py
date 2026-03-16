@@ -616,8 +616,8 @@ def init_baroclinic_wave_state(h_grid,
                                pert_type=perturbation_opts.none,
                                enforce_hydrostatic=False):
   """
-  Initialise model state for the Jablonowski-Williamson baroclinic
-  wave test case.
+  Initialise model state for the Ullrich et al. (2014), Ullrich et al. (2016),
+   and Hughes & Jablonowski (2023) baroclinic wave test cases.
 
   Wraps ``init_model_pressure`` with the analytic surface state,
   pressure/temperature profile, and wind functions from the

@@ -57,6 +57,7 @@ def init_physics_config(model,
                         p0=1e5,
                         cp=1.00464e3,
                         cp_water_vapor=1.810e3,
+                        alpha=0.0,
                         R_water_vapor=universal_R / molec_weight_water_vapor,
                         epsilon=molec_weight_water_vapor / molec_weight_dry_air,
                         dry_air_species=["N2", "O2"]):
@@ -89,6 +90,8 @@ def init_physics_config(model,
   cp_water_vapor : float, optional
       Specific heat capacity of water vapour at constant pressure in
       J kg^-1 K^-1 (default: 1810).
+  alpha:
+      Rotation in radians about which to rotate earth's axis relative to the conventional pole (0, 0, 1).
   R_water_vapor : float, optional
       Specific gas constant for water vapour (J kg^-1 K^-1).
   epsilon : float, optional
@@ -113,6 +116,7 @@ def init_physics_config(model,
                     "epsilon": epsilon}
   physics_config["Rgas"] = device_wrapper(Rgas)
   physics_config["cp"] = device_wrapper(cp)
+  physics_config["alpha"] = device_wrapper(alpha)
   if model in cam_se_models:
     if model in variable_kappa_models:
       physics_config["dry_air_species_Rgas"] = {}

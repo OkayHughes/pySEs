@@ -1,4 +1,5 @@
 from .physics_config import init_physics_config
+from .model_info import shallow_water_models
 from .hyperviscosity import init_hypervis_config_stub, init_hypervis_config_tensor, init_hypervis_config_const
 from .time_stepping import init_timestep_config
 from math import floor, log10
@@ -60,10 +61,16 @@ def init_default_config(nx,
     physics_dt = 900.0 * (30.0 / nx)
     physics_dt = round(physics_dt, -(int(floor(log10(abs(physics_dt)))) - 1))
   physics_config = init_physics_config(model)
+
+  if model in shallow_water_models:
+    n_sponge = 0
+  else:
+    n_sponge = 5
+
   if hypervis_type is hypervis_opts.variable_resolution:
-    diffusion_config = init_hypervis_config_tensor(h_grid, v_grid, dims, physics_config)
+    diffusion_config = init_hypervis_config_tensor(h_grid, v_grid, dims, physics_config, n_sponge=n_sponge)
   elif hypervis_type is hypervis_opts.quasi_uniform:
-    diffusion_config = init_hypervis_config_const(nx, physics_config, v_grid)
+    diffusion_config = init_hypervis_config_const(nx, physics_config, v_grid, n_sponge=n_sponge)
   elif hypervis_type is hypervis_opts.none:
     diffusion_config = init_hypervis_config_stub()
   timestep_config = init_timestep_config(physics_dt,

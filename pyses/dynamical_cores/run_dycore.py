@@ -2,7 +2,8 @@ from .time_stepping import (advance_dynamics_euler,
                             advance_hypervis_euler,
                             advance_dynamics_ullrich_5stage,
                             advance_sponge_euler)
-from .model_state import remap_dynamics
+from .._config import get_backend as _get_backend
+from .model_state import remap_dynamics, remap_tracers
 from .time_step import time_step_options
 from .model_state import (sum_dynamics_series,
                           sum_tracers_series,
@@ -13,8 +14,13 @@ from .model_state import (sum_dynamics_series,
 from .physics_dynamics_coupling import coupling_types
 from .tracer_advection.eulerian_spectral import advance_tracers
 from .model_info import cam_se_models
+from functools import partial
+_be = _get_backend()
+jit = _be.jit
 
 
+
+@partial(jit, static_argnames=["model", "dims", "timestep_config"])
 def advance_coupling_step(state_in,
                           h_grid,
                           v_grid,
@@ -64,6 +70,7 @@ def advance_coupling_step(state_in,
       Updated model state after advancing one physics timestep.
   """
   physics_dynamics_coupling = timestep_config["physics_dynamics_coupling"]
+  do_remap = v_grid["hybrid_a_m"].shape[0] > 1
 
   dynamics_state = state_in["dynamics"]
   tracer_state = state_in["tracers"]
@@ -84,12 +91,13 @@ def advance_coupling_step(state_in,
                                       [1.0, timestep_config["physics_dt"]],
                                       model)
   for q_split in range(timestep_config["tracer_subcycle"]):
-    dynamics_state = remap_dynamics(dynamics_state,
-                                    state_in["static_forcing"],
-                                    v_grid,
-                                    physics_config,
-                                    len(v_grid["hybrid_b_m"]),
-                                    model)
+    if do_remap:
+      dynamics_state = remap_dynamics(dynamics_state,
+                                      state_in["static_forcing"],
+                                      v_grid,
+                                      physics_config,
+                                      len(v_grid["hybrid_b_m"]),
+                                      model)
     tracer_consist_init = {"d_mass_init": 1.0 * dynamics_state["d_mass"]}
     if dribble_dynamics and physics_forcing is not None:
       dynamics_state = sum_dynamics_series([dynamics_state, physics_forcing["dynamics"]],
@@ -173,8 +181,6 @@ def advance_coupling_step(state_in,
                                                           tracer_consist_dyn,
                                                           1.0 / timestep_config["dynamics_subcycle"],
                                                           0.0)
-      assert not check_dynamics_nan(dynamics_next, h_grid, model)
-      assert not check_tracers_nan(tracer_state, h_grid, model)
 
       dynamics_state, dynamics_next = dynamics_next, dynamics_state
     tracer_consist_init["d_mass_end"] = 1.0 * dynamics_state["d_mass"]
@@ -188,6 +194,12 @@ def advance_coupling_step(state_in,
                                    timestep_config,
                                    model,
                                    tracer_consist_hypervis=tracer_consist_visc_total)
+    if do_remap:
+      tracer_state = remap_tracers(dynamics_state,
+                                   tracer_state,
+                                   v_grid,
+                                   len(v_grid["hybrid_b_m"]),
+                                   model)
   return wrap_model_state(dynamics_state,
                           static_forcing,
                           tracer_state)
@@ -290,6 +302,8 @@ def init_simulator(h_grid,
                                       dims,
                                       model,
                                       physics_forcing=physics_forcing)
+      assert not check_dynamics_nan(state_n["dynamics"], h_grid, model)
+      assert not check_tracers_nan(state_n["tracers"], h_grid, model)
       t += timestep_config["physics_dt"]
       physics_forcing = yield t, state_n
   return simulator

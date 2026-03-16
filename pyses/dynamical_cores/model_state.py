@@ -9,7 +9,9 @@ from .model_info import (f_plane_models,
                          thermodynamic_variable_names,
                          hydrostatic_models,
                          cam_se_models,
-                         moist_mixing_ratio_models)
+                         moist_mixing_ratio_models,
+                         shallow_water_models,
+                         quasi_hydrostatic_models)
 from .mass_coordinate import surface_mass_to_d_mass, surface_mass_to_midlevel_mass
 from .homme.thermodynamics import eval_balanced_geopotential, eval_midlevel_pressure
 from .utils_3d import interface_to_delta, cumulative_sum, phi_to_g
@@ -248,6 +250,8 @@ def remap_tracers(dynamics,
     tracers_new[species_name] = ct
     tracer_list.append(tracers["tracers"][species_name])
     ct += 1
+  if ct < 1:
+    return tracers
   pi_surf = dynamics_to_surface_mass(dynamics, v_grid)
   d_mass_ref = surface_mass_to_d_mass(pi_surf,
                                       v_grid)
@@ -636,9 +640,22 @@ def init_static_forcing(phi_surf,
     coriolis_param = 2.0 * physics_config["angular_freq_earth"] * (jnp.sin(f_plane_center) *
                                                                    jnp.ones_like(h_grid["physical_coords"][:, :, :, 0]))
   else:
-    coriolis_param = 2.0 * physics_config["angular_freq_earth"] * jnp.sin(h_grid["physical_coords"][:, :, :, 0])
+    coriolis = (-jnp.cos(h_grid["physical_coords"][:, :, :, 1]) *
+                jnp.cos(h_grid["physical_coords"][:, :, :, 0]) *
+                jnp.sin(physics_config["alpha"]) +
+                jnp.sin(h_grid["physical_coords"][:, :, :, 0]) *
+                jnp.cos(physics_config["alpha"]))
+    # todo: add rotation to cos coriolis for completeness.
+    coriolis_param = 2.0 * physics_config["angular_freq_earth"] * coriolis
+    # coriolis_param = 2.0 * physics_config["angular_freq_earth"] * jnp.sin(h_grid["physical_coords"][:, :, :, 0])
   if model in deep_atmosphere_models:
-    nontrad_coriolis_param = 2.0 * physics_config["angular_freq_earth"] * jnp.cos(h_grid["physical_coords"][:, :, :, 0])
+    nontrad_coriolis = (jnp.cos(physics_config["alpha"]) *
+                        jnp.cos(h_grid["physical_coords"][:, :, :, 0]) +
+                        jnp.sin(physics_config["alpha"]) *
+                        jnp.sin(h_grid["physical_coords"][:, :, :, 0]) *
+                        jnp.cos(h_grid["physical_coords"][:, :, :, 1]))
+    nontrad_coriolis_param = 2.0 * physics_config["angular_freq_earth"] * nontrad_coriolis
+    # nontrad_coriolis_param = 2.0 * physics_config["angular_freq_earth"] * jnp.cos(h_grid["physical_coords"][:, :, :, 0])
   else:
     nontrad_coriolis_param = None
   return wrap_static_forcing(phi_surf, grad_phi_surf, coriolis_param, nontrad_coriolis_param=nontrad_coriolis_param)
@@ -800,7 +817,7 @@ def remap_dynamics(dynamics_in,
   if model in cam_se_models:
     thermo_model = dynamics_in["T"] * d_mass
   else:
-    thermo_model = dynamics_in["theta_v_d_mass"]
+    thermo_model = dynamics_in[thermodynamic_variable_names[model]]
   if model not in hydrostatic_models:
     p_mid = eval_midlevel_pressure(dynamics_in, v_grid)
     phi_ref = eval_balanced_geopotential(static_forcing["phi_surf"],
@@ -975,7 +992,9 @@ def check_dynamics_nan(dynamics,
       ``True`` if any NaN is found in any dynamics field on any MPI rank.
   """
   is_nan = False
-  fields = ["horizontal_wind", thermodynamic_variable_names[model], "d_mass"]
+  fields = ["horizontal_wind", "d_mass"]
+  if model not in shallow_water_models:
+    fields += [thermodynamic_variable_names[model]]
   if model not in hydrostatic_models:
     fields += ["w_i", "phi_i"]
   for field in fields:
