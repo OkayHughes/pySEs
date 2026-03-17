@@ -103,7 +103,7 @@ def calc_minmax(tracers, grid, dims):
     maxvals_global = minmax_scalar_3d(maxvals[tracer_idx, :, np.newaxis, np.newaxis] *
                                       jnp.ones_like(tracers[0, :, :, :, :]),
                                       grid, dims, max=True)
-    tracer_elem_lev_maxs.append(np.max(maxvals_global, axis=(1, 2)))
+    tracer_elem_lev_maxs.append(jnp.max(maxvals_global, axis=(1, 2)))
   return jnp.stack(tracer_elem_lev_mins, axis=0), jnp.stack(tracer_elem_lev_maxs, axis=0)
 
 
@@ -148,7 +148,7 @@ def tracer_euler_step(tracer_mass_stacked,
   """
   interim_velocity = u_d_mass_avg / interim_d_mass[:, :, :, :, np.newaxis]
   tracer_mass_out = []
-  tracer_maxs, tracer_mins = calc_minmax(tracer_mass_stacked / interim_d_mass, grid, dims)
+  tracer_mins, tracer_maxs = calc_minmax(tracer_mass_stacked / interim_d_mass, grid, dims)
   for tracer_idx in range(tracer_mass_stacked.shape[0]):
     tracer_tend = -horizontal_divergence_3d(tracer_mass_stacked[tracer_idx, :, :, :, :, np.newaxis] * interim_velocity,
                                             grid,
@@ -196,7 +196,7 @@ def calc_hypervis_tend_tracer(tracer_mass, d_mass_scale, grid, dims, dt, physics
     harmonic = scalar_harmonic_3d(d_mass_scale * tracer_mass[tracer_idx, :, :, :, :], grid, physics_config)
     harmonic = project_tracer_3d(harmonic, grid, dims)
     apply_tensor = "tensor_hypervis" in diffusion_config.keys()
-    biharmonic = scalar_harmonic_3d(tracer_mass[tracer_idx, :, :, :, :],
+    biharmonic = scalar_harmonic_3d(harmonic,
                                     grid,
                                     physics_config,
                                     apply_tensor=apply_tensor)
@@ -339,18 +339,18 @@ def advance_tracers_rk2(tracer_mass_in,
   intermediate_d_mass = intermediate_d_mass_dynamics(d_mass_init, d_mass_tend_dyn_cont, dt, 2)
   d_mass_limiter = limiter_d_mass(d_mass_init, d_mass_tend_dyn, d_mass_tend_dyn_cont, dt, 2)
 
-  if d_mass_hypervis_tend is not None and "disable_diffusion" not in diffusion_config.keys():
-    nu_tracer = diffusion_config["nu_tracer"]
-    d_mass_limiter += 3.0 * dt / 2.0 * nu_tracer * d_mass_hypervis_tend
-    hypervis_tend = calc_hypervis_tend_tracer(tracer_mass_out,
-                                              hypervis_d_mass_scale,
-                                              grid,
-                                              dims,
-                                              3.0 * dt / 2.0,
-                                              physics_config,
-                                              diffusion_config)
-  else:
-    hypervis_tend = jnp.zeros_like(tracer_mass_in)
+  # if d_mass_hypervis_tend is not None and "disable_diffusion" not in diffusion_config.keys():
+  #   nu_tracer = diffusion_config["nu_tracer"]
+  #   d_mass_limiter += 3.0 * dt / 2.0 * nu_tracer * d_mass_hypervis_tend
+  #   hypervis_tend = calc_hypervis_tend_tracer(tracer_mass_out,
+  #                                             hypervis_d_mass_scale,
+  #                                             grid,
+  #                                             dims,
+  #                                             3.0 * dt / 2.0,
+  #                                             physics_config,
+  #                                             diffusion_config)
+  # else:
+  hypervis_tend = jnp.zeros_like(tracer_mass_in)
   tracer_mass_out = tracer_euler_step(tracer_mass_out,
                                       dt / 2.0,
                                       u_d_mass_avg,
