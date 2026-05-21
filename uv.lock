@@ -1600,12 +1600,14 @@ wheels = [
 
 [[package]]
 name = "pyses"
-version = "0.2.0"
+version = "0.0.3.1"
 source = { virtual = "." }
 dependencies = [
     { name = "frozendict" },
     { name = "jax", version = "0.6.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "jax", version = "0.8.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "jaxlib", version = "0.6.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "jaxlib", version = "0.8.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "numpy", version = "2.4.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "setuptools" },
@@ -1636,6 +1638,7 @@ doc = [
 requires-dist = [
     { name = "frozendict", specifier = ">=2.4.7" },
     { name = "jax", specifier = ">=0.6.2" },
+    { name = "jaxlib", specifier = ">=0.6.2" },
     { name = "mpi4jax", marker = "extra == 'mpi'", specifier = ">=0.8.1.post2" },
     { name = "mpi4py", marker = "extra == 'mpi'", specifier = ">=4.1.1" },
     { name = "numpy", specifier = ">=2.2.6" },
@@ -1648,7 +1651,7 @@ dev = [
     { name = "build", specifier = ">=1.4.0" },
     { name = "flake8", specifier = ">=7.3.0" },
     { name = "matplotlib", specifier = ">=3.10.7" },
-    { name = "pytest", specifier = ">=9.0.1" },
+    { name = "pytest", specifier = ">=9.0.2" },
     { name = "twine", specifier = ">=6.2.0" },
 ]
 doc = [

@@ -1,0 +1,4 @@
+fix_vertex 0
+fix_vertex 126
+fix_vertex 707
+fix_vertex 790

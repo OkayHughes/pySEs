@@ -10,7 +10,7 @@ class init:
   init_equiangular_grid = staticmethod(_equiangular_metric.init_quasi_uniform_grid)
   init_stretched_grid = staticmethod(_element_local_metric.init_stretched_grid_elem_local)
   init_unstructured_grid = staticmethod(_element_local_metric.init_unstructured_grid)
-  init_periodic_plane_grid = staticmethod(_periodic_plane.init_periodic_plane)
+  init_periodic_plane_grid = staticmethod(_periodic_plane.init_uniform_grid)
   exodus_to_pysces_grid_corners = staticmethod(_mesh_io.exodus_to_pyses_grid_corners)
 
 

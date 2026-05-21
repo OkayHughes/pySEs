@@ -4,7 +4,7 @@ from ..operations_2d.operators import horizontal_weak_vector_laplacian, horizont
 from ..operations_2d.tensor_hyperviscosity import (eval_quasi_uniform_hypervisc_coeff,
                                                    eval_variable_resolution_hypervisc_coeff)
 from ..operations_2d.horizontal_grid import eval_global_grid_deformation_metrics
-from .model_state import wrap_dynamics, project_dynamics, wrap_tracer_consist_hypervis
+from .model_state import wrap_dynamics, project_dynamics, wrap_tracer_consist_hypervis, project_scalar_3d
 from .utils_3d import interface_to_delta, interface_to_midlevel
 from .homme.thermodynamics import eval_balanced_geopotential
 from .mass_coordinate import surface_mass_to_interface_mass
@@ -80,6 +80,26 @@ def vector_harmonic_3d(vector,
 
   del2 = vmap_1d_apply(vec_lap_wk_onearg, vector, -2, -2)
   return del2
+
+
+@partial(jit, static_argnames=["timestep_config", "dims"])
+def smooth_field(field,
+                 h_grid,
+                 dims,
+                 physics_config,
+                 diffusion_config,
+                 timestep_config,
+                 enlarge_dx_factor=4.0,
+                 num_iter=6):
+  smoothed_field = field[:, :, :, jnp.newaxis]
+  for _ in range(num_iter):
+    laplace_field = scalar_harmonic_3d(smoothed_field, h_grid, physics_config, apply_tensor=False)
+    laplace_cont = project_scalar_3d(laplace_field, h_grid, dims)
+
+    biharmonic_field = scalar_harmonic_3d(laplace_cont, h_grid, physics_config, apply_tensor=True)
+    biharmonic_cont = project_scalar_3d(biharmonic_field, h_grid, dims)
+    smoothed_field -= biharmonic_cont * diffusion_config["nu_d_mass"] * timestep_config["hyperviscosity"]["dt"] * (enlarge_dx_factor)**3.2 / float(num_iter)
+  return smoothed_field.squeeze()
 
 
 @partial(jit, static_argnames=["apply_nu", "model"])

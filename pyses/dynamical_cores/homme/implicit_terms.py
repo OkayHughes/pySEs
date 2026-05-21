@@ -11,7 +11,7 @@ flip = _be.flip
 
 @jit
 def calc_dirk_jacobian(dt, d_mass, d_phi, pnh, physics_config):
-  kappa = physics_config["R_gas"]/physics_config["cp"]
+  kappa = physics_config["R_gas"] / physics_config["cp"]
   a = (dt * physics_config)**2 / (1 - kappa)
   b = jnp.stack((a / d_mass[:, :, :, 0], 
                  2 * a / (d_mass[:, :, :, :-1] + d_mass[:, :, :, 1:])))

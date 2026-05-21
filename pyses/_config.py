@@ -1,6 +1,4 @@
 """
-Alternative configuration module using env vars + lazy singleton + Backend protocol.
-
 Environment variables
 ---------------------
 PYSES_BACKEND : str, default "numpy"
@@ -127,6 +125,9 @@ class Backend(Protocol):
 
     def vmap_1d_apply(self, func: Callable, vector, in_axis: int, out_axis: int):
         ...
+
+    # def lev_scan(self, func: Callable, initial_accum, vector, reverse: bool = False):
+    #     ...
 
     def flip(self, array, axis: int):
         ...

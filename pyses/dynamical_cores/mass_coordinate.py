@@ -9,7 +9,8 @@ jnp = _be.np
 def init_vertical_grid(hybrid_a_i,
                        hybrid_b_i,
                        reference_surface_mass,
-                       model):
+                       model,
+                       hybrid_b_frac=None):
   """
   Build the vertical grid struct from hybrid σ-p coordinate coefficients.
 
@@ -34,10 +35,18 @@ def init_vertical_grid(hybrid_a_i,
       and a moisture flag.
   """
   v_grid = {"reference_surface_mass": reference_surface_mass,
-            "hybrid_a_i": hybrid_a_i,
-            "hybrid_b_i": hybrid_b_i}
+            "hybrid_a_i": hybrid_a_i}
   v_grid["hybrid_a_m"] = 0.5 * (hybrid_a_i[1:] + hybrid_a_i[:-1])
+  if hybrid_b_frac is not None:
+    hybrid_c_i = (1.0 - hybrid_b_frac) * hybrid_b_i
+    hybrid_b_i = hybrid_b_frac * hybrid_b_i
+    v_grid["hybrid_c_i"] = hybrid_c_i
+    v_grid["hybrid_c_m"] = 0.5 * (hybrid_c_i[1:] + hybrid_c_i[:-1])
+
+  v_grid["hybrid_b_i"] = hybrid_b_i
   v_grid["hybrid_b_m"] = 0.5 * (hybrid_b_i[1:] + hybrid_b_i[:-1])
+
+
   if model in moist_mixing_ratio_models:
     v_grid["moist"] = 1.0
   else:
@@ -47,7 +56,8 @@ def init_vertical_grid(hybrid_a_i,
 
 @jit
 def surface_mass_to_midlevel_mass(ps,
-                                  v_grid):
+                                  v_grid,
+                                  ps_smooth=None):
   """
   Compute mid-level pressure (mass) from surface pressure using the hybrid coordinate.
 
@@ -63,13 +73,17 @@ def surface_mass_to_midlevel_mass(ps,
   p_mid : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]
       Mid-level pressure (Pa) for each model level.
   """
-  return (v_grid["reference_surface_mass"] * v_grid["hybrid_a_m"][np.newaxis, np.newaxis, np.newaxis, :] +
-          v_grid["hybrid_b_m"][np.newaxis, np.newaxis, np.newaxis, :] * ps[:, :, :, np.newaxis])
+  midlevel_mass = (v_grid["reference_surface_mass"] * v_grid["hybrid_a_m"][np.newaxis, np.newaxis, np.newaxis, :] +
+                   v_grid["hybrid_b_m"][np.newaxis, np.newaxis, np.newaxis, :] * ps[:, :, :, np.newaxis])
+  if ps_smooth is not None:
+    midlevel_mass += ps_smooth * v_grid["hybrid_c_m"]
+  return midlevel_mass
 
 
 @jit
 def surface_mass_to_d_mass(ps,
-                           v_grid):
+                           v_grid,
+                           ps_smoothed=None):
   """
   Compute layer thickness (dp) from surface pressure using the hybrid coordinate.
 
@@ -89,13 +103,19 @@ def surface_mass_to_d_mass(ps,
         v_grid["hybrid_a_i"][np.newaxis, np.newaxis, np.newaxis, :-1])
   db = (v_grid["hybrid_b_i"][np.newaxis, np.newaxis, np.newaxis, 1:] -
         v_grid["hybrid_b_i"][np.newaxis, np.newaxis, np.newaxis, :-1])
-  return (v_grid["reference_surface_mass"] * da +
-          db * ps[:, :, :, np.newaxis])
+  d_mass = (v_grid["reference_surface_mass"] * da +
+            db * ps[:, :, :, np.newaxis])
+  if ps_smoothed is not None:
+    dc = (v_grid["hybrid_c_i"][np.newaxis, np.newaxis, np.newaxis, 1:] -
+          v_grid["hybrid_c_i"][np.newaxis, np.newaxis, np.newaxis, :-1])
+    d_mass += dc * ps_smoothed[:, :, :, np.newaxis]
+  return d_mass
 
 
 @jit
 def surface_mass_to_interface_mass(ps,
-                                   v_grid):
+                                   v_grid,
+                                   ps_smoothed=None):
   """
   Compute interface-level pressure (mass) from surface pressure using the hybrid coordinate.
 
@@ -111,8 +131,11 @@ def surface_mass_to_interface_mass(ps,
   p_int : Array[tuple[elem_idx, gll_idx, gll_idx, nlev+1], Float]
       Interface-level pressure (Pa) for each model interface.
   """
-  return (v_grid["reference_surface_mass"] * v_grid["hybrid_a_i"][np.newaxis, np.newaxis, np.newaxis, :] +
-          v_grid["hybrid_b_i"][np.newaxis, np.newaxis, np.newaxis, :] * ps[:, :, :, np.newaxis])
+  interface_mass = (v_grid["reference_surface_mass"] * v_grid["hybrid_a_i"][np.newaxis, np.newaxis, np.newaxis, :] +
+                    v_grid["hybrid_b_i"][np.newaxis, np.newaxis, np.newaxis, :] * ps[:, :, :, np.newaxis])
+  if ps_smoothed is not None:
+    interface_mass += v_grid["hybrid_c_i"][np.newaxis, np.newaxis, np.newaxis, :] * ps_smoothed[:, :, :, np.newaxis]
+  return interface_mass
 
 
 @jit

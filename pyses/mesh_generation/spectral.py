@@ -49,7 +49,9 @@ def init_deriv(gll_points):
 
 
 valid_npts = [3, 4, 5, 6]
-_gll_points = {3: {"points": np.array([1.0, 0.0, -1.0]),
+_gll_points = {2: {"points": np.array([1.0, -1.0]),
+                   "weights": np.array([1.0, 1.0])},
+               3: {"points": np.array([1.0, 0.0, -1.0]),
                    "weights": np.array([1.0 / 3.0, 4.0 / 3.0, 1.0 / 3.0])},
                4: {"points": np.array([1.0, np.sqrt(1 / 5), -np.sqrt(1 / 5), -1.0]),
                    "weights": np.array([1 / 6, 5 / 6, 5 / 6, 1 / 6])},

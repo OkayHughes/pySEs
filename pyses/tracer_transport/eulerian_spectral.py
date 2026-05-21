@@ -3,7 +3,7 @@ import numpy as np
 from ..operations_2d.local_assembly import minmax_scalar, project_scalar
 from ..dynamical_cores.operators_3d import horizontal_divergence_3d
 from ..dynamical_cores.hyperviscosity import scalar_harmonic_3d
-from ..operations_2d.limiters import full_limiter
+from ..operations_2d.limiters import full_limiter, clip_and_sum_limiter
 from functools import partial
 _be = _get_backend()
 jnp = _be.np
@@ -155,7 +155,7 @@ def tracer_euler_step(tracer_mass_stacked,
                                             physics_config)
     tracer_out = (tracer_mass_stacked[tracer_idx, :, :, :, :] +
                   dt * tracer_tend + hypervis_tracer_tend[tracer_idx, :, :, :, :])
-    tracer_out = full_limiter(tracer_out, grid["mass_matrix"],
+    tracer_out = clip_and_sum_limiter(tracer_out, grid["mass_matrix"],
                               tracer_mins[tracer_idx, :, :],
                               tracer_maxs[tracer_idx, :, :],
                               d_mass_for_limiter)

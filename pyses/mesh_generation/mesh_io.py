@@ -1,4 +1,5 @@
 import numpy as np
+from os.path import join
 from .._config import get_backend as _get_backend
 _be = _get_backend()
 DEBUG = _be.debug
@@ -110,3 +111,69 @@ def exodus_to_pyses_grid_corners(cart_coords, connect_map, element_permutation):
         assert np.max(np.abs(vert_pos[elem_idx, local_vert_1, :] - vert_pos[elem_idx_pair, remote_vert_1, :])) < 1e-10
         assert np.max(np.abs(vert_pos[elem_idx, local_vert_2, :] - vert_pos[elem_idx_pair, remote_vert_2, :])) < 1e-10
   return vert_pos, edge_info
+
+
+def pyses_grid_to_obj(vert_pos, num_segments=1,
+                      pin_fn=lambda x: False,
+                      scale_pinned=False):
+  edges_completed = set()
+  corner_idx_to_subdiv_grid_map = {}
+  edges_forward = [(0, 1),
+                   (0, 2),
+                   (1, 3),
+                   (2, 3)]
+  node_idxs = {}
+  def get_node_idx(vert_pos):
+    unique_id = f"{vert_pos[0]:0.7e} {vert_pos[1]:0.7e} {vert_pos[2]:0.7e}"
+    if unique_id not in node_idxs.keys():
+      node_idxs[unique_id] = len(node_idxs)
+    return node_idxs[unique_id]
+
+
+  obj_vert_pos = []
+  obj_edges = []
+
+  for elem_idx in range(vert_pos.shape[0]):
+    for vert_start, vert_end in edges_forward:
+      vert_pos_start = vert_pos[elem_idx, vert_start, :]
+      exo_node_start = get_node_idx(vert_pos_start)
+      vert_pos_end = vert_pos[elem_idx, vert_end, :]
+      exo_node_end = get_node_idx(vert_pos_end)
+      if ((exo_node_start, exo_node_end) not in edges_completed and
+          (exo_node_end, exo_node_start) not in edges_completed):
+        for exo_idx, elem_vert_idx in zip((exo_node_start, exo_node_end),
+                                          (vert_start, vert_end)):
+          if exo_idx not in corner_idx_to_subdiv_grid_map.keys():
+            obj_vert_pos.append(vert_pos[elem_idx, elem_vert_idx, :])
+            corner_idx_to_subdiv_grid_map[exo_idx] = len(obj_vert_pos)-1
+        obj_start_idx = corner_idx_to_subdiv_grid_map[exo_node_start]
+        obj_end_idx = corner_idx_to_subdiv_grid_map[exo_node_end]
+        alpha = np.linspace(0, 1, num_segments+1)
+        verts = alpha[:, np.newaxis] * vert_pos_start[np.newaxis, :] + (1.0 - alpha[:, np.newaxis]) * vert_pos_end[np.newaxis, :]
+        verts /= np.linalg.norm(verts, axis=-1)[:, np.newaxis]
+        obj_vert_idxs = [obj_end_idx]
+        for v_idx in range(1, alpha.shape[0]-1):
+          obj_vert_pos.append(verts[v_idx, :])
+          obj_vert_idxs.append(len(obj_vert_pos)-1)
+        obj_vert_idxs.append(obj_start_idx)
+        # Note: one-indexed edges UGH
+        for v_idx in range(alpha.shape[0]-1):
+          obj_edges.append((obj_vert_idxs[v_idx]+1, obj_vert_idxs[v_idx+1]+1))
+        edges_completed.add((exo_node_start, exo_node_end))
+  is_pinned = []
+  vert_scale = []
+  for node_pos in obj_vert_pos:
+    pin_vert = pin_fn(node_pos)
+    is_pinned.append(pin_vert)
+    if scale_pinned and pin_vert:
+      vert_scale.append(1.05)
+    else:
+      vert_scale.append(1.0)
+
+
+  obj_format = "# Cartesian vertex positions, constrainted to unit sphere:\n"
+  obj_format += "\n".join(["v {} {} {}".format(*(vscale * x)) for (x, vscale) in zip(obj_vert_pos, vert_scale)])
+  obj_format += "\n# Edges (one-indexed):\n"
+  obj_format += "\n".join(["l {} {}".format(*l) for l in obj_edges])
+
+  return obj_format, is_pinned

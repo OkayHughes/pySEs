@@ -10,14 +10,17 @@ from .model_state import (sum_dynamics_series,
                           wrap_model_state,
                           check_dynamics_nan,
                           check_tracers_nan,
-                          sum_consistency_struct)
+                          sum_consistency_struct,
+                          dynamics_to_surface_mass)
+from .mass_coordinate import init_vertical_grid
+from .hyperviscosity import smooth_field
 from .physics_dynamics_coupling import coupling_types
 from .tracer_advection.eulerian_spectral import advance_tracers
-from .model_info import cam_se_models
+from .model_info import cam_se_models, shallow_water_models
 from functools import partial
 _be = _get_backend()
 jit = _be.jit
-
+jnp = _be.np
 
 
 @partial(jit, static_argnames=["model", "dims", "timestep_config"])
@@ -70,13 +73,36 @@ def advance_coupling_step(state_in,
       Updated model state after advancing one physics timestep.
   """
   physics_dynamics_coupling = timestep_config["physics_dynamics_coupling"]
-  do_remap = v_grid["hybrid_a_m"].shape[0] > 1
+  do_remap = v_grid["hybrid_a_m"].shape[0] > 1 and model not in shallow_water_models
 
   dynamics_state = state_in["dynamics"]
   tracer_state = state_in["tracers"]
   static_forcing = state_in["static_forcing"]
   dribble_dynamics = (physics_dynamics_coupling == coupling_types.dribble_all or
                       physics_dynamics_coupling == coupling_types.lump_tracers_dribble_dynamics)
+
+# TMP
+# ===========================================================
+  if True:
+    ps = dynamics_to_surface_mass(dynamics_state,
+                                  v_grid)
+    ps_smoothed = smooth_field(ps,
+                                h_grid,
+                                dims,
+                                physics_config,
+                                diffusion_config,
+                                timestep_config)
+  else:
+    ps_smoothed = None
+  if do_remap:
+    dynamics_state = remap_dynamics(dynamics_state,
+                                    state_in["static_forcing"],
+                                    v_grid,
+                                    physics_config,
+                                    len(v_grid["hybrid_b_m"]),
+                                    model,
+                                    ps_smoothed=ps_smoothed)
+# =============================================================
 
   if (physics_dynamics_coupling == coupling_types.lump_tracers_dribble_dynamics) and physics_forcing is not None:
     tracer_state = sum_tracers_series([tracer_state, physics_forcing["tracers"]],
@@ -91,13 +117,6 @@ def advance_coupling_step(state_in,
                                       [1.0, timestep_config["physics_dt"]],
                                       model)
   for q_split in range(timestep_config["tracer_subcycle"]):
-    if do_remap:
-      dynamics_state = remap_dynamics(dynamics_state,
-                                      state_in["static_forcing"],
-                                      v_grid,
-                                      physics_config,
-                                      len(v_grid["hybrid_b_m"]),
-                                      model)
     tracer_consist_init = {"d_mass_init": 1.0 * dynamics_state["d_mass"]}
     if dribble_dynamics and physics_forcing is not None:
       dynamics_state = sum_dynamics_series([dynamics_state, physics_forcing["dynamics"]],
@@ -194,12 +213,32 @@ def advance_coupling_step(state_in,
                                    timestep_config,
                                    model,
                                    tracer_consist_hypervis=tracer_consist_visc_total)
+    if True:
+      ps = dynamics_to_surface_mass(dynamics_state,
+                                    v_grid)
+      ps_smoothed = smooth_field(ps,
+                                 h_grid,
+                                 dims,
+                                 physics_config,
+                                 diffusion_config,
+                                 timestep_config)
+    else:
+      ps_smoothed = None
+    if do_remap:
+      dynamics_state = remap_dynamics(dynamics_state,
+                                      state_in["static_forcing"],
+                                      v_grid,
+                                      physics_config,
+                                      len(v_grid["hybrid_b_m"]),
+                                      model,
+                                      ps_smoothed=ps_smoothed)
     if do_remap:
       tracer_state = remap_tracers(dynamics_state,
                                    tracer_state,
                                    v_grid,
                                    len(v_grid["hybrid_b_m"]),
-                                   model)
+                                   model,
+                                   ps_smoothed=ps_smoothed)
   return wrap_model_state(dynamics_state,
                           static_forcing,
                           tracer_state)

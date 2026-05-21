@@ -4,15 +4,21 @@ from pyses.dynamical_cores.homme.implicit_terms import (solve_strict_diag_domina
                                                         init_search_dir,
                                                         advance_buoyancy_explicit,
                                                         calc_dirk_jacobian)
+from pyses.dynamical_cores.homme.thermodynamics import eval_mu
+from pyses.dynamical_cores.mass_coordinate import surface_mass_to_midlevel_mass
 from pyses._config import get_backend as _get_backend
 import numpy as np
+
 _be = _get_backend()
 jnp = _be.np
 
 
+def get_isothermal_atmospheric_state(surface_pressure, v_grid):
+  
+
+
 def test_calc_dirk_jacobian():
   pass
-
 
 def test_advance_buoyancy_explicit():
   pass

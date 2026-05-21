@@ -603,7 +603,8 @@ def eval_explicit_tendency(dynamics,
                            h_grid,
                            v_grid,
                            config,
-                           model):
+                           model,
+                           acoustic_scaling=1.0):
   """
   Evaluate the full explicit adiabatic tendency for HOMME.
 
@@ -626,6 +627,8 @@ def eval_explicit_tendency(dynamics,
       Physics configuration dict.
   model : model_info.models
       Model identifier; static JIT argument.
+  acoustic_scaling: float
+      Factor that scales vertical buoyancy terms for imex timestepping.
 
   Returns
   -------

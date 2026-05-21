@@ -11,7 +11,6 @@ jnp = _be.np
 jit = _be.jit
 
 
-
 @jit
 def init_common_variables(dynamics,
                           static_forcing):

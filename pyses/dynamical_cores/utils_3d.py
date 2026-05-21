@@ -295,3 +295,16 @@ def physical_dot_product(u, v):
   """
   return (u[:, :, :, :, 0] * v[:, :, :, :, 0] +
           u[:, :, :, :, 1] * v[:, :, :, :, 1])
+
+
+@partial(jit, static_argnames=["model"])
+def calc_perceived_phi_tend(v, d_mass, grad_phi_surf, phi_i, physics_config, v_grid, model):
+  v_d_mass = v * d_mass
+  grad_z_surf = grad_phi_surf / phi_to_g(phi_i[:, :, :, -1], physics_config, model)
+  v_i_exl_boundaries = ((v_d_mass[:, :, :, :-1] + v_d_mass[:, :, :, 1:]) / 
+                        (d_mass[:, :, :, :-1] + d_mass[:, :, :, 1:]))
+  w_i_exl_boundaries = (v_i_exl_boundaries[:, :, :, :, 0] * grad_z_surf[:, :, :, 0, jnp.newaxis] +
+                         v_i_exl_boundaries[:, :, :, :, 1] * grad_z_surf[:, :, :, 1, jnp.newaxis]) * v_grid["hybrid_b_i"][jnp.newaxis, jnp.newaxis, jnp.newaxis, 1:-1]
+  return jnp.stack((jnp.zeros_like(d_mass[:, :, :, 0:1]),
+                    w_i_exl_boundaries,
+                    jnp.zeros_like(d_mass[:, :, :, 0:1])), axis=-1) * phi_to_g(phi_i, physics_config, model)

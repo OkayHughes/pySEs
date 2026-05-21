@@ -202,7 +202,8 @@ def remap_tracers(dynamics,
                   tracers,
                   v_grid,
                   num_lev,
-                  model):
+                  model,
+                  ps_smoothed=None):
   """
   Vertically remap all tracer species to the reference hybrid-coordinate levels.
 
@@ -254,7 +255,8 @@ def remap_tracers(dynamics,
     return tracers
   pi_surf = dynamics_to_surface_mass(dynamics, v_grid)
   d_mass_ref = surface_mass_to_d_mass(pi_surf,
-                                      v_grid)
+                                      v_grid,
+                                      ps_smoothed=ps_smoothed)
   tracer_mass = jnp.stack(tracer_list, axis=-1) * dynamics["d_mass"][:, :, :, :, jnp.newaxis]
   tracers_out = zerroukat_remap(tracer_mass, dynamics["d_mass"],
                                 d_mass_ref, num_lev, filter=True) / d_mass_ref[:, :, :, :, jnp.newaxis]
@@ -776,7 +778,8 @@ def remap_dynamics(dynamics_in,
                    v_grid,
                    physics_config,
                    num_lev,
-                   model):
+                   model,
+                   ps_smoothed=None):
   """
   Vertically remap all dynamics fields to the reference hybrid-coordinate levels.
 
@@ -810,7 +813,8 @@ def remap_dynamics(dynamics_in,
   """
   pi_surf = dynamics_to_surface_mass(dynamics_in, v_grid)
   d_mass_ref = surface_mass_to_d_mass(pi_surf,
-                                      v_grid)
+                                      v_grid,
+                                      ps_smoothed=ps_smoothed)
   d_mass = dynamics_in["d_mass"]
   u_model = dynamics_in["horizontal_wind"][:, :, :, :, 0] * d_mass
   v_model = dynamics_in["horizontal_wind"][:, :, :, :, 1] * d_mass
