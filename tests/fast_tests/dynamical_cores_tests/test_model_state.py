@@ -4,7 +4,8 @@ from pyses.dynamical_cores.model_info import (models,
                                             cam_se_models,
                                             thermodynamic_variable_names,
                                             hydrostatic_models,
-                                            deep_atmosphere_models)
+                                            deep_atmosphere_models,
+                                            dynamical_cores)
 from pyses.mesh_generation.equiangular_metric import init_quasi_uniform_grid
 from pyses.dynamical_cores.physics_config import init_physics_config
 from pyses.analytic_initialization.moist_baroclinic_wave import init_baroclinic_wave_config, init_baroclinic_wave_state
@@ -151,7 +152,7 @@ def test_wrappers():
   npt = 4
   nx = 4
   h_grid, dims = init_quasi_uniform_grid(nx, npt)
-  for model in models:
+  for model in dynamical_cores:
     v_grid = init_vertical_grid(cam30["hybrid_a_i"],
                                 cam30["hybrid_b_i"],
                                 cam30["p0"],
@@ -240,7 +241,7 @@ def test_project_dynamics_state():
   npt = 4
   nx = 4
   h_grid, dims = init_quasi_uniform_grid(nx, npt)
-  for model in models:
+  for model in dynamical_cores:
     v_grid = init_vertical_grid(cam30["hybrid_a_i"],
                                 cam30["hybrid_b_i"],
                                 cam30["p0"],
@@ -276,7 +277,7 @@ def test_advance_dynamics():
   npt = 4
   nx = 4
   h_grid, dims = init_quasi_uniform_grid(nx, npt)
-  for model in models:
+  for model in dynamical_cores:
     v_grid = init_vertical_grid(cam30["hybrid_a_i"],
                                 cam30["hybrid_b_i"],
                                 cam30["p0"],
@@ -319,7 +320,7 @@ def test_check_nan():
   npt = 4
   nx = 4
   h_grid, dims = init_quasi_uniform_grid(nx, npt)
-  for model in models:
+  for model in dynamical_cores:
     v_grid = init_vertical_grid(cam30["hybrid_a_i"],
                                 cam30["hybrid_b_i"],
                                 cam30["p0"],

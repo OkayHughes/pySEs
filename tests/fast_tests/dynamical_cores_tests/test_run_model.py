@@ -25,6 +25,7 @@ def test_theta_steady_state():
 
     total_time = (3600.0 * 6.0)
     for diffusion in [hypervis_opts.variable_resolution, hypervis_opts.quasi_uniform]:
+      print(model)
       print("=" * 10)
       print(f"starting {diffusion}")
       print("=" * 10)

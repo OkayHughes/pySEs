@@ -25,6 +25,9 @@ homme_models = (models.homme_hydrostatic,
 cam_se_models = (models.cam_se,
                  models.cam_se_whole_atmosphere)
 
+dynamical_cores = (*homme_models,
+                   *cam_se_models)
+
 shallow_water_models = (models.shallow_water,
                         models.shallow_water_f_plane)
 
@@ -63,7 +66,9 @@ moist_mixing_ratio_models = (models.homme_hydrostatic,
                              models.homme_nonhydrostatic_f_plane)
 
 dry_mixing_ratio_models = (models.cam_se,
-                           models.cam_se_whole_atmosphere)
+                           models.cam_se_whole_atmosphere,
+                           models.shallow_water,
+                           models.shallow_water_f_plane)
 
 variable_kappa_models = (models.cam_se_whole_atmosphere,)
 
