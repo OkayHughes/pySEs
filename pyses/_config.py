@@ -122,6 +122,30 @@ class Backend(Protocol):
     def shard_map(self, func: Callable, *args, **kwargs) -> Callable:
         ...
 
+    def index_get(self, arr, idx: tuple):
+        ...
+
+    def index_add(self, arr, idx: tuple, vals) -> object:
+        ...
+
+    def index_max(self, arr, idx: tuple, vals) -> object:
+        ...
+
+    def parallel_region(self, fn: Callable, in_specs=None, out_specs=None) -> Callable:
+        ...
+
+    def halo_exchange(self, send_buffers: dict, neighbor_ranks: tuple) -> dict:
+        ...
+
+    def all_reduce_sum(self, t):
+        ...
+
+    def all_reduce_max(self, t):
+        ...
+
+    def all_reduce_min(self, t):
+        ...
+
 
 # ---------------------------------------------------------------------------
 # Numpy backend
@@ -160,6 +184,11 @@ class NumpyBackend:
         self._default_dtype = np.float64 if use_double else np.float32
         self.has_mpi = has_mpi
         self.mpi_comm = mpi_comm
+        if has_mpi:
+            from mpi4py import MPI
+            self._MPI = MPI
+        else:
+            self._MPI = None
 
     def array(self, x, dtype=None, elem_sharding_axis=None):
         return np.array(x, dtype=dtype if dtype is not None else self._default_dtype)
@@ -175,6 +204,59 @@ class NumpyBackend:
 
     def shard_map(self, func, *_, **__):
         return func
+
+    def index_get(self, arr, idx):
+        return arr[idx]
+
+    def index_add(self, arr, idx, vals):
+        result = arr.copy()
+        np.add.at(result, idx, vals)
+        return result
+
+    def index_max(self, arr, idx, vals):
+        result = arr.copy()
+        np.maximum.at(result, idx, vals)
+        return result
+
+    def parallel_region(self, fn, in_specs=None, out_specs=None):
+        return fn
+
+    def halo_exchange(self, send_buffers, neighbor_ranks):
+        recv_buffers = {k: np.ascontiguousarray(np.asarray(send_buffers[k]))
+                        for k in neighbor_ranks}
+        if not neighbor_ranks or self.mpi_comm is None:
+            return recv_buffers
+        reqs = []
+        for k in neighbor_ranks:
+            reqs.append(self.mpi_comm.Isendrecv_replace(recv_buffers[k],
+                                                        dest=k, sendtag=0,
+                                                        source=k, recvtag=0))
+        self._MPI.Request.Waitall(reqs)
+        return recv_buffers
+
+    def all_reduce_sum(self, t):
+        if not self.has_mpi:
+            return np.sum(t)
+        send = np.asarray(t)
+        recv = np.copy(send)
+        self.mpi_comm.Allreduce(send, recv, op=self._MPI.SUM)
+        return recv.item()
+
+    def all_reduce_max(self, t):
+        if not self.has_mpi:
+            return np.max(t)
+        send = np.asarray(t)
+        recv = np.copy(send)
+        self.mpi_comm.Allreduce(send, recv, op=self._MPI.MAX)
+        return recv.item()
+
+    def all_reduce_min(self, t):
+        if not self.has_mpi:
+            return np.min(t)
+        send = np.asarray(t)
+        recv = np.copy(send)
+        self.mpi_comm.Allreduce(send, recv, op=self._MPI.MIN)
+        return recv.item()
 
 
 
@@ -202,6 +284,10 @@ class JaxBackend:
         import jax
         import jax.numpy as jnp
         from jax.sharding import PartitionSpec, NamedSharding, AxisType
+
+        assert not do_mpi_communication, (
+            "The JAX backend does not support MPI; it uses device sharding for "
+            "parallelism. This should have been rejected in _build_backend.")
 
         self.use_double = use_double
         self.debug = debug
@@ -237,8 +323,8 @@ class JaxBackend:
         else:
             self.do_sharding = False
             self.num_devices = 1
-            if use_cpu:
-                jax.config.update("jax_default_device", jax.local_devices("cpu")[0])
+            #if use_cpu:
+            #    jax.config.update("jax_default_device", jax.local_devices("cpu")[0])
             devices = jax.local_devices()
 
         if debug:
@@ -301,6 +387,100 @@ class JaxBackend:
     def shard_map(self, func, *args, **kwargs):
         return self._jax.shard_map(func, *args, **kwargs)
 
+    def index_get(self, arr, idx):
+        return arr[idx]
+
+    def index_add(self, arr, idx, vals):
+        return arr.at[idx].add(vals)
+
+    def index_max(self, arr, idx, vals):
+        return arr.at[idx].max(vals)
+
+    def parallel_region(self, fn, in_specs=None, out_specs=None):
+        P = self._PartitionSpec
+        if in_specs is None:
+            in_specs = P(self._elem_axis_name)
+        if out_specs is None:
+            out_specs = P(self._elem_axis_name)
+        return self._jax.shard_map(
+            fn, mesh=self._device_mesh, in_specs=in_specs, out_specs=out_specs,
+        )
+
+    def all_to_all_ppermute(self, comm_matrix):
+        """
+        Transpose a device-indexed communication matrix via shard_map + ppermute.
+
+        Parameters
+        ----------
+        comm_matrix : Array[tuple[num_devices, num_devices, *trailing], Float]
+            ``comm_matrix[src, dst]`` is the payload device ``src`` sends to
+            device ``dst``.  Sharded along axis 0 (the source axis).
+
+        Returns
+        -------
+        Array[tuple[num_devices, num_devices, *trailing], Float]
+            ``out[dst, src] == comm_matrix[src, dst]`` — each device's row holds
+            what it received from every other device.  Sharded along axis 0.
+
+        Notes
+        -----
+        Implemented as ``num_devices - 1`` ``lax.ppermute`` shift rounds inside
+        a ``shard_map``.  Round ``d`` uses the static permutation
+        ``[(s, (s + d) % N) for s in range(N)]``; the per-round payload is the
+        column the local device owes its round-``d`` partner.  ``ppermute`` is
+        its own transpose under autograd, so this is forward- and
+        reverse-differentiable.  This is the native-collective building block on
+        which a multi-host DSS halo exchange is built.
+        """
+        from jax import lax
+        jnp = self.np
+        N = self.num_devices
+        axis = self._elem_axis_name
+
+        def _core(row):
+            r = lax.axis_index(axis)
+            local = row[0]
+            result = jnp.zeros_like(local)
+            result = result.at[r].set(local[r])
+            for d in range(1, N):
+                payload = lax.dynamic_index_in_dim(local, (r + d) % N,
+                                                   axis=0, keepdims=False)
+                perm = [(s, (s + d) % N) for s in range(N)]
+                recvd = lax.ppermute(payload, axis, perm)
+                result = result.at[(r - d) % N].set(recvd)
+            return result[jnp.newaxis]
+
+        return self.parallel_region(_core)(comm_matrix)
+
+    def halo_exchange(self, send_buffers, neighbor_ranks):
+        """
+        Sparse point-to-point exchange (multi-host JAX path).
+
+        Single-host JAX achieves DSS through device sharding (see
+        ``operations_2d.local_assembly.project_scalar``), so this dict-of-buffers
+        API — a multi-process concept — is not exercised in single-host runs.
+        A multi-host implementation packs ``send_buffers`` into a device-indexed
+        communication matrix and calls :meth:`all_to_all_ppermute`; wiring that
+        requires a globally consistent device/rank map threaded from grid
+        construction, which is not yet in place.
+        """
+        if not neighbor_ranks:
+            return dict(send_buffers)
+        raise NotImplementedError(
+            "Multi-host JAX halo_exchange is not wired. Single-host JAX uses "
+            "device sharding for DSS (operations_2d.local_assembly.project_scalar); "
+            "the ppermute all-to-all primitive is available as all_to_all_ppermute. "
+            "See MIGRATION_PLAN.md §2.5.")
+
+    def all_reduce_sum(self, t):
+        return self.np.sum(t)
+
+    def all_reduce_max(self, t):
+        return self.np.max(t)
+
+    def all_reduce_min(self, t):
+        return self.np.min(t)
+
 
 
 # ---------------------------------------------------------------------------
@@ -326,18 +506,22 @@ def _build_backend() -> Backend:
     has_mpi = _has_mpi_lib and use_mpi
 
     if backend_name == "jax":
-        assert not (shard_count > 1 and do_mpi), \
-            "Sharding in an MPI environment is not presently supported"
+        if use_mpi:
+            raise ValueError(
+                "The JAX backend does not support MPI. JAX parallelism is "
+                "provided by device sharding (set PYSES_SHARD_CPU_COUNT or use "
+                "GPUs); unset PYSES_USE_MPI (or set PYSES_USE_MPI=0)."
+            )
         return JaxBackend(
             use_double=use_double,
             debug=debug,
             use_cpu=use_cpu,
             shard_cpu_count=shard_count,
-            do_mpi_communication=do_mpi,
-            mpi_rank=rank,
-            mpi_size=size,
-            has_mpi=has_mpi,
-            mpi_comm=mpi_comm,
+            do_mpi_communication=False,
+            mpi_rank=0,
+            mpi_size=1,
+            has_mpi=False,
+            mpi_comm=None,
         )
     elif backend_name == "numpy":
         return NumpyBackend(

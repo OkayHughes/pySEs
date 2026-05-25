@@ -645,6 +645,10 @@ def make_grid_mpi_ready(grid, dims, proc_idx, decomp=None, wrapped=use_wrapper):
   local_grid["triples_send"] = triples_send
   local_grid["triples_receive"] = triples_recv
   local_grid["assembly_triple"] = triples_local
+  neighbor_ranks = tuple(sorted(triples_send.keys()))
+  assert tuple(sorted(triples_recv.keys())) == neighbor_ranks, \
+      "DSS bilateral symmetry violated — send and receive neighbor sets must match"
+  local_grid["neighbor_ranks"] = neighbor_ranks
   if not wrapped:
     local_grid["vertex_redundancy"] = vert_red_local
     local_grid["vertex_redundancy_send"] = vert_red_send
@@ -664,4 +668,4 @@ def make_grid_mpi_ready(grid, dims, proc_idx, decomp=None, wrapped=use_wrapper):
   local_dims["num_elem"] = local_grid["metric_determinant"].shape[0]
   for key in send_dims.keys():
     local_dims[key] = send_dims[key]
-  return local_grid, local_dims
+  return local_grid, frozendict(local_dims)

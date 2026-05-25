@@ -1,258 +1,98 @@
-import numpy as np
 from .._config import get_backend as _get_backend
 _be = _get_backend()
-use_wrapper = _be.use_wrapper
-wrapper_type = _be.wrapper_type
-has_mpi = _be.has_mpi
-device_wrapper = _be.array
-jit = _be.jit
-jnp = _be.np
-mpi_comm = _be.mpi_comm
-if has_mpi:
-  from mpi4py import MPI
-  if use_wrapper and wrapper_type == "jax":
-    import mpi4jax
 
 
-def exchange_buffers_mpi(buffer):
+def exchange_buffers(send_buffers, neighbor_ranks=None):
   """
-  Exchange Spectral Element grid non-processor-local redundant DOFS
-  between processes using the Message Passing Interface.
+  Exchange Spectral Element grid non-processor-local redundant DOFS between
+  processes using the active backend's native collective.
+
+  This is a thin wrapper over :meth:`Backend.halo_exchange`.  NumPy uses mpi4py
+  point-to-point sendrecv; JAX uses ``shard_map`` + ``lax.ppermute`` (multi-host
+  path).  The per-field buffer lists are exchanged one field at a time so that
+  buffers with differing level counts are handled uniformly.
 
   Parameters
   ----------
-  buffer: `dict[proc_idx, list[Array[tuple[point_idx, level_idx], Float]]]`
-      A buffer struct that maps `proc_idx` to a
-      list of arrays containing redundant DOFs to send to that processor.
+  send_buffers : `dict[proc_idx, list[Array[tuple[point_idx, level_idx], Float]]]`
+      A buffer struct that maps `proc_idx` to a list of arrays containing
+      redundant DOFs to send to that processor.
+  neighbor_ranks : `tuple[int, ...]` or None, optional
+      Static list of ranks this rank exchanges with.  Defaults to
+      ``tuple(send_buffers.keys())``.
 
   Returns
   -------
-  buffer: `dict[proc_idx, list[Array[tuple[point_idx, level_idx], Float]]]`
-      A buffer struct that maps `proc_idx` to a
-      list of arrays containing redundant DOFs received from that processor.
-
-  Notes
-  -----
-  mpi4py is designed to accept objects that buffer properties
-  that resemble np.ndarrays. This function can almost certainly
-  be designed in a way that can leverage gpu-aware MPI environments,
-  but this functionality has not yet been tested.
-  Divergence in how this is performed with different wrapper types
-  is acceptable.
-
-  Raises
-  ------
-  Error
-    Any error that can be raised by the following two functions:
-    * `mpi_comm.Isendrecv_replace`
-    * `MPI.Request.Waitall`
-
+  buffer : `dict[proc_idx, list[Array[tuple[point_idx, level_idx], Float]]]`
+      A buffer struct that maps `proc_idx` to a list of arrays containing
+      redundant DOFs received from that processor.
   """
-  reqs = []
-  for source_proc_idx in buffer.keys():
-    for k_idx in range(len(buffer[source_proc_idx])):
-      reqs.append(mpi_comm.Isendrecv_replace(buffer[source_proc_idx][k_idx],
-                                             source_proc_idx,
-                                             source=source_proc_idx,
-                                             sendtag=k_idx,
-                                             recvtag=k_idx))
-  MPI.Request.Waitall(reqs)
-  return buffer
-
-
-@jit
-def exchange_buffers_jax(buffer):
-  """
-  Exchange Spectral Element grid non-processor-local redundant DOFS
-  between processes using mpi4jax
-
-  **This function is the only function in the entire codebase
-  that will hang indefinitely in the event of, e.g., hardware failures
-  on a remote processor, or other distributed-memory shenanigans.**
-
-  Parameters
-  ----------
-  buffer: `dict[proc_idx, list[Array[tuple[point_idx, level_idx], Float]]]`
-      A buffer struct that maps `proc_idx` to a
-      list of arrays containing redundant DOFs to send to that processor.
-
-  Returns
-  -------
-  buffer: `dict[proc_idx, list[Array[tuple[point_idx, level_idx], Float]]]`
-      A buffer struct that maps `proc_idx` to a
-      list of arrays containing redundant DOFs received from that processor.
-
-  Notes
-  -----
-  mpi4py is designed to accept objects that buffer properties
-  that resemble np.ndarrays. This function can almost certainly
-  be designed in a way that can leverage gpu-aware MPI environments,
-  but this functionality has not yet been tested.
-  Divergence in how this is performed with different wrapper types
-  is acceptable.
-
-  Raises
-  ------
-  Error
-    Any error that can be raised by:
-      * mpi4jax.sendrecv
-
-  """
-  for source_proc_idx in buffer.keys():
-    for k_idx in range(len(buffer[source_proc_idx])):
-      buffer[source_proc_idx][k_idx] = mpi4jax.sendrecv(buffer[source_proc_idx][k_idx], buffer[source_proc_idx][k_idx],
-                                                        source_proc_idx,
-                                                        source_proc_idx,
-                                                        sendtag=k_idx,
-                                                        recvtag=k_idx)
-  return buffer
-
-
-def exchange_buffers_jax_unwrap(buffer):
-  """
-  Exchange Spectral Element grid non-processor-local redundant DOFS
-  between processes using mpi4py with device-host copying.
-
-  **This function is the only function in the entire codebase
-  that will hang indefinitely in the event of, e.g., hardware failures
-  on a remote processor, or other distributed-memory shenanigans.**
-
-  Parameters
-  ----------
-  buffer: `dict[proc_idx, list[Array[tuple[point_idx, level_idx], Float]]]`
-      A buffer struct that maps `proc_idx` to a
-      list of arrays containing redundant DOFs to send to that processor.
-
-  Returns
-  -------
-  buffer: `dict[proc_idx, list[Array[tuple[point_idx, level_idx], Float]]]`
-      A buffer struct that maps `proc_idx` to a
-      list of arrays containing redundant DOFs received from that processor.
-
-  Notes
-  -----
-  mpi4py is designed to accept objects that buffer properties
-  that resemble np.ndarrays. This function can almost certainly
-  be designed in a way that can leverage gpu-aware MPI environments,
-  but this functionality has not yet been tested.
-  Divergence in how this is performed with different wrapper types
-  is acceptable.
-
-  Raises
-  ------
-  Error
-    Any error that can be raised by the following two functions:
-    * `mpi_comm.Isendrecv_replace`
-    * `MPI.Request.Waitall`
-
-  """
-  reqs = []
-  for source_proc_idx in buffer.keys():
-    for k_idx in range(len(buffer[source_proc_idx])):
-      buffer[source_proc_idx][k_idx] = np.array(buffer[source_proc_idx][k_idx])
-  for source_proc_idx in buffer.keys():
-    for k_idx in range(len(buffer[source_proc_idx])):
-      reqs.append(mpi_comm.Isendrecv_replace(buffer[source_proc_idx][k_idx],
-                                             source_proc_idx,
-                                             source=source_proc_idx,
-                                             sendtag=k_idx,
-                                             recvtag=k_idx))
-  MPI.Request.Waitall(reqs)
-  for source_proc_idx in buffer.keys():
-    for k_idx in range(len(buffer[source_proc_idx])):
-      buffer[source_proc_idx][k_idx] = device_wrapper(buffer[source_proc_idx][k_idx])
-  return buffer
-
-
-if use_wrapper and wrapper_type == "jax":
-  exchange_buffers = exchange_buffers_jax
-else:
-  exchange_buffers = exchange_buffers_mpi
+  if neighbor_ranks is None:
+    neighbor_ranks = tuple(send_buffers.keys())
+  if not neighbor_ranks:
+    return send_buffers
+  num_fields = len(send_buffers[neighbor_ranks[0]])
+  out = {k: [None] * num_fields for k in neighbor_ranks}
+  for field_idx in range(num_fields):
+    per_field = {k: send_buffers[k][field_idx] for k in neighbor_ranks}
+    recv = _be.halo_exchange(per_field, neighbor_ranks)
+    for k in neighbor_ranks:
+      out[k][field_idx] = recv[k]
+  return out
 
 
 def global_sum(summand):
   """
-  Compute the global sum of a processor-local quantity
-  such as a summed integrand.
+  Compute the global sum of a processor-local quantity such as a summed
+  integrand, via :meth:`Backend.all_reduce_sum`.
 
   Parameters
   ----------
   summand : float
-    Processor-local part of the quantity over which reduction is
-    performed.
+    Processor-local part of the quantity over which reduction is performed.
 
   Returns
   -------
   integral : float
     Global sum of quantity.
   """
-  if has_mpi:
-    send = np.array(summand)
-    recv = np.copy(send)
-    req = mpi_comm.Iallreduce(np.array(send),
-                              recv,
-                              MPI.SUM)
-    MPI.Request.Wait(req)
-    ret = recv.item()
-  else:
-    ret = jnp.sum(summand)
-  return ret
+  return _be.all_reduce_sum(summand)
 
 
 def global_max(arg):
   """
-  Compute the global maximum of a processor-local quantity.
+  Compute the global maximum of a processor-local quantity, via
+  :meth:`Backend.all_reduce_max`.
 
   Parameters
   ----------
   arg : float
-    Processor-local part of the quantity over which reduction is
-    performed.
+    Processor-local part of the quantity over which reduction is performed.
 
   Returns
   -------
   integral : float
     Global max of quantity.
   """
-  if has_mpi:
-    send = np.array(arg)
-    recv = np.copy(send)
-    req = mpi_comm.Iallreduce(np.array(send),
-                              recv,
-                              MPI.MAX)
-    MPI.Request.Wait(req)
-    ret = recv.item()
-  else:
-    ret = jnp.max(arg)
-  return ret
+  return _be.all_reduce_max(arg)
 
 
 def global_min(arg):
   """
-  Compute the global minimum of a processor-local quantity.
+  Compute the global minimum of a processor-local quantity, via
+  :meth:`Backend.all_reduce_min`.
 
   Parameters
   ----------
   arg : float
-    Processor-local part of the quantity over which reduction is
-    performed.
+    Processor-local part of the quantity over which reduction is performed.
 
   Returns
   -------
   integral : float
     Global min of quantity.
   """
-  if has_mpi:
-    send = np.array(arg)
-    recv = np.copy(send)
-    req = mpi_comm.Iallreduce(np.array(send),
-                              recv,
-                              MPI.MIN)
-    MPI.Request.Wait(req)
-    ret = recv.item()
-  else:
-    ret = jnp.min(arg)
-  return ret
+  return _be.all_reduce_min(arg)
 
 
 def _exchange_buffers_stub(buffer_list):
@@ -278,7 +118,7 @@ def _exchange_buffers_stub(buffer_list):
   ------
   This function exchanges the memory reffered to by `buffer_list[proc_idx][remote_proc_idx][field_idx]`
   with `buffer_list[remote_proc_idx][proc_idx][field_idx]`.
-  The behavior should be almost identical to how exchange_buffers_mpi
+  The behavior should be almost identical to how exchange_buffers
   behaves when called when has_mpi=True, except for this difference.
 
   By construction, if any grid point `(elem_idx_source, i_idx_source, j_idx_source)`

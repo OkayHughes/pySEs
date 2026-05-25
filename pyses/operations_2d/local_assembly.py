@@ -69,60 +69,6 @@ def project_scalar_sparse(f,
   return ret * grid["mass_matrix_denominator"]
 
 
-def segment_sum(field,
-                data,
-                segment_ids):
-  """
-  A function that provides a numpy equivalent of the `segment_sum` function
-  from Jax and TensorFlow.
-
-  Parameters
-  ----------
-  data : Array[tuple[point_idx], Float]
-      The floating point values to sum over
-  segment_ids : Array[tuple[point_idx], Int]
-      The indices in the result array into which to sum data.
-      That is, `result[segment_idx[p]] += data[p]
-  N: int
-      The number of bins in which to sum
-
-  Returns
-  -------
-  s: Array[tuple[N], Float]
-      arrays into which segments have been summed.
-  """
-  data = np.asarray(data)
-  np.add.at(field, (segment_ids[0], segment_ids[1], segment_ids[2]), data)
-
-
-def segment_max(field,
-                data,
-                segment_ids):
-  """
-  A function that provides a numpy equivalent of the `segment_sum` function
-  from Jax and TensorFlow.
-
-  Parameters
-  ----------
-  data : Array[tuple[point_idx], Float]
-      The floating point values to sum over
-  segment_ids : Array[tuple[point_idx], Int]
-      The indices in the result array into which to sum data.
-      That is, `result[segment_idx[p]] += data[p]
-  N: int
-      The number of bins in which to sum
-
-  Returns
-  -------
-  s: Array[tuple[N], Float]
-      arrays into which segments have been summed.
-  """
-
-  data = np.asarray(data)
-  s = np.copy(field)
-  np.maximum.at(s, (segment_ids[0], segment_ids[1], segment_ids[2]), data)
-  return s
-
 
 @shard_map_extract
 def do_sum_manual_sharding(scaled_f, elem_idx, i_idx, j_idx, relevant_data):
@@ -186,34 +132,24 @@ def project_scalar_wrapper(f,
   shape = f.shape
 
   scaled_f = f * grid["mass_matrix"]
-  if use_wrapper and wrapper_type == "jax":
-    if do_sharding:
-      scaled_f = scaled_f.reshape((num_jax_devices, -1, dims["npt"], dims["npt"]), out_sharding=projection_sharding)
-      extraction_struct = grid["shard_extraction_map"]
+  if do_sharding:
+    scaled_f = scaled_f.reshape((num_jax_devices, -1, dims["npt"], dims["npt"]), out_sharding=projection_sharding)
+    extraction_struct = grid["shard_extraction_map"]
 
-      relevant_data = (scaled_f).at[extraction_struct["extract_from"]["shard_idx"],
-                                    extraction_struct["extract_from"]["elem_idx"],
-                                    extraction_struct["extract_from"]["i_idx"],
-                                    extraction_struct["extract_from"]["j_idx"]].get(out_sharding=extraction_sharding)
-      relevant_data *= extraction_struct["mask"]
-      scaled_f = do_sum_manual_sharding(scaled_f,
-                                        extraction_struct["sum_into"]["elem_idx"],
-                                        extraction_struct["sum_into"]["i_idx"],
-                                        extraction_struct["sum_into"]["j_idx"],
-                                        relevant_data)
-      scaled_f = scaled_f.reshape(shape, out_sharding=usual_scalar_sharding)
-    else:
-      relevant_data = (scaled_f).at[cols[0], cols[1], cols[2]].get()
-      scaled_f = scaled_f.at[rows[0], rows[1], rows[2]].add(relevant_data)
-  elif use_wrapper and wrapper_type == "torch":
-    # this is broken
-    scaled_f = scaled_f.flatten()
-    scaled_f = scaled_f.scatter_add_(0, rows, relevant_data)
-    scaled_f = scaled_f.reshape(dims["shape"])
-    relevant_data = scaled_f[cols[0], cols[1], cols[2]]
+    relevant_data = (scaled_f).at[extraction_struct["extract_from"]["shard_idx"],
+                                  extraction_struct["extract_from"]["elem_idx"],
+                                  extraction_struct["extract_from"]["i_idx"],
+                                  extraction_struct["extract_from"]["j_idx"]].get(out_sharding=extraction_sharding)
+    relevant_data *= extraction_struct["mask"]
+    scaled_f = do_sum_manual_sharding(scaled_f,
+                                      extraction_struct["sum_into"]["elem_idx"],
+                                      extraction_struct["sum_into"]["i_idx"],
+                                      extraction_struct["sum_into"]["j_idx"],
+                                      relevant_data)
+    scaled_f = scaled_f.reshape(shape, out_sharding=usual_scalar_sharding)
   else:
-    relevant_data = scaled_f[cols[0], cols[1], cols[2]]
-    segment_sum(scaled_f, relevant_data, rows)
+    relevant_data = _be.index_get(scaled_f, (cols[0], cols[1], cols[2]))
+    scaled_f = _be.index_add(scaled_f, (rows[0], rows[1], rows[2]), relevant_data)
   return scaled_f * grid["mass_matrix_denominator"]
 
 
@@ -284,28 +220,24 @@ def minmax_scalar(f,
     scaled_f = 1.0 * f
   else:
     scaled_f = -1.0 * f
-  if use_wrapper and wrapper_type == "jax":
-    if do_sharding:
-      scaled_f = scaled_f.reshape((num_jax_devices, -1, dims["npt"], dims["npt"]), out_sharding=projection_sharding)
-      extraction_struct = grid["shard_extraction_map"]
+  if do_sharding:
+    scaled_f = scaled_f.reshape((num_jax_devices, -1, dims["npt"], dims["npt"]), out_sharding=projection_sharding)
+    extraction_struct = grid["shard_extraction_map"]
 
-      relevant_data = (scaled_f).at[extraction_struct["extract_from"]["shard_idx"],
-                                    extraction_struct["extract_from"]["elem_idx"],
-                                    extraction_struct["extract_from"]["i_idx"],
-                                    extraction_struct["extract_from"]["j_idx"]].get(out_sharding=extraction_sharding)
-      relevant_data *= extraction_struct["mask"]
-      scaled_f = do_max_manual_sharding(scaled_f,
-                                        extraction_struct["sum_into"]["elem_idx"],
-                                        extraction_struct["sum_into"]["i_idx"],
-                                        extraction_struct["sum_into"]["j_idx"],
-                                        relevant_data)
-      scaled_f = scaled_f.reshape(shape, out_sharding=usual_scalar_sharding)
-    else:
-      relevant_data = (scaled_f).at[cols[0], cols[1], cols[2]].get()
-      scaled_f = scaled_f.at[rows[0], rows[1], rows[2]].max(relevant_data)
+    relevant_data = (scaled_f).at[extraction_struct["extract_from"]["shard_idx"],
+                                  extraction_struct["extract_from"]["elem_idx"],
+                                  extraction_struct["extract_from"]["i_idx"],
+                                  extraction_struct["extract_from"]["j_idx"]].get(out_sharding=extraction_sharding)
+    relevant_data *= extraction_struct["mask"]
+    scaled_f = do_max_manual_sharding(scaled_f,
+                                      extraction_struct["sum_into"]["elem_idx"],
+                                      extraction_struct["sum_into"]["i_idx"],
+                                      extraction_struct["sum_into"]["j_idx"],
+                                      relevant_data)
+    scaled_f = scaled_f.reshape(shape, out_sharding=usual_scalar_sharding)
   else:
-    relevant_data = scaled_f[cols[0], cols[1], cols[2]]
-    scaled_f = segment_max(scaled_f, relevant_data, rows)
+    relevant_data = _be.index_get(scaled_f, (cols[0], cols[1], cols[2]))
+    scaled_f = _be.index_max(scaled_f, (rows[0], rows[1], rows[2]), relevant_data)
   if not max:
     scaled_f = -1.0 * scaled_f
   return scaled_f

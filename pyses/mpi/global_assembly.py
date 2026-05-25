@@ -4,8 +4,6 @@ from .global_communication import exchange_buffers, _exchange_buffers_stub
 from functools import partial
 _be = _get_backend()
 jnp = _be.np
-use_wrapper = _be.use_wrapper
-wrapper_type = _be.wrapper_type
 jit = _be.jit
 mpi_rank = _be.mpi_rank
 
@@ -35,20 +33,8 @@ def sum_into(fijk_field,
   fijk_field: `Array[tuple[elem_idx, gll_idx, gll_idx, level_idx], Float]`
       Field values into which the values in buffer have been summed
 
-  Notes
-  -----
-  The implementation of this function is allowed to depend on wrapper_type.
-
-  """
-  if not use_wrapper:
-    np.add.at(fijk_field, (rows[0], rows[1], rows[2], slice(None, None)), buffer.T)
-  elif wrapper_type == "jax":
-    fijk_field = fijk_field.at[rows[0], rows[1], rows[2], :].add(buffer.T)
-  elif wrapper_type == "torch":
-    ncol = fijk_field.shape[-1]
-    fijk_field = fijk_field.reshape((-1, fijk_field.shape[-1]))
-    fijk_field = fijk_field.scatter_add_(0, rows[:, np.newaxis] * jnp.ones((1, ncol), dtype=jnp.int64), buffer.T)
-    fijk_field = fijk_field.reshape((*dims["shape"], ncol))
+"""
+  fijk_field = _be.index_add(fijk_field, (rows[0], rows[1], rows[2], slice(None)), buffer.T)
   return fijk_field
 
 
@@ -90,10 +76,7 @@ def extract_fields(fijk_fields,
     buffers[remote_proc_idx] = []
     for field_idx in range(len(fijk_fields)):
       (data, rows, cols) = triples_send[remote_proc_idx]
-      if not use_wrapper:
-        relevant_data = fijk_fields[field_idx][cols[0], cols[1], cols[2], :]
-      else:
-        relevant_data = fijk_fields[field_idx].at[cols[0], cols[1], cols[2], :].get()
+      relevant_data = _be.index_get(fijk_fields[field_idx], (cols[0], cols[1], cols[2], slice(None)))
       buffers[remote_proc_idx].append(relevant_data.T)
   return buffers
 
@@ -339,7 +322,7 @@ def project_scalar_global(fs_in,
     fs = fs_in
 
   buffer = pack_scalar([f * scale for f in fs], grid)
-  buffer = exchange_buffers(buffer)
+  buffer = exchange_buffers(buffer, grid.get("neighbor_ranks"))
 
   local_buffer = extract_fields([f * scale for f in fs], {mpi_rank: grid["assembly_triple"]})[mpi_rank]
   fs_out = []
