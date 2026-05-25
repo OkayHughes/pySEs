@@ -223,7 +223,7 @@ def test_nu_ramp():
                               cam30["p0"],
                               model)
   nu_ramp = eval_nu_ramp(v_grid, 5).squeeze()
-  for lev_idx in range(nu_ramp.size):
+  for lev_idx in range(nu_ramp.shape[0]):
     assert nu_ramp[lev_idx] > 0
     assert nu_ramp[lev_idx] <= 8.0
     if lev_idx > 0:
@@ -258,7 +258,7 @@ def test_sponge_layer_energy_estimate(homme_hydrostatic_noisy,
       dynamics["phi_i"] += pert(dynamics["phi_i"])
       dynamics["w_i"] += pert(dynamics["w_i"])
     dt = timestep_config["sponge"]["dt"]
-    n_sponge = diffusion_config["nu_ramp"].size
+    n_sponge = int(np.prod(diffusion_config["nu_ramp"].shape))
     dynamics_new = advance_sponge_layer(dynamics, dt, h_grid, physics_config, diffusion_config, dims, model)
     fields = ["horizontal_wind", "d_mass", thermodynamic_variable_names[model]]
     if model not in hydrostatic_models:
@@ -297,7 +297,7 @@ def test_hypervis_energy_estimate_quasi_uniform(homme_hydrostatic_noisy,
     model_state = struct["model_state"]
     physics_config = struct["physics_config"]
     nx = struct["nx"]
-    nlev = v_grid["hybrid_a_m"].size
+    nlev = v_grid["hybrid_a_m"].shape[0]
     diffusion_config_constant = init_hypervis_config_const(nx, physics_config, v_grid, nu_div_factor=1.0)
     diffusion_config_tensor = init_hypervis_config_tensor(h_grid, v_grid, dims, physics_config)
     for diffusion_config in [diffusion_config_constant, diffusion_config_tensor]:
@@ -372,7 +372,7 @@ def test_hypervis_energy_estimate_mobius():
                                 v_grid_tmp["hybrid_b_i"],
                                 v_grid_tmp["p0"],
                                 model)
-    nlev = v_grid["hybrid_a_m"].size
+    nlev = v_grid["hybrid_a_m"].shape[0]
     physics_config = init_physics_config(model)
     diffusion_config = init_hypervis_config_tensor(h_grid, v_grid, dims, physics_config)
     timestep_config = init_timestep_config(1000, h_grid, physics_config, diffusion_config, dims, model)

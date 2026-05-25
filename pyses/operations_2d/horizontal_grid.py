@@ -166,7 +166,7 @@ def init_spectral_element_grid(latlon,
                              [wrapper(arr, dtype=jnp.int64) for arr in assembly_triple[1]],
                              [wrapper(arr, dtype=jnp.int64) for arr in assembly_triple[2]]),
          "hypervis_scaling": wrapper(hypervis_scaling),
-         "ghost_mask": ghost_mask}
+         "ghost_mask": reorder_wrapper(ghost_mask)}
   if not wrapped:
     ret["vertex_redundancy"] = vert_redundancy_gll_flat
   metdet = ret["metric_determinant"]
@@ -175,7 +175,7 @@ def init_spectral_element_grid(latlon,
   #   ret["dss_matrix"] = torch.sparse_coo_tensor((dss_triple[2], dss_triple[3]),
   #                                                dss_triple[0],
   #                                                size=(NELEM * npt * npt, NELEM * npt * npt))
-  grid_dims = frozendict(N=metdet.size, shape=metdet.shape, npt=npt, num_elem=metdet.shape[0])
+  grid_dims = frozendict(N=int(np.prod(metdet.shape)), shape=metdet.shape, npt=npt, num_elem=metdet.shape[0])
   return ret, grid_dims
 
 
@@ -660,7 +660,7 @@ def make_grid_mpi_ready(grid, dims, proc_idx, decomp=None, wrapped=use_wrapper):
 
   send_dims = {}
   for proc_idx in triples_send.keys():
-    send_dims[str(proc_idx)] = triples_send[proc_idx][0].size
+    send_dims[str(proc_idx)] = triples_send[proc_idx][0].shape[0]
 
   local_dims = {}
   for key in dims.keys():

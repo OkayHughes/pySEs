@@ -15,4 +15,4 @@ def test_grid():
   element_permuation = arr["element_permutation"]
   vert_pos, face_connectivity = exodus_to_pyses_grid_corners(cart_coords, connect_map, element_permuation)
   grid, dims = init_unstructured_grid(face_connectivity, vert_pos, npt)
-  assert np.allclose(np.sum(grid["mass_matrix"]), 4 * np.pi)
+  assert np.allclose(np.sum(_be.unwrap(grid["mass_matrix"])), 4 * np.pi)

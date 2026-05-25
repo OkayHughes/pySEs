@@ -4,11 +4,12 @@ Alternative configuration module using env vars + lazy singleton + Backend proto
 Environment variables
 ---------------------
 PYSES_BACKEND : str, default "numpy"
-    Compute backend to use. One of "numpy" or "jax".
+    Compute backend to use. One of "numpy", "jax", or "torch".
 PYSES_USE_MPI : str, default "0"
-    Set to "1" to enable MPI communication.
+    Set to "1" to enable MPI communication. Not supported with the JAX backend
+    (which uses device sharding); supported by numpy and torch.
 PYSES_USE_CPU : str, default "1"
-    Set to "0" to allow GPU use (JAX backend only).
+    Set to "0" to allow GPU use (JAX and torch backends).
 PYSES_USE_DOUBLE : str, default "1"
     Set to "0" to use single precision.
 PYSES_DEBUG : str, default "0"
@@ -22,7 +23,7 @@ Usage
 
     be = get_backend()
     x = be.array([1, 2, 3])
-    y = be.flip(x, axis=0)
+    y = be.np.flip(x, axis=0)
 
 The backend is initialised once on first call to ``get_backend()`` and cached
 for the lifetime of the process.  To override in tests, set env vars before
@@ -506,6 +507,467 @@ class JaxBackend:
 
 
 # ---------------------------------------------------------------------------
+# PyTorch backend
+# ---------------------------------------------------------------------------
+
+def _install_torch_numpy_compat(torch, device):
+    """
+    Make torch tensors interoperate with numpy the way jax arrays do.
+
+    numpy 2.0 dispatches mixed ``numpy <op> tensor`` and ``np.ufunc(tensor)``
+    through ``__array_ufunc__`` (ignoring ``__array_priority__``).  Without a
+    handler torch returns ``NotImplemented`` and the op raises.  We install a
+    handler that converts numpy operands to device tensors and dispatches to the
+    matching torch op, so host arrays can be freely mixed with tensors.  Also
+    adds ``.astype`` (torch tensors only have ``.to``).
+    """
+    import numpy as _np
+    if not hasattr(torch.Tensor, "astype"):
+        torch.Tensor.astype = lambda self, dtype: self.to(dtype)
+    if getattr(torch.Tensor, "_pyses_ufunc_installed", False):
+        return
+    mapping = {
+        _np.add: torch.add, _np.subtract: torch.subtract, _np.multiply: torch.mul,
+        _np.divide: torch.div, _np.true_divide: torch.div, _np.power: torch.pow,
+        _np.negative: torch.neg, _np.absolute: torch.abs,
+        _np.sqrt: torch.sqrt, _np.exp: torch.exp, _np.log: torch.log,
+        _np.sin: torch.sin, _np.cos: torch.cos, _np.tan: torch.tan,
+        _np.arccos: torch.arccos, _np.maximum: torch.maximum, _np.minimum: torch.minimum,
+        _np.greater: torch.gt, _np.less: torch.lt, _np.greater_equal: torch.ge,
+        _np.less_equal: torch.le, _np.equal: torch.eq, _np.not_equal: torch.ne,
+        _np.logical_and: torch.logical_and, _np.logical_or: torch.logical_or,
+        _np.logical_not: torch.logical_not, _np.isnan: torch.isnan, _np.isinf: torch.isinf,
+        _np.floor: torch.floor, _np.ceil: torch.ceil, _np.sign: torch.sign,
+        _np.remainder: torch.remainder,
+    }
+
+    def _array_ufunc(self, ufunc, method, *inputs, **kwargs):
+        fn = mapping.get(ufunc)
+        if method != "__call__" or fn is None:
+            return NotImplemented
+        if kwargs.get("out") is not None:
+            # In-place into a numpy out-buffer (e.g. `numpy_array *= tensor`):
+            # evaluate on the host so the numpy buffer is written, matching how
+            # numpy interops with jax arrays.
+            host_inputs = [x.detach().cpu().numpy() if torch.is_tensor(x) else x
+                           for x in inputs]
+            return ufunc(*host_inputs, **kwargs)
+        conv = [torch.as_tensor(x, device=device) if isinstance(x, _np.ndarray) else x
+                for x in inputs]
+        return fn(*conv)
+
+    torch.Tensor.__array_ufunc__ = _array_ufunc
+    torch.Tensor._pyses_ufunc_installed = True
+
+
+class _TorchNamespace:
+    """
+    NumPy-API-compatible namespace over torch, used as ``TorchBackend.np`` and
+    aliased as ``jnp`` in the science modules.
+
+    Names defined explicitly here adapt the torch signatures that differ from
+    numpy/jax (``dim`` vs ``axis``, ``amax``/``amin`` vs ``max``/``min``,
+    ``take_along_dim`` vs ``take_along_axis``, ``flip(dims=)``, ...).  Every other
+    attribute falls through to ``torch`` via :meth:`__getattr__`, so the large set
+    of name-and-signature-compatible ops (``einsum``, ``where``, ``zeros``,
+    ``sqrt``, ``eye``, ``linalg``, ``pi``, dtypes, ...) needs no enumeration.
+    Factory functions inherit the process-wide default device/dtype set in
+    :class:`TorchBackend`, so created tensors land on the accelerator.
+    """
+
+    def __init__(self, torch, device):
+        self._torch = torch
+        self._device = device
+        self.newaxis = None
+
+    def _coerce(self, x):
+        # Mirror jax.numpy, which promotes numpy arrays inside ops. Only
+        # numpy.ndarray is coerced — tuples/lists are left alone so that shape
+        # and axis arguments (e.g. jnp.ones((2, 3))) pass through untouched.
+        if isinstance(x, np.ndarray):
+            return self._torch.as_tensor(x, device=self._device)
+        return x
+
+    def _coerce_num(self, x):
+        # For elementwise math (sin, sqrt, ...) numpy/jax accept python scalars;
+        # torch needs tensors. Safe here because these ops never take shape args.
+        if isinstance(x, (np.ndarray, int, float, complex)):
+            return self._torch.as_tensor(x, device=self._device)
+        return x
+
+    def __getattr__(self, name):
+        # Reached only for names not defined as instance/class attributes above
+        # (e.g. einsum, where, zeros, sqrt, eye, linalg, pi, dtypes). Callables
+        # are wrapped to coerce numpy/python array args to device tensors.
+        attr = getattr(self._torch, name)
+        if not callable(attr):
+            return attr
+
+        def _wrapped(*args, **kwargs):
+            args = tuple(self._coerce(a) for a in args)
+            kwargs = {k: self._coerce(v) for k, v in kwargs.items()}
+            return attr(*args, **kwargs)
+        return _wrapped
+
+    def flip(self, x, axis=None):
+        x = self._coerce(x)
+        if axis is None:
+            dims = tuple(range(x.ndim))
+        elif isinstance(axis, int):
+            dims = (axis,)
+        else:
+            dims = tuple(axis)
+        return self._torch.flip(x, dims=dims)
+
+    def cumsum(self, x, axis=-1):
+        return self._torch.cumsum(self._coerce(x), dim=axis)
+
+    def sum(self, x, axis=None):
+        x = self._coerce(x)
+        return self._torch.sum(x) if axis is None else self._torch.sum(x, dim=axis)
+
+    def max(self, x, axis=None):
+        x = self._coerce(x)
+        return self._torch.max(x) if axis is None else self._torch.amax(x, dim=axis)
+
+    def min(self, x, axis=None):
+        x = self._coerce(x)
+        return self._torch.min(x) if axis is None else self._torch.amin(x, dim=axis)
+
+    def all(self, x, axis=None):
+        x = self._coerce(x)
+        return self._torch.all(x) if axis is None else self._torch.all(x, dim=axis)
+
+    def any(self, x, axis=None):
+        x = self._coerce(x)
+        return self._torch.any(x) if axis is None else self._torch.any(x, dim=axis)
+
+    def stack(self, arrays, axis=0):
+        return self._torch.stack([self._coerce(a) for a in arrays], dim=axis)
+
+    def concatenate(self, arrays, axis=0):
+        return self._torch.cat([self._coerce(a) for a in arrays], dim=axis)
+
+    def take_along_axis(self, arr, indices, axis):
+        return self._torch.take_along_dim(self._coerce(arr), self._coerce(indices), dim=axis)
+
+    def remainder(self, x, y):
+        return self._torch.remainder(self._coerce(x), self._coerce(y))
+
+    def mod(self, x, y):
+        return self._torch.remainder(self._coerce(x), self._coerce(y))
+
+    def allclose(self, a, b, **kwargs):
+        a = self._torch.as_tensor(a, device=self._device)
+        b = self._torch.as_tensor(b, device=self._device)
+        if a.dtype != b.dtype:  # numpy/jax promote mixed dtypes; torch does not
+            a, b = a.to(self._torch.float64), b.to(self._torch.float64)
+        return self._torch.allclose(a, b, **kwargs)
+
+    def sin(self, x):
+        return self._torch.sin(self._coerce_num(x))
+
+    def cos(self, x):
+        return self._torch.cos(self._coerce_num(x))
+
+    def tan(self, x):
+        return self._torch.tan(self._coerce_num(x))
+
+    def arccos(self, x):
+        return self._torch.arccos(self._coerce_num(x))
+
+    def sqrt(self, x):
+        return self._torch.sqrt(self._coerce_num(x))
+
+    def exp(self, x):
+        return self._torch.exp(self._coerce_num(x))
+
+    def log(self, x):
+        return self._torch.log(self._coerce_num(x))
+
+    def abs(self, x):
+        return self._torch.abs(self._coerce_num(x))
+
+    def mean(self, x, axis=None):
+        x = self._coerce(x)
+        return self._torch.mean(x) if axis is None else self._torch.mean(x, dim=axis)
+
+    def nanmax(self, x, axis=None):
+        x = self._torch.nan_to_num(self._coerce(x), nan=float("-inf"))
+        return self.max(x, axis)
+
+    def nanmin(self, x, axis=None):
+        x = self._torch.nan_to_num(self._coerce(x), nan=float("inf"))
+        return self.min(x, axis)
+
+    def take(self, a, indices, axis=None):
+        a = self._coerce(a)
+        if axis is None:
+            return self._torch.take(a, self._coerce(indices))
+        if isinstance(indices, int):
+            return self._torch.select(a, dim=axis, index=indices)
+        return self._torch.index_select(a, axis, self._coerce(indices))
+
+    def where(self, condition, x=None, y=None):
+        # numpy/jax accept python-bool/scalar conditions and branches; torch
+        # needs a tensor condition (a scalar comparison like `cfg_float > 0`
+        # yields a python bool).
+        if x is None and y is None:
+            return self._torch.where(self._coerce_num(condition))
+        return self._torch.where(self._coerce_num(condition),
+                                 self._coerce_num(x), self._coerce_num(y))
+
+    def array(self, x, dtype=None):
+        return self._torch.as_tensor(x, dtype=dtype, device=self._device)
+
+    def asarray(self, x, dtype=None):
+        return self._torch.as_tensor(x, dtype=dtype, device=self._device)
+
+    def copy(self, x):
+        return self._torch.as_tensor(x, device=self._device).clone()
+
+
+class TorchBackend:
+    """PyTorch backend with autograd-aware ``torch.distributed`` collectives."""
+
+    newaxis = None
+    use_wrapper = True
+    wrapper_type = "torch"
+    # JAX sharding attributes — not applicable; exposed as None for uniform access
+    usual_scalar_sharding = None
+    extraction_sharding = None
+    projection_sharding = None
+    do_sharding = False
+
+    def __init__(self,
+                 use_double: bool,
+                 debug: bool,
+                 use_cpu: bool,
+                 do_mpi_communication: bool,
+                 mpi_rank: int,
+                 mpi_size: int,
+                 has_mpi: bool,
+                 mpi_comm):
+        import torch
+
+        self._torch = torch
+        self.use_double = use_double
+        self.debug = debug
+        self.do_mpi_communication = do_mpi_communication
+        self.mpi_rank = mpi_rank
+        self.mpi_size = mpi_size
+        self.is_main_proc = mpi_rank == 0
+        self.has_mpi = has_mpi
+        self.mpi_comm = mpi_comm
+        self.num_devices = 1
+        self.num_jax_devices = 1
+        self.eps = 1e-11 if use_double else 1e-6
+
+        # --- precision (process-wide default so factory functions match) ---
+        self._default_dtype = torch.float64 if use_double else torch.float32
+        torch.set_default_dtype(self._default_dtype)
+
+        # --- device selection and process-wide default ---
+        if use_cpu:
+            device = torch.device("cpu")
+        elif torch.cuda.is_available():
+            device = torch.device("cuda")
+        elif torch.backends.mps.is_available():
+            device = torch.device("mps")
+        else:
+            device = torch.device("cpu")
+        self._device = device
+        torch.set_default_device(device)
+
+        # numpy interop (`.astype`, mixed numpy/tensor ops) — see helper.
+        _install_torch_numpy_compat(torch, device)
+
+        self.np = _TorchNamespace(torch, device)
+
+        # --- distributed bootstrap (multi-process only) ---
+        if do_mpi_communication:
+            self._init_torch_dist(mpi_comm)
+            import torch.distributed as dist
+            self._dist = dist
+            self._world_size = dist.get_world_size()
+        else:
+            self._dist = None
+            self._world_size = 1
+
+        if debug:
+            print(f"Using torch device {device}, dtype {self._default_dtype}, "
+                  f"distributed: {self._dist is not None}")
+
+    # --- distributed setup ---
+
+    def _init_torch_dist(self, mpi_comm):
+        """Bootstrap torch.distributed via the existing mpi4py communicator."""
+        import torch, torch.distributed as dist, os, socket
+        rank = mpi_comm.Get_rank()
+        world_size = mpi_comm.Get_size()
+        if rank == 0:
+            host = socket.gethostname()
+            with socket.socket() as s:
+                s.bind(("", 0))
+                port = s.getsockname()[1]
+            addr = (host, port)
+        else:
+            addr = None
+        host, port = mpi_comm.bcast(addr, root=0)
+        os.environ["MASTER_ADDR"] = host
+        os.environ["MASTER_PORT"] = str(port)
+        os.environ["RANK"] = str(rank)
+        os.environ["WORLD_SIZE"] = str(world_size)
+        local_rank = self._resolve_local_rank()
+        os.environ["LOCAL_RANK"] = str(local_rank)
+        if torch.cuda.is_available():
+            torch.cuda.set_device(local_rank)
+            backend = "nccl"
+        else:
+            backend = "gloo"
+        dist.init_process_group(backend=backend, init_method="env://")
+
+    @staticmethod
+    def _resolve_local_rank():
+        import os
+        for var in ("SLURM_LOCALID", "OMPI_COMM_WORLD_LOCAL_RANK",
+                    "MV2_COMM_WORLD_LOCAL_RANK", "PMI_LOCAL_RANK", "LOCAL_RANK"):
+            if var in os.environ:
+                return int(os.environ[var])
+        return 0
+
+    # --- Backend interface ---
+
+    def array(self, x, dtype=None, elem_sharding_axis=None):
+        dt = dtype if dtype is not None else self._default_dtype
+        return self._torch.as_tensor(x, dtype=dt, device=self._device)
+
+    def unwrap(self, x):
+        if self._torch.is_tensor(x):
+            return x.detach().cpu().numpy()
+        return np.asarray(x)
+
+    def get_global_array(self, x, dims, elem_sharding_axis=0):
+        arr = self.unwrap(x)
+        if dims is not None:
+            slices = [slice(None)] * arr.ndim
+            slices[elem_sharding_axis] = slice(0, dims["num_elem"])
+            return arr[tuple(slices)]
+        return arr
+
+    def jit(self, func, *_, **__):
+        return func
+
+    def shard_map(self, func, *_, **__):
+        return func
+
+    def parallel_region(self, fn, in_specs=None, out_specs=None):
+        return fn
+
+    # --- scatter / gather ---
+
+    def _scatter(self, arr, idx, vals, reduce):
+        torch = self._torch
+        tensor_idx = [i for i in idx if not isinstance(i, slice)]
+        n = len(tensor_idx)
+        trailing = tuple(arr.shape[n:])
+        flat_lead = 1
+        for s in arr.shape[:n]:
+            flat_lead *= s
+        flat = tensor_idx[0]
+        for d in range(1, n):
+            flat = flat * arr.shape[d] + tensor_idx[d]
+        flat = flat.reshape(-1).to(torch.long)
+        arr_flat = arr.reshape((flat_lead,) + trailing)
+        src = vals.reshape((-1,) + trailing)
+        result = arr_flat.clone()
+        if reduce == "sum":
+            result.index_add_(0, flat, src)
+        else:
+            result.index_reduce_(0, flat, src, reduce=reduce, include_self=True)
+        return result.reshape(arr.shape)
+
+    def index_get(self, arr, idx):
+        return arr[tuple(idx)]
+
+    def index_add(self, arr, idx, vals):
+        return self._scatter(arr, idx, vals, "sum")
+
+    def index_max(self, arr, idx, vals):
+        return self._scatter(arr, idx, vals, "amax")
+
+    # --- collectives ---
+
+    def halo_exchange(self, send_buffers, neighbor_ranks):
+        """
+        Sparse point-to-point exchange via ``all_to_all_single`` (zero splits for
+        non-neighbors).  Its autograd adjoint swaps the split sizes — the
+        mathematical adjoint of a halo exchange — so it is forward- and
+        reverse-differentiable for DSS.
+        """
+        torch = self._torch
+        if self._dist is None or not neighbor_ranks:
+            return {k: send_buffers[k].clone() for k in neighbor_ranks}
+        from torch.distributed.nn.functional import all_to_all_single
+
+        sample = next(iter(send_buffers.values()))
+        trailing_shape = tuple(sample.shape[1:])
+        trailing_numel = 1
+        for s in trailing_shape:
+            trailing_numel *= s
+
+        input_split_sizes = [0] * self._world_size
+        send_list = []
+        for k in neighbor_ranks:
+            buf = send_buffers[k]
+            send_list.append(buf.reshape(-1))
+            input_split_sizes[k] = buf.shape[0] * trailing_numel
+        output_split_sizes = list(input_split_sizes)
+
+        input_tensor = (torch.cat(send_list) if send_list
+                        else torch.zeros(0, dtype=sample.dtype, device=sample.device))
+        output_tensor = all_to_all_single(
+            input_tensor,
+            output_split_sizes=output_split_sizes,
+            input_split_sizes=input_split_sizes,
+        )
+
+        recv_buffers = {}
+        offset = 0
+        for k in neighbor_ranks:
+            n_flat = output_split_sizes[k]
+            n_points = n_flat // trailing_numel
+            chunk = output_tensor[offset:offset + n_flat]
+            recv_buffers[k] = chunk.reshape((n_points,) + trailing_shape)
+            offset += n_flat
+        return recv_buffers
+
+    def all_reduce_sum(self, t):
+        t = self._torch.as_tensor(t, device=self._device)
+        if self._dist is None:
+            return self.np.sum(t)
+        from torch.distributed.nn.functional import all_reduce
+        return all_reduce(t)
+
+    def all_reduce_max(self, t):
+        t = self._torch.as_tensor(t, device=self._device)
+        if self._dist is None:
+            return self.np.max(t)
+        out = t.clone()
+        self._dist.all_reduce(out, op=self._dist.ReduceOp.MAX)
+        return out
+
+    def all_reduce_min(self, t):
+        t = self._torch.as_tensor(t, device=self._device)
+        if self._dist is None:
+            return self.np.min(t)
+        out = t.clone()
+        self._dist.all_reduce(out, op=self._dist.ReduceOp.MIN)
+        return out
+
+
+
+# ---------------------------------------------------------------------------
 # Factory
 # ---------------------------------------------------------------------------
 
@@ -555,9 +1017,20 @@ def _build_backend() -> Backend:
             has_mpi=has_mpi,
             mpi_comm=mpi_comm,
         )
+    elif backend_name == "torch":
+        return TorchBackend(
+            use_double=use_double,
+            debug=debug,
+            use_cpu=use_cpu,
+            do_mpi_communication=do_mpi,
+            mpi_rank=rank,
+            mpi_size=size,
+            has_mpi=has_mpi,
+            mpi_comm=mpi_comm,
+        )
     else:
         raise ValueError(
-            f"Unknown PYSES_BACKEND={backend_name!r}. Must be 'numpy' or 'jax'."
+            f"Unknown PYSES_BACKEND={backend_name!r}. Must be 'numpy', 'jax', or 'torch'."
         )
 
 

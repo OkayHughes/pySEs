@@ -129,7 +129,9 @@ def eval_mu(state,
   else:
     p_top = v_grid["hybrid_a_i"][0] * v_grid["reference_surface_mass"]
     if model in deep_atmosphere_models:
-      p_top /= r_hat_i[:, :, :, 0]**2
+      # rebind rather than in-place: p_top may be a 0-d scalar and the rhs a
+      # full field; numpy scalars rebind on /=, torch 0-d tensors raise.
+      p_top = p_top / r_hat_i[:, :, :, 0]**2
     d_mass_i = midlevel_to_interface(state["d_mass"])
     d_nh_pressure_d_mass_top = 2 * (p_model[:, :, :, 0] - p_top) / d_mass_i[:, :, :, 0]
     d_nh_pressure_d_mass_bottom = jnp.ones_like(p_model[:, :, :, 0])
