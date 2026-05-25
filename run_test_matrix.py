@@ -50,10 +50,13 @@ CONFIGS = {
                   {"PYSES_BACKEND": "numpy"}, "serial"),
     "numpy-mpi": ("NumPy + MPI (mpirun -n NP)",
                   {"PYSES_BACKEND": "numpy", "PYSES_USE_MPI": "1"}, "mpi"),
+    # torch.compile is on by default for end users, but the suite sweeps many
+    # shapes (a Dynamo recompile each), so disable it here unless --torch-compile.
     "torch":     ("PyTorch (single process)",
-                  {"PYSES_BACKEND": "torch"}, "serial"),
+                  {"PYSES_BACKEND": "torch", "PYSES_TORCH_COMPILE": "0"}, "serial"),
     "torch-mpi": ("PyTorch + torch.distributed (mpirun -n NP)",
-                  {"PYSES_BACKEND": "torch", "PYSES_USE_MPI": "1"}, "mpi"),
+                  {"PYSES_BACKEND": "torch", "PYSES_USE_MPI": "1",
+                   "PYSES_TORCH_COMPILE": "0"}, "mpi"),
     "jax":       ("JAX (single device)",
                   {"PYSES_BACKEND": "jax"}, "serial"),
     "jax-shard": ("JAX (multi-device sharding)",
@@ -120,8 +123,10 @@ def build_command(kind, env, pyexe, tests, pytest_args, nproc, nshard, mpi_flavo
     raise ValueError(kind)
 
 
-def run_config(name, pyexe, tests, pytest_args, nproc, nshard, mpi_flavor):
+def run_config(name, pyexe, tests, pytest_args, nproc, nshard, mpi_flavor,
+               env_override=None):
     desc, env, kind = CONFIGS[name]
+    env = {**env, **(env_override or {})}
     argv, full_env, skip_reason = build_command(
         kind, env, pyexe, tests, pytest_args, nproc, nshard, mpi_flavor)
     print("\n" + "=" * 78)
@@ -172,6 +177,9 @@ def main():
                    help=f"Test path passed to pytest (default: {DEFAULT_TESTS}).")
     p.add_argument("--exclude-slow", action="store_true",
                    help="Skip the slow test_run_model.py and shallow_water_tests.")
+    p.add_argument("--torch-compile", action="store_true",
+                   help="Enable torch.compile for the torch configs "
+                        "(off by default here; expect long Dynamo recompiles).")
     p.add_argument("--pytest", default="-q -p no:cacheprovider",
                    help='Extra pytest args as one string '
                         '(default: "-q -p no:cacheprovider").')
@@ -193,10 +201,11 @@ def main():
     print(f"MPI: {mpi_flavor or 'not found'}")
     print(f"Tests: {args.tests}   Configs: {', '.join(selected)}")
 
+    override = {"PYSES_TORCH_COMPILE": "1"} if args.torch_compile else None
     results = []
     for name in selected:
         results.append(run_config(name, pyexe, args.tests, pytest_args,
-                                  args.np, args.nshard, mpi_flavor))
+                                  args.np, args.nshard, mpi_flavor, override))
 
     print("\n" + "=" * 78)
     print("SUMMARY")

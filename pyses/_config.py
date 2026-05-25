@@ -16,6 +16,10 @@ PYSES_DEBUG : str, default "0"
     Set to "1" to enable debug mode.
 PYSES_SHARD_CPU_COUNT : str, default "1"
     Number of virtual CPU devices for JAX CPU sharding.
+PYSES_TORCH_COMPILE : str, default "1"
+    Torch backend only. Set to "0" to run eager instead of torch.compile.
+    On by default so end users get compiled kernels; the test suite (which
+    sweeps many shapes and would pay a Dynamo recompile on each) sets it to "0".
 
 Usage
 -----
@@ -762,6 +766,10 @@ class TorchBackend:
         self.num_devices = 1
         self.num_jax_devices = 1
         self.eps = 1e-11 if use_double else 1e-6
+        # torch.compile is on by default (end users get compiled kernels); the
+        # test suite — which sweeps many shapes and would pay Dynamo recompiles
+        # on every one — disables it with PYSES_TORCH_COMPILE=0.
+        self._use_compile = _env_bool("PYSES_TORCH_COMPILE", default=True)
 
         # --- precision (process-wide default so factory functions match) ---
         self._default_dtype = torch.float64 if use_double else torch.float32
@@ -856,6 +864,10 @@ class TorchBackend:
         return arr
 
     def jit(self, func, *_, **__):
+        # Eager unless PYSES_TORCH_COMPILE is set (default on). Eager mixes
+        # numpy/tensor freely via __array_ufunc__, so no coercion is needed.
+        if not self._use_compile:
+            return func
         # torch.compile auto-specializes non-tensor args (the JAX `static_argnames`
         # role) via guards, so those kwargs are ignored. fullgraph is left False
         # so any residual data-dependent region falls back to eager rather than
@@ -863,7 +875,6 @@ class TorchBackend:
         # boundary (Dynamo cannot trace numpy in the graph; JAX's jit converts
         # them implicitly, so this matches that behaviour). frozendict statics
         # pass through as pytree leaves and Dynamo guards on them.
-        import torch
         from torch.utils._pytree import tree_map
         torch_mod = self._torch
         device = self._device
@@ -873,7 +884,7 @@ class TorchBackend:
                 return torch_mod.as_tensor(x, device=device)
             return x
 
-        compiled = torch.compile(func)
+        compiled = torch_mod.compile(func)
 
         @functools.wraps(func)
         def _wrapper(*args, **kwargs):
