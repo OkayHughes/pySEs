@@ -856,7 +856,30 @@ class TorchBackend:
         return arr
 
     def jit(self, func, *_, **__):
-        return func
+        # torch.compile auto-specializes non-tensor args (the JAX `static_argnames`
+        # role) via guards, so those kwargs are ignored. fullgraph is left False
+        # so any residual data-dependent region falls back to eager rather than
+        # erroring. numpy array inputs are coerced to device tensors at the
+        # boundary (Dynamo cannot trace numpy in the graph; JAX's jit converts
+        # them implicitly, so this matches that behaviour). frozendict statics
+        # pass through as pytree leaves and Dynamo guards on them.
+        import torch
+        from torch.utils._pytree import tree_map
+        torch_mod = self._torch
+        device = self._device
+
+        def _to_tensor(x):
+            if isinstance(x, np.ndarray):
+                return torch_mod.as_tensor(x, device=device)
+            return x
+
+        compiled = torch.compile(func)
+
+        @functools.wraps(func)
+        def _wrapper(*args, **kwargs):
+            return compiled(*tree_map(_to_tensor, args),
+                            **tree_map(_to_tensor, kwargs))
+        return _wrapper
 
     def shard_map(self, func, *_, **__):
         return func
