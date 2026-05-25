@@ -8,7 +8,6 @@ from functools import partial
 _be = _get_backend()
 jnp = _be.np
 jit = _be.jit
-vmap_1d_apply = _be.vmap_1d_apply
 
 
 @partial(jit, static_argnames=["dims", "max"])
@@ -40,7 +39,7 @@ def minmax_scalar_3d(scalar,
       Field with each node replaced by the DSS-global min or max.
   """
   sph_op = partial(minmax_scalar, grid=h_grid, max=max, dims=dims)
-  return vmap_1d_apply(sph_op, scalar, -1, -1)
+  return jnp.stack([sph_op(scalar[..., k]) for k in range(scalar.shape[-1])], axis=-1)
 
 
 @partial(jit, static_argnames=["dims"])
@@ -67,7 +66,7 @@ def project_tracer_3d(scalar,
       Globally continuous (C0) tracer field.
   """
   sph_op = partial(project_scalar, grid=h_grid, dims=dims)
-  return vmap_1d_apply(sph_op, scalar, -1, -1)
+  return jnp.stack([sph_op(scalar[..., k]) for k in range(scalar.shape[-1])], axis=-1)
 
 
 @partial(jit, static_argnames=["dims"])

@@ -6,7 +6,6 @@ from ..dynamical_cores.model_info import deep_atmosphere_models
 _be = _get_backend()
 jnp = _be.np
 device_wrapper = _be.array
-remainder = _be.remainder
 
 perturbation_opts = Enum('perturbation_type',
                          [("none", 1),
@@ -267,7 +266,7 @@ def eval_z_surface(lat,
                                     config["mountain_lons"],
                                     config["mountain_lat_scales"],
                                     config["mountain_lon_scales"]):
-      d0 = remainder(lon - mountain_lon, 2.0 * jnp.pi)
+      d0 = jnp.remainder(lon - mountain_lon, 2.0 * jnp.pi)
       d0 = jnp.minimum(d0, 2.0 * jnp.pi - d0)
       zs += mountain_height * jnp.exp(-(((lat - mountain_lat) / mountain_lat_scale)**6 +
                                         (d0 / mountain_lon_scale)**2))

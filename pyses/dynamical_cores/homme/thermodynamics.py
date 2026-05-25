@@ -6,7 +6,6 @@ from ..model_info import hydrostatic_models, deep_atmosphere_models, quasi_hydro
 _be = _get_backend()
 jnp = _be.np
 jit = _be.jit
-flip = _be.flip
 
 
 @jit
@@ -206,8 +205,8 @@ def eval_balanced_geopotential(phi_surf,
   exponent = (physics_config["Rgas"] / physics_config["cp"] - 1.0)
   d_phi = physics_config["Rgas"] * (theta_v_d_mass *
                                     (p_mid / physics_config["p0"])**exponent / physics_config["p0"])
-  d_phi_augment = flip(jnp.concatenate((d_phi[:, :, :, :-1],
+  d_phi_augment = jnp.flip(jnp.concatenate((d_phi[:, :, :, :-1],
                                         (d_phi[:, :, :, -1] + phi_surf)[:, :, :, np.newaxis]),
                                        axis=-1), -1)
   phi_i_above_surf = jnp.cumsum(d_phi_augment, axis=-1)
-  return jnp.concatenate((flip(phi_i_above_surf, -1), phi_surf[:, :, :, np.newaxis]), axis=-1)
+  return jnp.concatenate((jnp.flip(phi_i_above_surf, -1), phi_surf[:, :, :, np.newaxis]), axis=-1)

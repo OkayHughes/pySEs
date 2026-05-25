@@ -5,7 +5,6 @@ from .model_info import deep_atmosphere_models
 _be = _get_backend()
 jnp = _be.np
 jit = _be.jit
-flip = _be.flip
 
 
 @jit
@@ -141,7 +140,7 @@ def cumulative_sum(dfield_model,
   field_interface : Array[tuple[elem_idx, gll_idx, gll_idx, nlev+1], Float]
       Reconstructed field on interface levels.
   """
-  return jnp.concatenate((flip(jnp.cumsum(flip(dfield_model, -1), axis=-1), -1) +
+  return jnp.concatenate((jnp.flip(jnp.cumsum(jnp.flip(dfield_model, -1), axis=-1), -1) +
                           val_surf_top[:, :, :, np.newaxis],
                           val_surf_top[:, :, :, np.newaxis]), axis=-1)
 

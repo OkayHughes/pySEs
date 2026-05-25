@@ -4,7 +4,6 @@ from functools import partial
 _be = _get_backend()
 jnp = _be.np
 jit = _be.jit
-flip = _be.flip
 
 
 @jit
@@ -36,7 +35,7 @@ def horizontal_gradient(f,
   df_da = jnp.einsum("fij,ki->fkj", f, grid["derivative_matrix"])
   df_db = jnp.einsum("fij,kj->fik", f, grid["derivative_matrix"])
   df_dab = jnp.stack((df_da, df_db), axis=-1)
-  return 1.0 / a * flip(jnp.einsum("fijg,fijgs->fijs", df_dab, grid["physical_to_contra"]), -1)
+  return 1.0 / a * jnp.flip(jnp.einsum("fijg,fijgs->fijs", df_dab, grid["physical_to_contra"]), -1)
 
 
 @jit
@@ -382,7 +381,7 @@ def contravariant_to_physical(u,
   One typically uses `se_grid.create_spectral_element_grid` to create
   the `grid` argument.
   """
-  return flip(jnp.einsum("fijg,fijsg->fijs", u, grid["contra_to_physical"]), -1)
+  return jnp.flip(jnp.einsum("fijg,fijsg->fijs", u, grid["contra_to_physical"]), -1)
 
 
 @jit
@@ -409,7 +408,7 @@ def physical_to_contravariant(u,
   One typically uses `se_grid.create_spectral_element_grid` to create
   the `grid` argument.
   """
-  return jnp.einsum("fijs,fijgs->fijg", flip(u, -1), grid["physical_to_contra"])
+  return jnp.einsum("fijs,fijgs->fijg", jnp.flip(u, -1), grid["physical_to_contra"])
 
 
 @jit
@@ -436,7 +435,7 @@ def physical_to_covariant(u,
   One typically uses `se_grid.create_spectral_element_grid` to create
   the `grid` argument.
   """
-  return jnp.einsum("fijs,fijsg->fijg", flip(u, -1), grid["contra_to_physical"])
+  return jnp.einsum("fijs,fijsg->fijg", jnp.flip(u, -1), grid["contra_to_physical"])
 
 
 @jit

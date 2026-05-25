@@ -20,9 +20,7 @@ from ..mpi.global_communication import global_sum
 _be = _get_backend()
 jnp = _be.np
 jit = _be.jit
-flip = _be.flip
 do_mpi_communication = _be.do_mpi_communication
-vmap_1d_apply = _be.vmap_1d_apply
 
 
 @partial(jit, static_argnames=["is_dry_air_species"])
@@ -740,7 +738,7 @@ def project_scalar_3d(variable,
                                           two_d=False)[0]
   else:
     op_2d = partial(project_scalar, grid=h_grid, dims=dims)
-    variable_cont = vmap_1d_apply(op_2d, variable, -1, -1)
+    variable_cont = jnp.stack([op_2d(variable[..., k]) for k in range(variable.shape[-1])], axis=-1)
   return variable_cont
 
 
@@ -849,7 +847,7 @@ def remap_dynamics(dynamics_in,
     w_i_surf = ((u_remap[:, :, :, -1, 0] * static_forcing["grad_phi_surf"][:, :, :, 0] +
                  u_remap[:, :, :, -1, 1] * static_forcing["grad_phi_surf"][:, :, :, 1]) /
                 phi_to_g(static_forcing["phi_surf"], physics_config, model))
-    w_i_upper = flip(jnp.cumsum(-flip(Qdp[:, :, :, :, 4], -1), axis=-1), -1) + dynamics_in["w_i"][:, :, :, -1:]
+    w_i_upper = jnp.flip(jnp.cumsum(-jnp.flip(Qdp[:, :, :, :, 4], -1), axis=-1), -1) + dynamics_in["w_i"][:, :, :, -1:]
     w_i_remap = jnp.concatenate((w_i_upper, w_i_surf[:, :, :, np.newaxis]), axis=-1)
   else:
     phi_i_remap = None

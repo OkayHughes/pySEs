@@ -1,11 +1,10 @@
-from .._config import get_backend as _get_backend
+from .._config import get_backend as _get_backend, runtime_assert
 from .time_stepping import advance_step_euler, advance_step_ssprk3, advance_hypervis_euler
 from .tracers import advance_tracers_shallow_water
 from ..dynamical_cores.time_step import time_step_options
 from sys import stdout
 _be = _get_backend()
 jnp = _be.np
-versatile_assert = _be.assert_true
 is_main_proc = _be.is_main_proc
 
 
@@ -89,8 +88,8 @@ def simulate_shallow_water(end_time,
 
       state_n, state_np1 = state_np1, state_n
 
-      versatile_assert(jnp.logical_not(jnp.any(jnp.isnan(state_n["horizontal_wind"]))))
-      versatile_assert(jnp.logical_not(jnp.any(jnp.isnan(state_n["h"]))))
+      runtime_assert(jnp.logical_not(jnp.any(jnp.isnan(state_n["horizontal_wind"]))), "NaN in horizontal_wind")
+      runtime_assert(jnp.logical_not(jnp.any(jnp.isnan(state_n["h"]))), "NaN in h")
     k += 1
   ret = {"dynamics": state_n}
   if tracers_in is not None:

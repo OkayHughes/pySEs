@@ -1,10 +1,10 @@
 from .._config import get_backend as _get_backend
 from ..operations_2d.operators import horizontal_divergence, horizontal_vorticity
 from ..operations_2d.operators import horizontal_gradient, horizontal_weak_laplacian, horizontal_weak_vector_laplacian
+from functools import partial
 _be = _get_backend()
-partial = _be.partial
 jit = _be.jit
-vmap_1d_apply = _be.vmap_1d_apply
+jnp = _be.np
 
 
 @jit
@@ -29,7 +29,7 @@ def horizontal_divergence_3d(vector,
       Horizontal divergence (s^-1) at each model level.
   """
   sph_op = partial(horizontal_divergence, grid=h_grid, a=physics_config["radius_earth"])
-  return vmap_1d_apply(sph_op, vector, -2, -1)
+  return jnp.stack([sph_op(vector[..., k, :]) for k in range(vector.shape[-2])], axis=-1)
 
 
 @jit
@@ -54,7 +54,7 @@ def horizontal_vorticity_3d(vector,
       Relative vorticity (s^-1) at each model level.
   """
   sph_op = partial(horizontal_vorticity, grid=h_grid, a=physics_config["radius_earth"])
-  return vmap_1d_apply(sph_op, vector, -2, -1)
+  return jnp.stack([sph_op(vector[..., k, :]) for k in range(vector.shape[-2])], axis=-1)
 
 
 @jit
@@ -79,7 +79,7 @@ def horizontal_weak_laplacian_3d(scalar,
       Weak-form Laplacian at each model level.
   """
   sph_op = partial(horizontal_weak_laplacian, grid=h_grid, a=physics_config["radius_earth"])
-  return vmap_1d_apply(sph_op, scalar, -1, -1)
+  return jnp.stack([sph_op(scalar[..., k]) for k in range(scalar.shape[-1])], axis=-1)
 
 
 @jit
@@ -104,7 +104,7 @@ def horizontal_weak_vector_laplacian_3d(vector,
       Weak-form vector Laplacian at each model level.
   """
   sph_op = partial(horizontal_weak_vector_laplacian, grid=h_grid, a=physics_config["radius_earth"])
-  return vmap_1d_apply(sph_op, vector, -2, -2)
+  return jnp.stack([sph_op(vector[..., k, :]) for k in range(vector.shape[-2])], axis=-2)
 
 
 @jit
@@ -129,4 +129,4 @@ def horizontal_gradient_3d(scalar,
       Covariant horizontal gradient at each model level.
   """
   sph_op = partial(horizontal_gradient, grid=h_grid, a=physics_config["radius_earth"])
-  return vmap_1d_apply(sph_op, scalar, -1, -2)
+  return jnp.stack([sph_op(scalar[..., k]) for k in range(scalar.shape[-1])], axis=-2)

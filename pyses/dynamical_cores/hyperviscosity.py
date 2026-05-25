@@ -11,7 +11,6 @@ from .mass_coordinate import surface_mass_to_interface_mass
 from functools import partial
 from .model_info import hydrostatic_models, thermodynamic_variable_names, homme_models, cam_se_models, shallow_water_models
 _be = _get_backend()
-vmap_1d_apply = _be.vmap_1d_apply
 jit = _be.jit
 jnp = _be.np
 device_wrapper = _be.array
@@ -45,7 +44,7 @@ def scalar_harmonic_3d(scalar,
   def lap_wk_onearg(scalar):
       return horizontal_weak_laplacian(scalar, h_grid, a=physics_config["radius_earth"], apply_tensor=apply_tensor)
 
-  del2 = vmap_1d_apply(lap_wk_onearg, scalar, -1, -1)
+  del2 = jnp.stack([lap_wk_onearg(scalar[..., k]) for k in range(scalar.shape[-1])], axis=-1)
   return del2
 
 
@@ -78,7 +77,7 @@ def vector_harmonic_3d(vector,
       return horizontal_weak_vector_laplacian(vector, h_grid, a=physics_config["radius_earth"],
                                               nu_div_fact=nu_div_factor)
 
-  del2 = vmap_1d_apply(vec_lap_wk_onearg, vector, -2, -2)
+  del2 = jnp.stack([vec_lap_wk_onearg(vector[..., k, :]) for k in range(vector.shape[-2])], axis=-2)
   return del2
 
 

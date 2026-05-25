@@ -1,13 +1,9 @@
 import numpy as np
-from .._config import get_backend as _get_backend
+from .._config import get_backend as _get_backend, runtime_assert
 from functools import partial
 _be = _get_backend()
 jnp = _be.np
 jit = _be.jit
-versatile_assert = _be.assert_true
-take_along_axis = _be.take_along_axis
-cast_type = _be.cast_type
-flip = _be.flip
 device_wrapper = _be.array
 
 
@@ -68,9 +64,8 @@ def zerroukat_remap(tracer_mass,
   frac = 0.5
   axis_size = 1.0 * num_lev
   for _ in range(8):
-    levels_model = take_along_axis(pi_int_model, cast_type(jnp.floor(idxs), jnp.int64), -1)
-    levels_model_below = take_along_axis(pi_int_model, cast_type(jnp.floor(idxs), jnp.int64
-                                                                 ) + 1, -1)
+    levels_model = jnp.take_along_axis(pi_int_model, jnp.floor(idxs).astype(jnp.int64), -1)
+    levels_model_below = jnp.take_along_axis(pi_int_model, jnp.floor(idxs).astype(jnp.int64) + 1, -1)
     low_enough = pi_int_reference[:, :, :, 1:-1] > levels_model
     too_low = pi_int_reference[:, :, :, 1:-1] > levels_model_below
     converged = jnp.logical_and(low_enough,
@@ -80,13 +75,13 @@ def zerroukat_remap(tracer_mass,
                      jnp.where(too_low, idxs + jump, idxs - jump),
                      idxs)
     frac *= 0.5
-  versatile_assert(jnp.all(converged))
-  idxs = cast_type(jnp.floor(idxs), jnp.int64)
+  runtime_assert(jnp.all(converged), "PPM binary search did not converge")
+  idxs = jnp.floor(idxs).astype(jnp.int64)
   idxs = jnp.concatenate((jnp.zeros_like(idxs[:, :, :, 0:1]),
                           idxs,
                           (num_lev - 1) * jnp.ones_like(idxs[:, :, :, 0:1])), axis=-1)
-  model_above = take_along_axis(pi_int_model, idxs, -1)
-  model_below = take_along_axis(pi_int_model, idxs + 1, -1)
+  model_above = jnp.take_along_axis(pi_int_model, idxs, -1)
+  model_below = jnp.take_along_axis(pi_int_model, idxs + 1, -1)
 
   zgam = (pi_int_reference - model_above) / (model_below - model_above)
   zgam = jnp.concatenate((jnp.zeros_like(zgam[:, :, :, 0])[:, :, :, np.newaxis],
@@ -164,7 +159,7 @@ def zerroukat_remap(tracer_mass,
       rhs_tmp.append((1.0 - filter_code[k]) * lev(rhs, k) +
                      filter_code[k] * (t3 * lev(zarg, k) + (1.0 - t3) * lev(zarg, im1)))
       filter_code[im1] = jnp.maximum(filter_code[im1], filter_code[k])
-    rhs = flip(jnp.stack(rhs_tmp, axis=-2), -2)
+    rhs = jnp.flip(jnp.stack(rhs_tmp, axis=-2), -2)
     rhs = jnp.where(rhs > qmax, qmax, rhs)
     rhs = jnp.where(rhs < 0, 0.0, rhs)
     za0_base = rhs[:, :, :, :-1, :]
@@ -276,12 +271,12 @@ def zerroukat_remap(tracer_mass,
     za1 = -4.0 * rhs[:, :, :, :-1, :] - 2.0 * rhs[:, :, :, 1:, :] + 6 * zarg
     za2 = 3.0 * rhs[:, :, :, :-1, :] + 3.0 * rhs[:, :, :, 1:, :] - 6 * zarg
 
-  zhdp_mapped = take_along_axis(zhdp, idxs[:, :, :, 1:], -1)[:, :, :, :, np.newaxis]
+  zhdp_mapped = jnp.take_along_axis(zhdp, idxs[:, :, :, 1:], -1)[:, :, :, :, np.newaxis]
   zv1 = jnp.zeros_like(tracer_mass[:, :, :, 0, :])
-  zv_mapped = take_along_axis(values_model[:, :, :, :-1, :], idxs[:, :, :, 1:, np.newaxis], -2)
-  za0_mapped = take_along_axis(za0[:, :, :, :, :], idxs[:, :, :, 1:, np.newaxis], -2)
-  za1_mapped = take_along_axis(za1[:, :, :, :, :], idxs[:, :, :, 1:, np.newaxis], -2)
-  za2_mapped = take_along_axis(za2[:, :, :, :, :], idxs[:, :, :, 1:, np.newaxis], -2)
+  zv_mapped = jnp.take_along_axis(values_model[:, :, :, :-1, :], idxs[:, :, :, 1:, np.newaxis], -2)
+  za0_mapped = jnp.take_along_axis(za0[:, :, :, :, :], idxs[:, :, :, 1:, np.newaxis], -2)
+  za1_mapped = jnp.take_along_axis(za1[:, :, :, :, :], idxs[:, :, :, 1:, np.newaxis], -2)
+  za2_mapped = jnp.take_along_axis(za2[:, :, :, :, :], idxs[:, :, :, 1:, np.newaxis], -2)
 
   tracer_mass_out = []
   for k_idx in range(num_lev):

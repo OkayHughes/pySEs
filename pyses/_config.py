@@ -122,27 +122,6 @@ class Backend(Protocol):
     def shard_map(self, func: Callable, *args, **kwargs) -> Callable:
         ...
 
-    def partial(self, func: Callable, *args, **kwargs) -> Callable:
-        ...
-
-    def vmap_1d_apply(self, func: Callable, vector, in_axis: int, out_axis: int):
-        ...
-
-    def flip(self, array, axis: int):
-        ...
-
-    def remainder(self, array, divisor):
-        ...
-
-    def take_along_axis(self, array, idxs, axis: int):
-        ...
-
-    def cast_type(self, arr, dtype):
-        ...
-
-    def assert_true(self, condition: bool) -> None:
-        ...
-
 
 # ---------------------------------------------------------------------------
 # Numpy backend
@@ -197,31 +176,6 @@ class NumpyBackend:
     def shard_map(self, func, *_, **__):
         return func
 
-    def partial(self, func, *args, **kwargs):
-        from functools import partial
-        return partial(func, *args, **kwargs)
-
-    def vmap_1d_apply(self, func, scalar, in_axis, out_axis):
-        levs = []
-        for lev_idx in range(scalar.shape[in_axis]):
-            scalar_2d = scalar.take(indices=lev_idx, axis=in_axis)
-            levs.append(func(scalar_2d))
-        return np.stack(levs, axis=out_axis)
-
-    def flip(self, array, axis):
-        return np.flip(array, axis=axis)
-
-    def remainder(self, array, divisor):
-        return np.mod(array, divisor)
-
-    def take_along_axis(self, array, idxs, axis):
-        return np.take_along_axis(array, idxs, axis=axis)
-
-    def cast_type(self, arr, dtype):
-        return arr.astype(dtype)
-
-    def assert_true(self, condition):
-        assert condition
 
 
 # ---------------------------------------------------------------------------
@@ -248,7 +202,6 @@ class JaxBackend:
         import jax
         import jax.numpy as jnp
         from jax.sharding import PartitionSpec, NamedSharding, AxisType
-        from jax.tree_util import Partial as jax_partial
 
         self.use_double = use_double
         self.debug = debug
@@ -313,7 +266,6 @@ class JaxBackend:
 
         self._NamedSharding = NamedSharding
         self._PartitionSpec = PartitionSpec
-        self._jax_partial = jax_partial
         self.num_jax_devices = self.num_devices
 
     # --- sharding helpers ---
@@ -349,27 +301,6 @@ class JaxBackend:
     def shard_map(self, func, *args, **kwargs):
         return self._jax.shard_map(func, *args, **kwargs)
 
-    def partial(self, func, *args, **kwargs):
-        return self._jax_partial(func, *args, **kwargs)
-
-    def vmap_1d_apply(self, func, vector, in_axis, out_axis):
-        return self._jax.vmap(func, in_axes=(in_axis), out_axes=(out_axis))(vector)
-
-    def flip(self, array, axis):
-        return self.np.flip(array, axis=axis)
-
-    def remainder(self, array, divisor):
-        return self.np.mod(array, divisor)
-
-    def take_along_axis(self, array, idxs, axis):
-        return self.np.take_along_axis(array, idxs, axis=axis)
-
-    def cast_type(self, arr, dtype):
-        return arr.astype(dtype)
-
-    def assert_true(self, condition):
-        # JAX traces through asserts, so we skip them in jit-compiled code
-        return
 
 
 # ---------------------------------------------------------------------------
@@ -434,3 +365,28 @@ def get_backend() -> Backend:
 def _reset_backend():
     """Clear the cached backend (useful in tests)."""
     get_backend.cache_clear()
+
+
+def runtime_assert(condition, message: str = "Assertion failed") -> None:
+    """
+    Assert that condition is True at runtime, including inside JIT.
+
+    Under JAX jit, plain Python ``assert`` evaluates at trace time against an
+    abstract value and either silently passes or raises ConcretizationTypeError.
+    This helper uses ``jax.debug.callback`` so the check executes at actual
+    kernel-launch time and is excluded from the autodiff graph.
+
+    Under NumPy the check is a plain assert.  Future PyTorch support should
+    replace the else-branch with ``torch._check(condition)``.
+    """
+    be = get_backend()
+    if be.wrapper_type == "jax":
+        import jax
+
+        def _check(ok):
+            if not bool(ok):
+                raise RuntimeError(message)
+
+        jax.debug.callback(_check, condition)
+    else:
+        assert condition, message
