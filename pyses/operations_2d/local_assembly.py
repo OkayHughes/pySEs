@@ -571,3 +571,191 @@ def init_shard_extraction_map(assembly_triple, num_devices, nelem_padded, dims, 
                            "i_idx": wrapper(extract_from_i_idxs, dtype=jnp.int64, elem_sharding_axis=0),
                            "j_idx": wrapper(extract_from_j_idxs, dtype=jnp.int64, elem_sharding_axis=0)},
           "mask": wrapper(coeff_mat, dtype=jnp.int64, elem_sharding_axis=0)}, max_dof
+
+
+def _edge_color_rounds(undirected_edges, num_devices):
+  """
+  Greedy edge-coloring of the (undirected) device communication graph.
+
+  Each color class is a matching, so it can be realised as one ``lax.ppermute``
+  round of disjoint transpositions.  Greedy coloring uses at most ``2*deg - 1``
+  colors and in practice ``~deg`` where ``deg`` is the max neighbor count, which
+  is small and independent of ``num_devices`` for spatially-local (e.g.
+  Hilbert-curve) decompositions.
+
+  Parameters
+  ----------
+  undirected_edges : list[tuple[int, int]]
+      Sorted ``(a, b)`` device pairs (``a < b``) that must communicate.
+  num_devices : int
+      Total device count.
+
+  Returns
+  -------
+  partner : list[list[int]]
+      ``partner[r][d]`` is the device ``d`` is matched with in round ``r``
+      (``d`` itself if idle that round).  ``len(partner)`` is the round count.
+  """
+  used = [set() for _ in range(num_devices)]
+  edge_color = {}
+  for (a, b) in undirected_edges:
+    c = 0
+    while c in used[a] or c in used[b]:
+      c += 1
+    edge_color[(a, b)] = c
+    used[a].add(c)
+    used[b].add(c)
+  num_rounds = (max(edge_color.values()) + 1) if edge_color else 0
+  partner = [[d for d in range(num_devices)] for _ in range(num_rounds)]
+  for (a, b), c in edge_color.items():
+    partner[c][a] = b
+    partner[c][b] = a
+  return partner
+
+
+def init_global_comm_map(assembly_triple, num_devices, nelem_padded, wrapped=True):
+  """
+  Build the sparse ppermute DSS schedule (the global device/rank map).
+
+  Classifies every redundancy entry in the global assembly triple by the
+  ``(source_device, target_device)`` pair under a contiguous block element
+  decomposition (device ``d`` owns elements ``[d*E, (d+1)*E)`` where
+  ``E = nelem_padded / num_devices``).  Same-device pairs become a purely local
+  gather/scatter (the "self" term).  The cross-device pairs form a symmetric
+  communication graph, which is edge-colored into ``num_rounds`` matchings (see
+  :func:`_edge_color_rounds`).  Each round is one ``lax.ppermute`` of disjoint
+  transpositions ``{a <-> b}``: ``a`` sends bucket ``(a, b)`` while ``b`` sends
+  bucket ``(b, a)`` in the same collective.  The round count is ``~max_neighbors``
+  rather than ``num_devices - 1``.
+
+  Per device ``d`` and round ``r`` (matched with ``q = partner[r][d]``):
+
+  * ``send_*[d, r, p]`` — gather index on ``d`` for bucket ``(d, q)`` (what ``d``
+    ships to ``q``); masked by ``send_mask`` so padded slots ship zeros.
+  * ``recv_*[d, r, p]`` — scatter-add index on ``d`` for bucket ``(q, d)`` (where
+    the payload from ``q`` lands); slot ``p`` aligns with ``q``'s send slot ``p``,
+    so padded receives are zeros and scatter harmlessly.
+
+  The diagonal ``self_*`` arrays carry bucket ``(d, d)`` for the local term.
+
+  Parameters
+  ----------
+  assembly_triple : tuple[Array, list[Array], list[Array]]
+      Global assembly triple ``(data, rows, cols)`` from
+      :func:`init_assembly_local` over all ``nelem_padded`` elements.
+  num_devices : int
+      Number of mesh devices to decompose across.
+  nelem_padded : int
+      Total element count after zero-padding; must be divisible by
+      ``num_devices``.
+  wrapped : bool, optional
+      If ``True`` (default), index/mask arrays are wrapped onto the device and
+      sharded along the device axis.
+
+  Returns
+  -------
+  comm_map : dict
+      ``perms`` (static per-round ppermute permutations), the device-axis-sharded
+      ``send_*`` / ``recv_*`` / ``send_mask`` arrays of shape
+      ``(num_devices, num_rounds, max_points_edge)``, the ``self_*`` arrays of
+      shape ``(num_devices, max_points_self)``, and the scalars
+      ``elems_per_device``, ``num_rounds``, ``max_points_edge``,
+      ``max_points_self`` and ``num_devices``.
+  """
+  assert nelem_padded % num_devices == 0, "nelem_padded must be divisible by num_devices"
+  E = nelem_padded // num_devices
+  N = num_devices
+
+  data, rows, cols = assembly_triple
+  rows = [np.asarray(_be.unwrap(arr)) for arr in rows]
+  cols = [np.asarray(_be.unwrap(arr)) for arr in cols]
+  num_entries = np.asarray(_be.unwrap(data)).shape[0]
+
+  # bucket[(src_device, dst_device)] = list of (src_loc, si, sj, tgt_loc, ti, tj)
+  buckets = {}
+  for k in range(num_entries):
+    s_elem, s_i, s_j = int(cols[0][k]), int(cols[1][k]), int(cols[2][k])
+    t_elem, t_i, t_j = int(rows[0][k]), int(rows[1][k]), int(rows[2][k])
+    a, s_loc = divmod(s_elem, E)
+    b, t_loc = divmod(t_elem, E)
+    buckets.setdefault((a, b), []).append((s_loc, s_i, s_j, t_loc, t_i, t_j))
+
+  undirected = sorted({(min(a, b), max(a, b)) for (a, b) in buckets if a != b})
+  partner = _edge_color_rounds(undirected, N)
+  num_rounds = len(partner)
+  perms = tuple(tuple((d, partner[r][d]) for d in range(N)) for r in range(num_rounds))
+
+  cross_lens = [len(v) for (k, v) in buckets.items() if k[0] != k[1]]
+  max_pts_edge = max(cross_lens) if cross_lens else 1
+  self_lens = [len(buckets[(d, d)]) for d in range(N) if (d, d) in buckets]
+  max_pts_self = max(self_lens) if self_lens else 1
+
+  e_shape = (N, num_rounds, max_pts_edge)
+  send_elem = np.zeros(e_shape, dtype=np.int64)
+  send_i = np.zeros(e_shape, dtype=np.int64)
+  send_j = np.zeros(e_shape, dtype=np.int64)
+  send_mask = np.zeros(e_shape, dtype=np.float64)
+  recv_elem = np.zeros(e_shape, dtype=np.int64)
+  recv_i = np.zeros(e_shape, dtype=np.int64)
+  recv_j = np.zeros(e_shape, dtype=np.int64)
+
+  for r in range(num_rounds):
+    for d in range(N):
+      q = partner[r][d]
+      if q == d:
+        continue
+      for p, (s_loc, si, sj, _, _, _) in enumerate(buckets.get((d, q), [])):
+        send_elem[d, r, p] = s_loc
+        send_i[d, r, p] = si
+        send_j[d, r, p] = sj
+        send_mask[d, r, p] = 1.0
+      for p, (_, _, _, t_loc, ti, tj) in enumerate(buckets.get((q, d), [])):
+        recv_elem[d, r, p] = t_loc
+        recv_i[d, r, p] = ti
+        recv_j[d, r, p] = tj
+
+  s_shape = (N, max_pts_self)
+  self_gather_elem = np.zeros(s_shape, dtype=np.int64)
+  self_gather_i = np.zeros(s_shape, dtype=np.int64)
+  self_gather_j = np.zeros(s_shape, dtype=np.int64)
+  self_mask = np.zeros(s_shape, dtype=np.float64)
+  self_scatter_elem = np.zeros(s_shape, dtype=np.int64)
+  self_scatter_i = np.zeros(s_shape, dtype=np.int64)
+  self_scatter_j = np.zeros(s_shape, dtype=np.int64)
+  for d in range(N):
+    for p, (s_loc, si, sj, t_loc, ti, tj) in enumerate(buckets.get((d, d), [])):
+      self_gather_elem[d, p] = s_loc
+      self_gather_i[d, p] = si
+      self_gather_j[d, p] = sj
+      self_mask[d, p] = 1.0
+      self_scatter_elem[d, p] = t_loc
+      self_scatter_i[d, p] = ti
+      self_scatter_j[d, p] = tj
+
+  if wrapped:
+    def wrap(x, dtype):
+      return device_wrapper(x, dtype=dtype, elem_sharding_axis=0)
+  else:
+    def wrap(x, dtype):
+      return x
+
+  return {"perms": perms,
+          "num_rounds": num_rounds,
+          "max_points_edge": max_pts_edge,
+          "max_points_self": max_pts_self,
+          "elems_per_device": E,
+          "num_devices": N,
+          "send_elem": wrap(send_elem, jnp.int64),
+          "send_i": wrap(send_i, jnp.int64),
+          "send_j": wrap(send_j, jnp.int64),
+          "send_mask": wrap(send_mask, jnp.float64),
+          "recv_elem": wrap(recv_elem, jnp.int64),
+          "recv_i": wrap(recv_i, jnp.int64),
+          "recv_j": wrap(recv_j, jnp.int64),
+          "self_gather_elem": wrap(self_gather_elem, jnp.int64),
+          "self_gather_i": wrap(self_gather_i, jnp.int64),
+          "self_gather_j": wrap(self_gather_j, jnp.int64),
+          "self_mask": wrap(self_mask, jnp.float64),
+          "self_scatter_elem": wrap(self_scatter_elem, jnp.int64),
+          "self_scatter_i": wrap(self_scatter_i, jnp.int64),
+          "self_scatter_j": wrap(self_scatter_j, jnp.int64)}

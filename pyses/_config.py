@@ -406,71 +406,93 @@ class JaxBackend:
             fn, mesh=self._device_mesh, in_specs=in_specs, out_specs=out_specs,
         )
 
-    def all_to_all_ppermute(self, comm_matrix):
+    def dss_ppermute(self, field, comm_map):
         """
-        Transpose a device-indexed communication matrix via shard_map + ppermute.
+        Direct Stiffness Summation across the device mesh via shard_map + ppermute.
+
+        Performs ``field[rows] += field[cols]`` (the assembly-triple DSS) for a
+        field whose element axis is sharded across the device mesh, using only
+        native collectives — no mpi4py / mpi4jax.  Uses the sparse edge-colored
+        schedule from
+        :func:`operations_2d.local_assembly.init_global_comm_map`: one
+        ``lax.ppermute`` of disjoint transpositions per round
+        (``num_rounds ~ max_neighbors``, independent of device count), plus a
+        purely local self term for same-device redundancies.  All gathers read the
+        original field, contributions accumulate, so every redundancy entry is
+        applied exactly once.
 
         Parameters
         ----------
-        comm_matrix : Array[tuple[num_devices, num_devices, *trailing], Float]
-            ``comm_matrix[src, dst]`` is the payload device ``src`` sends to
-            device ``dst``.  Sharded along axis 0 (the source axis).
+        field : Array[tuple[nelem_padded, npt, npt], Float]
+            Scalar field, element axis length divisible by ``num_devices``.
+        comm_map : dict
+            Global device/rank map from
+            :func:`operations_2d.local_assembly.init_global_comm_map`.
 
         Returns
         -------
-        Array[tuple[num_devices, num_devices, *trailing], Float]
-            ``out[dst, src] == comm_matrix[src, dst]`` — each device's row holds
-            what it received from every other device.  Sharded along axis 0.
-
-        Notes
-        -----
-        Implemented as ``num_devices - 1`` ``lax.ppermute`` shift rounds inside
-        a ``shard_map``.  Round ``d`` uses the static permutation
-        ``[(s, (s + d) % N) for s in range(N)]``; the per-round payload is the
-        column the local device owes its round-``d`` partner.  ``ppermute`` is
-        its own transpose under autograd, so this is forward- and
-        reverse-differentiable.  This is the native-collective building block on
-        which a multi-host DSS halo exchange is built.
+        Array[tuple[nelem_padded, npt, npt], Float]
+            ``field`` with every shared DOF accumulated across all its copies.
         """
         from jax import lax
         jnp = self.np
         N = self.num_devices
+        E = comm_map["elems_per_device"]
+        num_rounds = comm_map["num_rounds"]
+        perms = comm_map["perms"]
         axis = self._elem_axis_name
+        P = self._PartitionSpec
+        npt_i, npt_j = field.shape[1], field.shape[2]
 
-        def _core(row):
-            r = lax.axis_index(axis)
-            local = row[0]
-            result = jnp.zeros_like(local)
-            result = result.at[r].set(local[r])
-            for d in range(1, N):
-                payload = lax.dynamic_index_in_dim(local, (r + d) % N,
-                                                   axis=0, keepdims=False)
-                perm = [(s, (s + d) % N) for s in range(N)]
-                recvd = lax.ppermute(payload, axis, perm)
-                result = result.at[(r - d) % N].set(recvd)
-            return result[jnp.newaxis]
+        field_resh = field.reshape(N, E, npt_i, npt_j)
+        send_e, send_i, send_j = comm_map["send_elem"], comm_map["send_i"], comm_map["send_j"]
+        send_m = comm_map["send_mask"]
+        recv_e, recv_i, recv_j = comm_map["recv_elem"], comm_map["recv_i"], comm_map["recv_j"]
+        slf_ge, slf_gi, slf_gj = (comm_map["self_gather_elem"], comm_map["self_gather_i"],
+                                  comm_map["self_gather_j"])
+        slf_m = comm_map["self_mask"]
+        slf_se, slf_si, slf_sj = (comm_map["self_scatter_elem"], comm_map["self_scatter_i"],
+                                  comm_map["self_scatter_j"])
 
-        return self.parallel_region(_core)(comm_matrix)
+        def _core(fr, send_e, send_i, send_j, send_m, recv_e, recv_i, recv_j,
+                  slf_ge, slf_gi, slf_gj, slf_m, slf_se, slf_si, slf_sj):
+            fl0 = fr[0]                      # (E, npt, npt) — original values
+            fl = fl0
+            for r in range(num_rounds):
+                ge, gi, gj = send_e[0, r], send_i[0, r], send_j[0, r]   # (max_pts_edge,)
+                payload = fl0[ge, gi, gj] * send_m[0, r]
+                got = lax.ppermute(payload, axis, list(perms[r]))
+                se, si, sj = recv_e[0, r], recv_i[0, r], recv_j[0, r]
+                fl = fl.at[se, si, sj].add(got)
+            # local (same-device) redundancies
+            self_payload = fl0[slf_ge[0], slf_gi[0], slf_gj[0]] * slf_m[0]
+            fl = fl.at[slf_se[0], slf_si[0], slf_sj[0]].add(self_payload)
+            return fl[jnp.newaxis]
+
+        spec = P(axis)
+        out = self._jax.shard_map(
+            _core, mesh=self._device_mesh,
+            in_specs=(spec,) * 15, out_specs=spec,
+        )(field_resh, send_e, send_i, send_j, send_m, recv_e, recv_i, recv_j,
+          slf_ge, slf_gi, slf_gj, slf_m, slf_se, slf_si, slf_sj)
+        return out.reshape(field.shape)
 
     def halo_exchange(self, send_buffers, neighbor_ranks):
         """
-        Sparse point-to-point exchange (multi-host JAX path).
+        Sparse rank-keyed point-to-point exchange (mpi4py-style API).
 
-        Single-host JAX achieves DSS through device sharding (see
-        ``operations_2d.local_assembly.project_scalar``), so this dict-of-buffers
-        API — a multi-process concept — is not exercised in single-host runs.
-        A multi-host implementation packs ``send_buffers`` into a device-indexed
-        communication matrix and calls :meth:`all_to_all_ppermute`; wiring that
-        requires a globally consistent device/rank map threaded from grid
-        construction, which is not yet in place.
+        This dict-of-buffers signature is the multi-process (NumPy/mpi4py)
+        contract.  JAX expresses DSS over the device mesh with native
+        collectives instead: build the global device/rank map with
+        :func:`operations_2d.local_assembly.init_global_comm_map` and apply
+        :meth:`dss_ppermute` (``shard_map`` + ``lax.ppermute``).
         """
         if not neighbor_ranks:
             return dict(send_buffers)
         raise NotImplementedError(
-            "Multi-host JAX halo_exchange is not wired. Single-host JAX uses "
-            "device sharding for DSS (operations_2d.local_assembly.project_scalar); "
-            "the ppermute all-to-all primitive is available as all_to_all_ppermute. "
-            "See MIGRATION_PLAN.md §2.5.")
+            "JAX does not use the rank-keyed halo_exchange API. Use "
+            "init_global_comm_map + JaxBackend.dss_ppermute for mesh DSS via "
+            "shard_map + lax.ppermute. See MIGRATION_PLAN.md §2.5.")
 
     def all_reduce_sum(self, t):
         return self.np.sum(t)
