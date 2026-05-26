@@ -306,8 +306,8 @@ def init_model_pressure(z_pi_surf_func,
                                    config,
                                    eps=eps)
   if model not in hydrostatic_models:
-    w_i = device_wrapper(w_func(lat, lon, z_int))
-    phi_i = device_wrapper(z_int * config["gravity"])
+    w_i = device_wrapper(w_func(lat, lon, z_int), elem_sharding_axis=0)
+    phi_i = device_wrapper(z_int * config["gravity"], elem_sharding_axis=0)
   else:
     w_i = None
     phi_i = None
@@ -326,7 +326,7 @@ def init_model_pressure(z_pi_surf_func,
     moisture_dry_ratio = (d_mass_moist / d_mass_dry) - 1.0
     temperature = virtual_temperature * ((1.0 + moisture_dry_ratio) /
                                          (1.0 + (1.0 / config["epsilon"]) * moisture_dry_ratio))
-    moisture_species = {"water_vapor": device_wrapper(moisture_dry_ratio)}
+    moisture_species = {"water_vapor": device_wrapper(moisture_dry_ratio, elem_sharding_axis=0)}
     if model in variable_kappa_models:
       species_names = config["dry_air_species_Rgas"].keys()
       ratios = typical_mass_ratios[frozenset(species_names)]
@@ -335,10 +335,10 @@ def init_model_pressure(z_pi_surf_func,
         dry_air_species[species] = ratios[species] * jnp.ones_like(moisture_species["water_vapor"])
     else:
       dry_air_species = None
-    initial_state = init_model_struct_se(device_wrapper(wind),
-                                         device_wrapper(temperature),
-                                         device_wrapper(d_mass),
-                                         device_wrapper(phi_surf),
+    initial_state = init_model_struct_se(device_wrapper(wind, elem_sharding_axis=0),
+                                         device_wrapper(temperature, elem_sharding_axis=0),
+                                         device_wrapper(d_mass, elem_sharding_axis=0),
+                                         device_wrapper(phi_surf, elem_sharding_axis=0),
                                          moisture_species,
                                          {},
                                          h_grid,
@@ -353,11 +353,11 @@ def init_model_pressure(z_pi_surf_func,
     if enforce_hydrostatic and model not in hydrostatic_models:
       phi_i = eval_balanced_geopotential(phi_surf, p_mid, theta_v_d_mass, config)
 
-    moisture_species = {"water_vapor": device_wrapper(moisture_moist_ratio)}
-    initial_state = init_model_struct_homme(device_wrapper(wind),
-                                            device_wrapper(theta_v_d_mass),
-                                            device_wrapper(d_mass),
-                                            device_wrapper(phi_surf),
+    moisture_species = {"water_vapor": device_wrapper(moisture_moist_ratio, elem_sharding_axis=0)}
+    initial_state = init_model_struct_homme(device_wrapper(wind, elem_sharding_axis=0),
+                                            device_wrapper(theta_v_d_mass, elem_sharding_axis=0),
+                                            device_wrapper(d_mass, elem_sharding_axis=0),
+                                            device_wrapper(phi_surf, elem_sharding_axis=0),
                                             moisture_species,
                                             {},
                                             h_grid,

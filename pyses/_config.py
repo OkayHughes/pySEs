@@ -23,7 +23,7 @@ PYSES_TORCH_COMPILE : str, default "1"
 
 Usage
 -----
-    from config_alt import get_backend
+    from _config import get_backend
 
     be = get_backend()
     x = be.array([1, 2, 3])
@@ -317,9 +317,13 @@ class JaxBackend:
             self.do_sharding = True
             if use_cpu:
                 self.num_devices = shard_cpu_count
+                # append (don't clobber) so externally-set XLA_FLAGS — e.g. the
+                # scaling harness's thread-pinning flags — survive.
+                existing_xla_flags = os.environ.get("XLA_FLAGS", "")
                 os.environ["XLA_FLAGS"] = (
+                    f"{existing_xla_flags} "
                     f"--xla_force_host_platform_device_count={shard_cpu_count}"
-                )
+                ).strip()
                 devices = jax.devices(backend="cpu")
             else:
                 maybe_devices = jax.devices(backend="gpu")
@@ -944,23 +948,32 @@ class TorchBackend:
             return {k: send_buffers[k].clone() for k in neighbor_ranks}
         from torch.distributed.nn.functional import all_to_all_single
 
+        # Buffers are (*payload, n_points) — the point count (last axis) varies
+        # per neighbor; the leading payload (e.g. levels) is constant.  Move the
+        # point axis to the front so each neighbor's chunk is contiguous for the
+        # split-based all-to-all.
         sample = next(iter(send_buffers.values()))
-        trailing_shape = tuple(sample.shape[1:])
-        trailing_numel = 1
-        for s in trailing_shape:
-            trailing_numel *= s
+        payload_shape = tuple(sample.shape[:-1])
+        payload_numel = 1
+        for s in payload_shape:
+            payload_numel *= s
 
         input_split_sizes = [0] * self._world_size
         send_list = []
         for k in neighbor_ranks:
-            buf = send_buffers[k]
-            send_list.append(buf.reshape(-1))
-            input_split_sizes[k] = buf.shape[0] * trailing_numel
+            buf = send_buffers[k]                              # (*payload, n_points_k)
+            send_list.append(torch.movedim(buf, -1, 0).reshape(-1))
+            input_split_sizes[k] = buf.shape[-1] * payload_numel
+        # DSS bilateral symmetry: recv count from k == send count to k.
         output_split_sizes = list(input_split_sizes)
 
         input_tensor = (torch.cat(send_list) if send_list
                         else torch.zeros(0, dtype=sample.dtype, device=sample.device))
+        # functional all_to_all_single needs a preallocated output (output, input, ...)
+        output_tensor = torch.empty(int(sum(output_split_sizes)),
+                                    dtype=input_tensor.dtype, device=input_tensor.device)
         output_tensor = all_to_all_single(
+            output_tensor,
             input_tensor,
             output_split_sizes=output_split_sizes,
             input_split_sizes=input_split_sizes,
@@ -970,9 +983,9 @@ class TorchBackend:
         offset = 0
         for k in neighbor_ranks:
             n_flat = output_split_sizes[k]
-            n_points = n_flat // trailing_numel
-            chunk = output_tensor[offset:offset + n_flat]
-            recv_buffers[k] = chunk.reshape((n_points,) + trailing_shape)
+            n_points = n_flat // payload_numel
+            chunk = output_tensor[offset:offset + n_flat].reshape((n_points,) + payload_shape)
+            recv_buffers[k] = torch.movedim(chunk, 0, -1)      # back to (*payload, n_points)
             offset += n_flat
         return recv_buffers
 

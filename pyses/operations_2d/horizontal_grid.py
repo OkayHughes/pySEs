@@ -231,6 +231,17 @@ def eval_global_grid_deformation_metrics(h_grid,
       Global minimum of the longest effective grid spacing.
   """
   L2_jac_inv, dx_short, dx_long = eval_grid_deformation_metrics(h_grid, dims["npt"])
+  # Exclude zero-padded ghost elements (added when the element axis is sharded
+  # across devices): their metric tensor is all zeros, so dx_short -> inf, which
+  # would poison max(dx_short) -> max_min_dx -> the hyperviscosity coefficient.
+  # ghost_mask is 1 on real DOFs and 0 on padding (all 1 for unpadded grids, so
+  # this is a no-op for the numpy / single-device case).
+  ghost_mask = h_grid.get("ghost_mask")
+  if ghost_mask is not None:
+    real = ghost_mask > 0.5
+    dx_short = jnp.where(real, dx_short, 0.0)          # ghosts -> 0, ignored by max
+    dx_long = jnp.where(real, dx_long, jnp.inf)        # ghosts -> +inf, ignored by min
+    L2_jac_inv = jnp.where(real, L2_jac_inv, 0.0)      # ghosts -> 0, ignored by max
   max_norm_jac_inv = global_max(jnp.max(L2_jac_inv))
   max_min_dx = global_max(jnp.max(dx_short))
   min_max_dx = global_min(jnp.min(dx_long))
@@ -276,7 +287,7 @@ def eval_cfl(h_grid,
   Notes
   -----
   Stability constants (``lambda_max``, ``lambda_vis``) are taken
-  from Ullrich & Jablonowski (2012) as implemented in CAM-SE/HOMME.
+  from results of Ullrich and Whitehead, as implemented in CAM-SE/HOMME.
   """
   #
   # estimate various CFL limits
@@ -593,11 +604,21 @@ def make_grid_mpi_ready(grid, dims, proc_idx, decomp=None, wrapped=use_wrapper):
     def wrapper(x, dtype=None):
       return x
 
-  vert_red_local, vert_red_send, vert_red_recv = triage_vert_redundancy_flat(grid["assembly_triple"],
+  # triage is pure-numpy index logic; unwrap so it works whatever backend the
+  # global grid was built on (numpy identity, torch/jax -> host numpy).
+  assembly_triple_np = (np.asarray(device_unwrapper(grid["assembly_triple"][0])),
+                        [np.asarray(device_unwrapper(a)) for a in grid["assembly_triple"][1]],
+                        [np.asarray(device_unwrapper(a)) for a in grid["assembly_triple"][2]])
+  vert_red_local, vert_red_send, vert_red_recv = triage_vert_redundancy_flat(assembly_triple_np,
                                                                              proc_idx,
                                                                              decomp)
   triples_send, triples_recv = init_assembly_global(vert_red_send, vert_red_recv)
+  # device-wrap the local assembly triple like the send/recv triples, so the
+  # local DSS (index_add / index_get) gets device arrays on every backend.
   triples_local = init_assembly_local(vert_red_local)
+  triples_local = (wrapper(triples_local[0]),
+                   [wrapper(arr, dtype=jnp.int64) for arr in triples_local[1]],
+                   [wrapper(arr, dtype=jnp.int64) for arr in triples_local[2]])
   for proc_idx_recv in triples_recv.keys():
     triples_recv[proc_idx_recv] = (wrapper(triples_recv[proc_idx_recv][0]),
                                    [wrapper(arr, dtype=jnp.int64) for arr in triples_recv[proc_idx_recv][1]],

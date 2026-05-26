@@ -17,7 +17,7 @@ def horizontal_divergence_3d(vector,
   Parameters
   ----------
   vector : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, 2], Float]
-      Horizontal vector field (covariant components).
+      Horizontal vector field (physical components).
   h_grid : SpectralElementGrid
       Horizontal spectral element grid.
   physics_config : dict[str, Any]
@@ -42,7 +42,7 @@ def horizontal_vorticity_3d(vector,
   Parameters
   ----------
   vector : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, 2], Float]
-      Horizontal vector field (covariant components).
+      Horizontal vector field (physical components).
   h_grid : SpectralElementGrid
       Horizontal spectral element grid.
   physics_config : dict[str, Any]
@@ -126,7 +126,7 @@ def horizontal_gradient_3d(scalar,
   Returns
   -------
   grad : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx, 2], Float]
-      Covariant horizontal gradient at each model level.
+      Physical horizontal gradient at each model level.
   """
   sph_op = partial(horizontal_gradient, grid=h_grid, a=physics_config["radius_earth"])
   return jnp.stack([sph_op(scalar[..., k]) for k in range(scalar.shape[-1])], axis=-2)
