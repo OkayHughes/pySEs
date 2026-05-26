@@ -5,10 +5,52 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 
-def get_figdir():
+def get_figdir(subdir=None):
+  """Return ``tests/_figures`` (or a subdirectory thereof), creating it if needed."""
   figdir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_figures")
+  if subdir is not None:
+    figdir = os.path.join(figdir, subdir)
   os.makedirs(figdir, exist_ok=True)
   return figdir
+
+
+def emit_plots():
+  """True when the ``PYSES_TEST_EMIT_PLOTS`` env var is truthy.
+
+  Test-only switch: when set to ``1``/``true``/``yes``/``on`` (case-insensitive),
+  tests may save diagnostic plots under :func:`get_figdir`.  Off by default so
+  the standard test run produces no artifacts and does not import matplotlib.
+  """
+  return os.environ.get("PYSES_TEST_EMIT_PLOTS", "").strip().lower() in (
+      "1", "true", "yes", "on")
+
+
+def plot_scalar_field(lat, lon, values, title, savepath, cmap=None,
+                      cbar_label=None, vmin=None, vmax=None, levels=21):
+  """``tricontourf`` a scalar field on the cubed sphere and save it as PNG.
+
+  ``lat``, ``lon``, and ``values`` are arrays of identical shape (typically
+  ``(elem, npt, npt)``); they are flattened internally.  Coordinates are in
+  radians but plotted in degrees so the file is skim-friendly.
+  """
+  import matplotlib.pyplot as plt
+  import numpy as np
+  r2d = 180.0 / np.pi
+  fig, ax = plt.subplots(figsize=(8.5, 4.2))
+  cs = ax.tricontourf(lon.flatten() * r2d, lat.flatten() * r2d,
+                      values.flatten(), levels=levels, cmap=cmap,
+                      vmin=vmin, vmax=vmax, extend="both")
+  cb = fig.colorbar(cs, ax=ax)
+  if cbar_label:
+    cb.set_label(cbar_label)
+  ax.set_xlabel("lon (deg)")
+  ax.set_ylabel("lat (deg)")
+  ax.set_xlim(0.0, 360.0)
+  ax.set_ylim(-90.0, 90.0)
+  ax.set_title(title)
+  fig.tight_layout()
+  fig.savefig(savepath, dpi=120)
+  plt.close(fig)
 
 
 def plot_grid(grid, ax):

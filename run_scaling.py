@@ -15,10 +15,7 @@ thread pool to the OS core count and exposes no public knob to cap it
 (``--xla_cpu_multi_thread_eigen=false`` only single-threads Eigen ops, not the
 runtime pool), so an in-process "n-device" sharded run uses all cores at every
 n -- the n=1 baseline is already multi-threaded and the speedup column is
-meaningless.  macOS additionally has no affinity (``taskset``) to pin a process
-to one core externally.  Meaningful per-core JAX scaling on CPU would require
-running each rank as its own process (``jax.distributed`` + gloo TCP), a
-non-trivial refactor of the JAX backend.  ``scaling_workload.py`` itself still
+meaningless.  ``scaling_workload.py`` itself still
 runs under JAX for spot-check single-machine timings.
 
 Single-core-per-worker for the MPI backends is enforced by single-threading

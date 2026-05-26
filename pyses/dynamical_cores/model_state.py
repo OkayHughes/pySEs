@@ -6,14 +6,18 @@ from ..mpi.global_assembly import project_scalar_global
 from ..operations_2d.local_assembly import project_scalar
 from .model_info import (f_plane_models,
                          deep_atmosphere_models,
+                         models,
                          thermodynamic_variable_names,
                          hydrostatic_models,
                          cam_se_models,
+                         cam_se_stable_models,
                          moist_mixing_ratio_models,
                          shallow_water_models,
+                         variable_kappa_models,
                          quasi_hydrostatic_models)
-from .mass_coordinate import surface_mass_to_d_mass, surface_mass_to_midlevel_mass
+from .mass_coordinate import surface_mass_to_d_mass, surface_mass_to_midlevel_mass, d_mass_to_surface_mass
 from .homme.thermodynamics import eval_balanced_geopotential, eval_midlevel_pressure
+from .cam_se import thermodynamics as _cam_se_thermo
 from .utils_3d import interface_to_delta, cumulative_sum, phi_to_g
 from .vertical_remap import zerroukat_remap
 from ..mpi.global_communication import global_sum
@@ -320,6 +324,115 @@ def wrap_dynamics(horizontal_wind,
     state["w_i"] = w_i
   return state
 
+
+@partial(jit, static_argnames=["model"])
+def se_T_to_theta_d_d_mass(dynamics, v_grid, physics_config, model):
+  """Re-express a CAM-SE dynamics dict in the cam_se_stable variant.
+
+  Used inside ``run_dycore`` to compute explicit dynamics terms in
+  potential-temperature form: convert ``cam_se`` (``T``-prognostic) ->
+  ``cam_se_stable`` (``theta_d_mass``-prognostic) immediately before the
+  ``advance_dynamics_*`` call, then invert with :func:`se_theta_d_mass_to_T`
+  immediately after so the external CAM-SE interface stays consistent::
+
+      dynamics_state, model = se_T_to_theta_d_mass(
+          dynamics_state, moisture_species, v_grid, physics_config)
+      dynamics_next, _   = advance_dynamics_*(dynamics_state, ..., model, ...)
+      dynamics_next, model = se_theta_d_mass_to_T(
+          dynamics_next, moisture_species, v_grid, physics_config)
+
+  The conversion is the dry-air Exner relation ``theta = T / pi`` with
+  ``pi = (p / p0)^(R_dry / cp_dry)``, evaluated at mid-level pressures
+  derived from the dynamics ``d_mass`` and the tracer moisture mixing ratios
+  via :func:`cam_se.thermodynamics.eval_d_pressure`,
+  :func:`~cam_se.thermodynamics.eval_interface_pressure`,
+  :func:`~cam_se.thermodynamics.eval_midlevel_pressure`, and
+  :func:`~cam_se.thermodynamics.eval_exner_function`.  ``theta_d_mass`` is
+  then ``theta * d_mass``.
+
+  Parameters
+  ----------
+  dynamics : dict[str, Array]
+      CAM-SE dynamics dict from :func:`wrap_dynamics` (``model = cam_se``);
+      must contain ``"horizontal_wind"``, ``"T"``, and ``"d_mass"``.
+  moisture_species : dict[str, Array]
+      Moisture mixing-ratio fields keyed by species name; used by
+      :func:`eval_d_pressure` to scale dry layer mass to moist pressure.
+      Typically ``tracer_state["moisture_species"]`` at the call site.
+  v_grid : dict[str, Array]
+      Vertical grid struct from :func:`init_vertical_grid`; supplies the
+      model-top pressure ``hybrid_a_i[0] * reference_surface_mass``.
+  physics_config : dict
+      Physics configuration; must contain ``"Rgas"``, ``"cp"``, ``"p0"``.
+
+  Returns
+  -------
+  (dynamics, model) : tuple[dict, models]
+      The dynamics dict re-wrapped under :data:`models.cam_se_stable`, paired
+      with that model identifier so callers can pass it straight into the
+      downstream ``advance_dynamics_*`` call.
+  """
+  d_mass = dynamics["d_mass"]
+  surface_mass = d_mass_to_surface_mass(d_mass, v_grid)
+  p_mid = surface_mass_to_midlevel_mass(surface_mass, v_grid)
+  exner = _cam_se_thermo.eval_exner_function(p_mid,
+                                             physics_config["Rgas"],
+                                             physics_config["cp"],
+                                             physics_config)
+  theta_d_mass = dynamics["T"] / exner * d_mass
+  if model is models.cam_se_whole_atmosphere:
+    new_model = models.cam_se_whole_atmosphere_stable
+  else:
+    new_model = models.cam_se_stable
+  new_dynamics = wrap_dynamics(dynamics["horizontal_wind"],
+                               theta_d_mass,
+                               d_mass,
+                               new_model)
+  return new_dynamics, new_model
+
+
+@partial(jit, static_argnames=["model"])
+def se_theta_d_d_mass_to_T(dynamics, v_grid, physics_config, model):
+  """Re-express a cam_se_stable dynamics dict back in CAM-SE's ``T`` variable.
+
+  Inverse of :func:`se_T_to_theta_d_mass`: ``T = theta * pi`` with
+  ``theta = theta_d_mass / d_mass`` and ``pi = (p / p0)^(R_dry / cp_dry)``
+  evaluated at mid-level pressures from the dynamics ``d_mass`` and the
+  tracer moisture mixing ratios.  Restores the external CAM-SE interface
+  after explicit terms have been computed in potential-temperature form.
+
+  Parameters
+  ----------
+  dynamics : dict[str, Array]
+      cam_se_stable dynamics dict from :func:`wrap_dynamics`
+      (``model = cam_se_stable``); must contain ``"horizontal_wind"``,
+      ``"theta_d_mass"``, and ``"d_mass"``.
+  moisture_species, v_grid, physics_config
+      As documented for :func:`se_T_to_theta_d_mass`.
+
+  Returns
+  -------
+  (dynamics, model) : tuple[dict, models]
+      The dynamics dict re-wrapped under :data:`models.cam_se`, paired with
+      that model identifier.
+  """
+  d_mass = dynamics["d_mass"]
+  surface_mass = d_mass_to_surface_mass(d_mass, v_grid)
+  p_mid = surface_mass_to_midlevel_mass(surface_mass, v_grid)
+  exner = _cam_se_thermo.eval_exner_function(p_mid,
+                                             physics_config["Rgas"],
+                                             physics_config["cp"],
+                                             physics_config)
+  T = dynamics["theta_d_d_mass"] * exner / d_mass
+  if model is models.cam_se_whole_atmosphere_stable:
+    new_model = models.cam_se_whole_atmosphere
+  else:
+    new_model = models.cam_se
+  new_dynamics = wrap_dynamics(dynamics["horizontal_wind"],
+                               T,
+                               d_mass,
+                               new_model)
+  return new_dynamics, new_model
 
 @jit
 def wrap_model_state(dynamics,
@@ -778,11 +891,20 @@ def remap_dynamics(dynamics_in,
   """
   Vertically remap all dynamics fields to the reference hybrid-coordinate levels.
 
-  Converts mass-weighted prognostic fields to layer-integrated form
-  (``q * d_mass``), remaps them conservatively via :func:`zerroukat_remap`,
-  then recovers mixing-ratio form on the reference levels.  Non-hydrostatic
-  models additionally remap the geopotential perturbation and vertical
-  velocity.
+  For CAM-SE hydrostatic variants (``cam_se``, ``cam_se_whole_atmosphere``)
+  this internally converts to the corresponding ``_stable`` variant
+  (``theta_d_d_mass``-prognostic) before remap and converts back afterwards;
+  the external T-prognostic interface is preserved.  The motivation is that
+  ``theta_d * d_mass`` is the natural Lagrangian invariant under adiabatic
+  vertical motion -- the same quantity HOMME remaps as ``theta_v * d_mass``
+  -- whereas remapping ``T * d_mass`` is not theoretically conservative for
+  the polytropic atmosphere we want to model and tends to pump mass out of
+  the thinnest top layers when the dynamics is doing work against the
+  pressure gradient.  After the conversion the thermo branch is unified: all
+  paths remap an already-mass-weighted potential temperature.
+
+  Non-hydrostatic models additionally remap the geopotential perturbation
+  and vertical velocity (HOMME only).
 
   Parameters
   ----------
@@ -794,29 +916,46 @@ def remap_dynamics(dynamics_in,
   v_grid : dict[str, Array]
       Vertical grid struct from :func:`init_vertical_grid`.
   physics_config : dict
-      Physics configuration forwarded to thermodynamic helpers.
+      Physics configuration forwarded to thermodynamic helpers; for the CAM-SE
+      auto-convert path must contain ``"Rgas"``, ``"cp"``, ``"p0"``.
   num_lev : int
       Number of vertical levels; static JIT argument.
   model : model_info.models
       Model identifier; selects thermodynamic variable and non-hydrostatic
-      handling.
+      handling.  Static JIT argument, so the convert / no-convert branch is
+      decided at trace time.
 
   Returns
   -------
   dynamics_remapped : dict[str, Array]
-      Dynamics state on the reference ``d_mass_ref`` levels.
+      Dynamics state on the reference ``d_mass_ref`` levels, wrapped under
+      the same model identifier the caller passed in.
   """
   pi_surf = dynamics_to_surface_mass(dynamics_in, v_grid)
   d_mass_ref = surface_mass_to_d_mass(pi_surf,
                                       v_grid)
+
+  # CAM-SE in T-prognostic form -> swap to the matching _stable variant so the
+  # remap operates on theta_d * d_mass.  This is a static-trace-time branch
+  # (model is a static JIT argname).  d_mass is unchanged by the conversion;
+  # only the thermo key swaps.
+  if model in cam_se_models and model not in cam_se_stable_models:
+    dynamics_in, model_remap = se_T_to_theta_d_d_mass(
+        dynamics_in, v_grid, physics_config, model)
+    needs_back_convert = True
+  else:
+    model_remap = model
+    needs_back_convert = False
+
   d_mass = dynamics_in["d_mass"]
   u_model = dynamics_in["horizontal_wind"][:, :, :, :, 0] * d_mass
   v_model = dynamics_in["horizontal_wind"][:, :, :, :, 1] * d_mass
-  if model in cam_se_models:
-    thermo_model = dynamics_in["T"] * d_mass
-  else:
-    thermo_model = dynamics_in[thermodynamic_variable_names[model]]
-  if model not in hydrostatic_models:
+  # thermo is already mass-weighted under model_remap for every path that
+  # reaches here: cam_se_stable / cam_se_whole_atmosphere_stable use
+  # theta_d_d_mass, HOMME variants use theta_v_d_mass.  No T * d_mass branch.
+  thermo_model = dynamics_in[thermodynamic_variable_names[model_remap]]
+
+  if model_remap not in hydrostatic_models:
     p_mid = eval_midlevel_pressure(dynamics_in, v_grid)
     phi_ref = eval_balanced_geopotential(static_forcing["phi_surf"],
                                          p_mid,
@@ -832,12 +971,11 @@ def remap_dynamics(dynamics_in,
   Qdp_out = zerroukat_remap(Qdp, dynamics_in["d_mass"], d_mass_ref, num_lev, filter=True)
   u_remap = jnp.stack((Qdp_out[:, :, :, :, 0] / d_mass_ref,
                        Qdp_out[:, :, :, :, 1] / d_mass_ref), axis=-1)
-  if model in cam_se_models:
-    thermo_remap = Qdp_out[:, :, :, :, 2] / d_mass_ref
-  else:
-    thermo_remap = Qdp_out[:, :, :, :, 2]
+  # thermo stays mass-weighted on the reference grid (theta * d_mass_ref) --
+  # the same convention the rest of the model expects under model_remap.
+  thermo_remap = Qdp_out[:, :, :, :, 2]
 
-  if model not in hydrostatic_models:
+  if model_remap not in hydrostatic_models:
     p_mid = surface_mass_to_midlevel_mass(pi_surf, v_grid)
     phi_ref_new = eval_balanced_geopotential(static_forcing["phi_surf"],
                                              p_mid,
@@ -846,18 +984,26 @@ def remap_dynamics(dynamics_in,
     phi_i_remap = cumulative_sum(-Qdp_out[:, :, :, :, 3], jnp.zeros_like(static_forcing["phi_surf"])) + phi_ref_new
     w_i_surf = ((u_remap[:, :, :, -1, 0] * static_forcing["grad_phi_surf"][:, :, :, 0] +
                  u_remap[:, :, :, -1, 1] * static_forcing["grad_phi_surf"][:, :, :, 1]) /
-                phi_to_g(static_forcing["phi_surf"], physics_config, model))
+                phi_to_g(static_forcing["phi_surf"], physics_config, model_remap))
     w_i_upper = jnp.flip(jnp.cumsum(-jnp.flip(Qdp[:, :, :, :, 4], -1), axis=-1), -1) + dynamics_in["w_i"][:, :, :, -1:]
     w_i_remap = jnp.concatenate((w_i_upper, w_i_surf[:, :, :, np.newaxis]), axis=-1)
   else:
     phi_i_remap = None
     w_i_remap = None
-  return wrap_dynamics(u_remap,
-                       thermo_remap,
-                       d_mass_ref,
-                       model,
-                       phi_i=phi_i_remap,
-                       w_i=w_i_remap)
+  dynamics_remapped = wrap_dynamics(u_remap,
+                                    thermo_remap,
+                                    d_mass_ref,
+                                    model_remap,
+                                    phi_i=phi_i_remap,
+                                    w_i=w_i_remap)
+
+  # If we entered the stable form for the remap, convert back so callers see
+  # the same external interface (T) they handed in.  The back-conversion uses
+  # the post-remap d_mass_ref for the Exner consistent with the new layers.
+  if needs_back_convert:
+    dynamics_remapped, _ = se_theta_d_d_mass_to_T(
+        dynamics_remapped, v_grid, physics_config, model_remap)
+  return dynamics_remapped
 
 
 @partial(jit, static_argnames=["model"])

@@ -255,7 +255,7 @@ def eval_energy_gradient_term(common_variables,
   u = common_variables["horizontal_wind"]
   phi = common_variables["phi"]
   kinetic_energy = physical_dot_product(u, u) / 2.0
-  return -horizontal_gradient_3d(kinetic_energy[:, :, :] + phi, h_grid, physics_config)
+  return -horizontal_gradient_3d(kinetic_energy + phi, h_grid, physics_config)
 
 
 @jit

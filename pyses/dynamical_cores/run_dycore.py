@@ -10,10 +10,12 @@ from .model_state import (sum_dynamics_series,
                           wrap_model_state,
                           check_dynamics_nan,
                           check_tracers_nan,
-                          sum_consistency_struct)
+                          sum_consistency_struct,
+                          se_T_to_theta_d_d_mass,
+                          se_theta_d_d_mass_to_T)
 from .physics_dynamics_coupling import coupling_types
 from .tracer_advection.eulerian_spectral import advance_tracers
-from .model_info import cam_se_models
+from .model_info import cam_se_models, cam_se_stable_models
 from functools import partial
 _be = _get_backend()
 jit = _be.jit
@@ -115,6 +117,18 @@ def advance_coupling_step(state_in,
       else:
         moisture_species = None
         dry_air_species = None
+      # Run the adiabatic dynamics step in the _stable (theta_d) variant so the
+      # explicit terms use the skew-symmetric / Exner-form formulation; the
+      # T-based interface is restored after the advance, so hyperviscosity,
+      # sponge, tracer transport, and the dynamics_next/dynamics_state swap
+      # below all continue to see ``model`` unchanged.  Skip the conversion
+      # when ``model`` is already a _stable variant (otherwise we'd try to read
+      # the T key that doesn't exist on those states).
+      if model in cam_se_models and model not in cam_se_stable_models:
+        dynamics_state, step_model = se_T_to_theta_d_d_mass(
+            dynamics_state, v_grid, physics_config, model)
+      else:
+        step_model = model
       if timestep_config["dynamics"]["step_type"] == time_step_options.Euler:
         dynamics_next, tracer_consist_dyn = advance_dynamics_euler(dynamics_state,
                                                                    static_forcing,
@@ -123,7 +137,7 @@ def advance_coupling_step(state_in,
                                                                    physics_config,
                                                                    timestep_config,
                                                                    dims,
-                                                                   model,
+                                                                   step_model,
                                                                    moisture_species=moisture_species,
                                                                    dry_air_species=dry_air_species)
       elif timestep_config["dynamics"]["step_type"] == time_step_options.RK3_5STAGE:
@@ -134,11 +148,20 @@ def advance_coupling_step(state_in,
                                                                             physics_config,
                                                                             timestep_config,
                                                                             dims,
-                                                                            model,
+                                                                            step_model,
                                                                             moisture_species=moisture_species,
                                                                             dry_air_species=dry_air_species)
       else:
         raise ValueError("Unknown dynamics timestep type")
+      # Restore the external T-prognostic interface for the rest of the
+      # iteration; also restore dynamics_state so the swap on the bottom of
+      # the loop preserves a T-form allocation for the next iteration.  Only
+      # convert back if we converted in (i.e., model was a non-stable variant).
+      if model in cam_se_models and model not in cam_se_stable_models:
+        dynamics_next, _ = se_theta_d_d_mass_to_T(
+            dynamics_next, v_grid, physics_config, step_model)
+        dynamics_state, _ = se_theta_d_d_mass_to_T(
+            dynamics_state, v_grid, physics_config, step_model)
       if "disable_diffusion" not in diffusion_config.keys():
         if timestep_config["hyperviscosity"]["step_type"] == time_step_options.Euler:
           dynamics_next, tracer_consist_visc = advance_hypervis_euler(dynamics_next,

@@ -2,6 +2,7 @@ from .._config import get_backend as _get_backend
 from .model_state import project_dynamics, sum_dynamics_series, sum_consistency_struct
 from .homme.explicit_terms import eval_explicit_tendency as eval_explicit_tendency_homme
 from .cam_se.explicit_terms import eval_explicit_tendency as eval_explicit_tendency_se
+from .cam_se.explicit_terms_theta import eval_explicit_tendency as eval_explicit_tendency_se_theta
 from .shallow_water_3d.explicit_terms import eval_explicit_tendency as eval_explicit_tendency_sw
 from .homme.explicit_terms import correct_state
 from .hyperviscosity import eval_hypervis_terms, advance_sponge_layer
@@ -10,7 +11,7 @@ from .time_step import time_step_options, stability_info
 from functools import partial
 from frozendict import frozendict
 from .physics_dynamics_coupling import coupling_types
-from .model_info import cam_se_models, homme_models, shallow_water_models
+from .model_info import cam_se_models, cam_se_stable_models, homme_models, shallow_water_models
 _be = _get_backend()
 jit = _be.jit
 jnp = _be.np
@@ -62,7 +63,18 @@ def dynamics_tendency(dynamics,
   tracer_consist : dict[str, Array]
       Tracer-consistency flux struct from :func:`wrap_tracer_consist_dynamics`.
   """
-  if model in cam_se_models:
+  # cam_se_stable_models are a subset of cam_se_models, so test them first;
+  # they use the skew-symmetric theta_d tendency in explicit_terms_theta.py.
+  if model in cam_se_stable_models:
+    dynamics_tend, tracer_consist = eval_explicit_tendency_se_theta(dynamics,
+                                                                    static_forcing,
+                                                                    moisture_species,
+                                                                    dry_air_species,
+                                                                    h_grid,
+                                                                    v_grid,
+                                                                    physics_config,
+                                                                    model)
+  elif model in cam_se_models:
     dynamics_tend, tracer_consist = eval_explicit_tendency_se(dynamics,
                                                               static_forcing,
                                                               moisture_species,

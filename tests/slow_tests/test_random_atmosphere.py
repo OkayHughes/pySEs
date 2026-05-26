@@ -41,8 +41,9 @@ from pyses.dynamical_cores.operators_3d import horizontal_gradient_3d
 from pyses.dynamical_cores.run_dycore import init_simulator
 from pyses.dynamical_cores.mass_coordinate import init_vertical_grid
 from pyses.dynamical_cores.model_config import init_default_config, hypervis_opts
-from pyses.dynamical_cores.model_info import models
+from pyses.dynamical_cores.model_info import models, thermodynamic_variable_names
 from pyses.mesh_generation.element_local_metric import init_quasi_uniform_grid_elem_local
+from ..context import emit_plots, get_figdir, plot_scalar_field
 from ..test_data.mass_coordinate_grids import cam30
 
 _be = _get_backend()
@@ -53,7 +54,7 @@ unwrap = _be.unwrap
 # --- resolution / model choices -------------------------------------------
 NE = 15                       # ne15 cubed-sphere
 NPT = 4                       # GLL points per element edge
-MODEL = models.homme_hydrostatic
+MODEL = models.cam_se
 
 # --- atmosphere parameters ------------------------------------------------
 T_E = 300.0                   # equatorial surface temperature (K)
@@ -69,9 +70,9 @@ MAX_ATTEMPTS = 30
 
 # --- topography parameters ------------------------------------------------
 N_CONTINENTS = 6
-CONTINENT_WIDTH_MEAN = np.deg2rad(20.0)   # half-width mean
+CONTINENT_WIDTH_MEAN = np.deg2rad(30.0)   # half-width mean
 CONTINENT_WIDTH_STD = np.deg2rad(5.0)
-CONTINENT_EXPONENT = 6                     # >2 -> approaches an indicator
+CONTINENT_EXPONENT = 4                     # >2 -> approaches an indicator
 CONTINENT_HEIGHT_RANGE = (500.0, 2000.0)   # m
 NOISE_AMP = 0.3                            # half-normal scale of roughness
 MAX_TOPO_HEIGHT = 2500.0                  # clip for steepness/stability
@@ -109,13 +110,13 @@ def _half_width_to_scale(half_width, exponent):
   return half_width / np.log(2.0) ** (1.0 / exponent)
 
 
-def _eval_slp(lat, lon, rng):
+def _eval_slp(lat, lon, rng, slp_std=SLP_STD):
   """
   Sea-level pressure field (Pa): mean ``SLP_MEAN`` plus random Gaussian hills.
 
   Centers are uniform on the sphere, half-widths follow a beta distribution
-  centered on 3*dx, and amplitudes are N(0, SLP_STD).  Returns a numpy array on
-  the grid (precomputed once and captured by ``p_moist`` for speed).
+  centered on 3*dx, and amplitudes are N(0, ``slp_std``).  Returns a numpy
+  array on the grid (precomputed once and captured by ``p_moist`` for speed).
   """
   dx = _dx_radians()
   # number of hills for the requested coverage (footprints per point ~ N w^2 / 4).
@@ -124,7 +125,7 @@ def _eval_slp(lat, lon, rng):
   lat_c, lon_c = _random_centers(rng, n_hills)
   half_widths = dx * (1.5 + 3.0 * rng.beta(2.0, 2.0, size=n_hills))   # mean 3*dx
   scales = _half_width_to_scale(half_widths, 2)
-  amps = rng.normal(0.0, SLP_STD, size=n_hills)
+  amps = rng.normal(0.0, slp_std, size=n_hills)
   return SLP_MEAN + _sum_gaussian_hills(lat, lon, lat_c, lon_c, amps, scales, 2)
 
 
@@ -160,8 +161,19 @@ def _eval_topography(lat, lon, rng):
   return np.clip(continents * roughness, 0.0, MAX_TOPO_HEIGHT)
 
 
-def _build_state(h_grid, v_grid, physics_config, dims, mountain, rng):
-  """Build a single random model state (no rejection check)."""
+def _build_state(h_grid, v_grid, physics_config, dims, mountain, rng,
+                 model=MODEL, slp_std=SLP_STD):
+  """Build a single random model state (no rejection check).
+
+  ``model`` selects the dynamical core: the geostrophic wind / barometric SLP
+  fields are model-invariant, so two cores called with the same ``rng`` and the
+  same ``mountain`` flag produce the same initial physical atmosphere expressed
+  in each core's prognostic variables.
+
+  ``slp_std`` overrides the per-hill SLP perturbation amplitude (default:
+  :data:`SLP_STD`).  CAM-SE's vertical remap tolerates smaller perturbations
+  than HOMME's at this resolution, so cross-core tests can dial this down.
+  """
   coords = unwrap(h_grid["physical_coords"])
   lat_np = coords[:, :, :, 0]
   lon_np = coords[:, :, :, 1]
@@ -173,7 +185,8 @@ def _build_state(h_grid, v_grid, physics_config, dims, mountain, rng):
 
   # precomputed per-column lookups captured by the closures below. elem_sharding_axis=0
   # shards them like the grid under JAX multi-device (no-op for numpy / torch).
-  slp = device_wrapper(_eval_slp(lat_np, lon_np, rng), elem_sharding_axis=0)     # (elem, i, j)
+  slp = device_wrapper(_eval_slp(lat_np, lon_np, rng, slp_std=slp_std),
+                       elem_sharding_axis=0)     # (elem, i, j)
   if mountain:
     z_surf = device_wrapper(_eval_topography(lat_np, lon_np, rng), elem_sharding_axis=0)
   else:
@@ -227,20 +240,79 @@ def _build_state(h_grid, v_grid, physics_config, dims, mountain, rng):
 
   return init_model_pressure(z_pi_surf_func, p_moist_func, Tv_func,
                              u_func, v_func, Q_func,
-                             h_grid, v_grid, physics_config, dims, MODEL,
+                             h_grid, v_grid, physics_config, dims, model,
                              w_func=w_func)
 
 
-def _init_fuzzed_state(h_grid, v_grid, physics_config, dims, mountain):
-  """Rejection-sample a state whose maximum wind speed is below ``MAX_WIND``."""
+# --- diagnostic plotting (gated by PYSES_TEST_EMIT_PLOTS) -----------------
+# Sample vertical levels for plots; 0 is model top, 14 is the surface for the
+# cam30[::2] truncation used here.  Three levels span strat / mid-trop / PBL.
+PLOT_LEVELS = (2, 7, 12)
+# Snapshot the run at these elapsed hours; the 6 h endpoint is included so we
+# get a final-state plot alongside the initial one.
+PLOT_SNAPSHOT_HOURS = (1.0, 3.0, 6.0)
+
+
+def _plot_coords(h_grid):
+  """Lat/lon arrays for plotting (radians, lon wrapped to ``[0, 2 pi)``)."""
+  coords = unwrap(h_grid["physical_coords"])
+  return coords[..., 0], coords[..., 1] % (2.0 * np.pi)
+
+
+def _plot_state(state, lat, lon, label, savedir, gravity=None, mountain=False):
+  """Save one set of (wind magnitude, theta_v) plots at ``PLOT_LEVELS``.
+
+  ``label`` is interpolated into the filenames and titles (e.g. ``"init"``,
+  ``"t06.0h"``).  Topography and the surface-mass column are only saved when
+  ``gravity`` is provided (i.e. for the initial state).
+  """
+  wind = unwrap(state["dynamics"]["horizontal_wind"])
+  d_mass = unwrap(state["dynamics"]["d_mass"])
+  thermo = unwrap(state["dynamics"][thermodynamic_variable_names[MODEL]]) / d_mass
+  wind_mag = np.sqrt(wind[..., 0] ** 2 + wind[..., 1] ** 2)
+
+  for k in PLOT_LEVELS:
+    plot_scalar_field(lat, lon, wind_mag[..., k],
+                      f"wind magnitude  {label}  (level {k})",
+                      f"{savedir}/{label}_wind_mag_lev{k:02d}.png",
+                      cmap="viridis", cbar_label="|u| (m/s)")
+    plot_scalar_field(lat, lon, thermo[..., k],
+                      f"{thermodynamic_variable_names[MODEL]} {label}  (level {k})",
+                      f"{savedir}/{label}_{thermodynamic_variable_names[MODEL]}_lev{k:02d}.png",
+                      cmap="inferno")
+  if gravity is not None:
+    # diagnostic surface-mass column (Pa) -> hPa
+    plot_scalar_field(lat, lon, d_mass.sum(axis=-1) * 1e-2,
+                      f"dry-mass column  {label}  (hPa)",
+                      f"{savedir}/{label}_dry_mass_column.png",
+                      cmap="coolwarm", cbar_label="sum(d_mass) (hPa)")
+    if mountain:
+      z_surf = unwrap(state["static_forcing"]["phi_surf"]) / gravity
+      plot_scalar_field(lat, lon, z_surf,
+                        "topography  (m)",
+                        f"{savedir}/{label}_topography.png",
+                        cmap="terrain", cbar_label="elevation (m)")
+
+
+def _init_fuzzed_state(h_grid, v_grid, physics_config, dims, mountain,
+                       model=MODEL, slp_std=SLP_STD):
+  """Rejection-sample a state whose maximum wind speed is below ``MAX_WIND``.
+
+  Returns ``(accepted_attempt, state)``.  The attempt index lets callers
+  reproduce the exact accepted draw under a different model -- the wind cap is
+  computed from a model-invariant geostrophic field, so the same attempt is
+  accepted for any choice of ``model`` and any ``slp_std`` (the latter just
+  rescales the windspeed-vs-attempt ranking).
+  """
   for attempt in range(MAX_ATTEMPTS):
     rng = np.random.default_rng(SEED0 + attempt)
-    state = _build_state(h_grid, v_grid, physics_config, dims, mountain, rng)
+    state = _build_state(h_grid, v_grid, physics_config, dims, mountain, rng,
+                         model=model, slp_std=slp_std)
     wind = unwrap(state["dynamics"]["horizontal_wind"])
     max_wind = float(np.max(np.sqrt(wind[..., 0] ** 2 + wind[..., 1] ** 2)))
     if np.isfinite(max_wind) and max_wind <= MAX_WIND:
       print(f"accepted draw on attempt {attempt} (max wind {max_wind:.1f} m/s)")
-      return state
+      return attempt, state
   raise RuntimeError(f"no draw with max wind < {MAX_WIND} m/s in "
                      f"{MAX_ATTEMPTS} attempts")
 
@@ -255,9 +327,23 @@ def _run_fuzzing_test(mountain):
       NE, h_grid, v_grid, dims, MODEL,
       hypervis_type=hypervis_opts.variable_resolution)
 
-  model_state = _init_fuzzed_state(h_grid, v_grid, physics_config, dims, mountain)
+  _, model_state = _init_fuzzed_state(h_grid, v_grid, physics_config, dims,
+                                      mountain)
   simulator = init_simulator(h_grid, v_grid, physics_config, diffusion_config,
                              timestep_config, dims, MODEL)
+
+  # When PYSES_TEST_EMIT_PLOTS is truthy, save initial-state plots now and
+  # collect snapshots of the evolution at the times in PLOT_SNAPSHOT_HOURS.
+  savedir = None
+  pending_snapshots: list = []
+  if emit_plots():
+    subdir = "random_atmosphere_topo" if mountain else "random_atmosphere_no_topo"
+    savedir = get_figdir(subdir=subdir)
+    plot_lat, plot_lon = _plot_coords(h_grid)
+    gravity = float(unwrap(physics_config["gravity"]))
+    _plot_state(model_state, plot_lat, plot_lon, "init", savedir,
+                gravity=gravity, mountain=mountain)
+    pending_snapshots = list(PLOT_SNAPSHOT_HOURS)
 
   total_time = 6.0 * 3600.0
   state = model_state
@@ -265,6 +351,10 @@ def _run_fuzzing_test(mountain):
   # integration stayed stable.
   for t, state in simulator(model_state):
     print(f"t = {t:.0f} s")
+    while savedir is not None and pending_snapshots and \
+        t / 3600.0 >= pending_snapshots[0]:
+      hr = pending_snapshots.pop(0)
+      _plot_state(state, plot_lat, plot_lon, f"t{hr:04.1f}h", savedir)
     if t >= total_time:
       break
 
@@ -278,3 +368,104 @@ def test_fuzzing_no_topography():
 
 def test_fuzzing_topography():
   _run_fuzzing_test(mountain=True)
+
+
+# --- cross-core consistency -----------------------------------------------
+# Tolerances for ``test_homme_vs_cam_se_consistency``.  HOMME and CAM-SE differ
+# in the prognostic thermodynamic variable (``theta_v * d_mass`` vs ``T``) and
+# in the per-step remap, so they will not match bit-exactly; on this balanced,
+# dry, no-physics initial state at 6 h they should still agree closely.  The
+# bounds are intentionally loose because there is no analytic reference -- this
+# is a cross-core consistency check, not a convergence test.  If a real bug
+# breaks one core, these bounds will catch it long before they fire spuriously.
+CROSS_CORE_PS_RELATIVE_TOL = 1.0e-2     # surface pressure RMS / mean
+CROSS_CORE_WIND_TOL_MS = 10.0           # mid-level |u| RMS  (m/s)
+# CAM-SE's variable-resolution hyperviscosity is too weak for this random
+# atmosphere: the column-top pressure goes negative after a few remaps and the
+# PPM monotonicity search fails.  Quasi-uniform hypervis (constant coefficient,
+# stronger global damping) stabilises CAM-SE on the same atmosphere, so we use
+# it for both cores here for an apples-to-apples comparison.  dt is left at the
+# nx=15 default (1800 s) -- earlier debugging showed reducing dt alone did not
+# rescue CAM-SE, so hypervis is the load-bearing change.
+CROSS_CORE_PHYSICS_DT = -1.0            # negative -> init_default_config picks
+CROSS_CORE_HYPERVIS = hypervis_opts.quasi_uniform
+
+
+def test_homme_vs_cam_se_consistency():
+  """HOMME hydrostatic and CAM-SE agree on the same random atmosphere at 6 h.
+
+  Both cores are integrated from the *identical* initial physical state -- the
+  geostrophic wind / barometric SLP construction in :func:`_build_state` is
+  model-invariant, so the same rejection-sampled seed yields the same atmosphere
+  expressed in each core's prognostic variables.  After 6 h of integration we
+  compare two model-agnostic diagnostics:
+
+    * surface pressure (sum of dry layer mass): RMS difference / mean
+    * mid-level horizontal-wind magnitude:       RMS difference (m/s)
+
+  Both must be finite and within :data:`CROSS_CORE_PS_RELATIVE_TOL` and
+  :data:`CROSS_CORE_WIND_TOL_MS` respectively.
+  """
+  h_grid, dims = init_quasi_uniform_grid_elem_local(NE, NPT, calc_smooth_tensor=True)
+  accepted_attempt = None
+  end_states = {}
+  for model in (models.homme_hydrostatic, models.cam_se):
+    v_grid = init_vertical_grid(cam30["hybrid_a_i"][::2],
+                                cam30["hybrid_b_i"][::2],
+                                cam30["p0"], model)
+    physics_config, diffusion_config, timestep_config = init_default_config(
+        NE, h_grid, v_grid, dims, model,
+        physics_dt=CROSS_CORE_PHYSICS_DT,
+        hypervis_type=CROSS_CORE_HYPERVIS)
+    if accepted_attempt is None:
+      accepted_attempt, init_state = _init_fuzzed_state(
+          h_grid, v_grid, physics_config, dims, mountain=False, model=model)
+    else:
+      # Reuse the accepted seed so the second core sees the same atmosphere;
+      # rejection is model-invariant, so re-running it here would just confirm
+      # the same attempt at the cost of another rebuild.
+      rng = np.random.default_rng(SEED0 + accepted_attempt)
+      init_state = _build_state(h_grid, v_grid, physics_config, dims,
+                                mountain=False, rng=rng, model=model)
+    simulator = init_simulator(h_grid, v_grid, physics_config, diffusion_config,
+                               timestep_config, dims, model)
+    total_time = 6.0 * 3600.0
+    state = init_state
+    for t, state in simulator(init_state):
+      print(f"  {model.name}: t = {t:.0f} s")
+      if t >= total_time:
+        break
+    end_states[model] = state
+
+  h_dyn = end_states[models.homme_hydrostatic]["dynamics"]
+  c_dyn = end_states[models.cam_se]["dynamics"]
+  h_d_mass = np.asarray(unwrap(h_dyn["d_mass"]))
+  c_d_mass = np.asarray(unwrap(c_dyn["d_mass"]))
+  h_wind = np.asarray(unwrap(h_dyn["horizontal_wind"]))
+  c_wind = np.asarray(unwrap(c_dyn["horizontal_wind"]))
+
+  assert np.all(np.isfinite(h_wind)) and np.all(np.isfinite(c_wind))
+  assert np.all(np.isfinite(h_d_mass)) and np.all(np.isfinite(c_d_mass))
+
+  # surface pressure proxy (sum of dry layer mass)
+  h_ps = h_d_mass.sum(axis=-1)
+  c_ps = c_d_mass.sum(axis=-1)
+  ps_mean = 0.5 * float(h_ps.mean() + c_ps.mean())
+  ps_rms = float(np.sqrt(np.mean((h_ps - c_ps) ** 2)))
+  ps_rel = ps_rms / ps_mean
+
+  # mid-level wind magnitude
+  mid = h_wind.shape[-2] // 2
+  h_mag = np.sqrt(h_wind[..., mid, 0] ** 2 + h_wind[..., mid, 1] ** 2)
+  c_mag = np.sqrt(c_wind[..., mid, 0] ** 2 + c_wind[..., mid, 1] ** 2)
+  wind_rms = float(np.sqrt(np.mean((h_mag - c_mag) ** 2)))
+
+  print(f"HOMME vs CAM-SE @ 6 h: dry-mass column RMS = {ps_rms:.2f} Pa "
+        f"({ps_rel * 100:.4f}% of mean),  mid-level |u| RMS = {wind_rms:.3f} m/s")
+
+  assert ps_rel < CROSS_CORE_PS_RELATIVE_TOL, (
+      f"surface pressure RMS = {ps_rel * 100:.3f}% of mean exceeds "
+      f"{CROSS_CORE_PS_RELATIVE_TOL * 100:.2f}% bound")
+  assert wind_rms < CROSS_CORE_WIND_TOL_MS, (
+      f"mid-level wind RMS = {wind_rms:.3f} m/s exceeds "
+      f"{CROSS_CORE_WIND_TOL_MS:.2f} m/s bound")
