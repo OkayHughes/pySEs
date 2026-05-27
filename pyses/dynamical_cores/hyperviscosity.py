@@ -428,7 +428,7 @@ def init_hypervis_config_tensor(h_grid,
                       "reference_profiles": {"T_ref": device_wrapper(T_ref),
                                              "T_ref_lapse": device_wrapper(T_ref_lapse)}}
   if n_sponge > 0:
-    diffusion_config["do_sponge_layer"] = 1.0
+    diffusion_config["sponge_layer"] = 1.0
     diffusion_config["nu_top"] = device_wrapper(nu_top)
     diffusion_config["nu_ramp"] = device_wrapper(nu_ramp)
   return diffusion_config

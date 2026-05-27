@@ -635,6 +635,52 @@ def wrap_tracers(moisture_species,
 
 
 @partial(jit, static_argnames=["model"])
+def renormalize_dry_air_species(tracer_state, model):
+  """Force ``sum(dry_air_species) == 1`` pointwise.
+
+  PPM remap (in :func:`remap_tracers`) is conservative on tracer mass but
+  not bit-exact on mixing ratio, and tracer transport
+  (``advance_tracers`` / horizontal-flux-divergence schemes) can introduce
+  similar drift.  The sum of the dry-air species can therefore drift from
+  1 by tiny element-scale residuals each step.  Those residuals corrupt
+  the Exner exponent ``R_dry / cp_dry`` (both linear in the dry-air
+  species), inject grid-scale noise into the splitform PGF
+  ``cp_dry * theta_v * grad(pi_d)``, and seed a top-layer ``d_mass``
+  oscillation that compounds across cycles.
+
+  Stabilise by dumping the residual into the dominant dry-air species.
+  The standard CAM whole-atmosphere convention puts it on N2; for the
+  single-bulk ``"dry_air"`` species this simply restores it to 1.  This
+  function is a no-op for non-CAM-SE models (which don't carry
+  ``dry_air_species``).
+
+  Parameters
+  ----------
+  tracer_state : dict
+      Tracer state dict from :func:`wrap_tracers`.
+  model : model_info.models
+      Model identifier.  CAM-SE models renormalise; others pass through.
+
+  Returns
+  -------
+  tracer_state_out : dict
+      Tracer state dict with renormalised dry-air mixing ratios (or the
+      input unchanged for non-CAM-SE models).
+  """
+  if model not in cam_se_models:
+    return tracer_state
+  dry_air = dict(tracer_state["dry_air_species"])
+  dry_sum = sum(dry_air.values())
+  residual = 1.0 - dry_sum
+  sink_key = "N2" if "N2" in dry_air else next(iter(dry_air))
+  dry_air[sink_key] = dry_air[sink_key] + residual
+  return wrap_tracers(tracer_state["moisture_species"],
+                      tracer_state["tracers"],
+                      model,
+                      dry_air_species=dry_air)
+
+
+@partial(jit, static_argnames=["model"])
 def wrap_tracer_mass(moisture_species_mass,
                      tracers_mass,
                      model,

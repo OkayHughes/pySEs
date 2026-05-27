@@ -422,31 +422,44 @@ def eval_pressure_gradient_force_term(common_variables,
                                       h_grid,
                                       physics_config):
   """
-  Splitform (Hamiltonian-adjoint) Exner pressure gradient force.
+  Splitform (Hamiltonian-adjoint) Exner PGF with moisture-loading correction.
 
   The thermo equation in this file (:func:`eval_thermo_skew_advection_term`)
   is the splitform of the mu*theta_d advection -- half flux-divergence,
   half advective-plus-product-rule.  For the discrete energy / entropy
   structure to close, the PGF must be the matching splitform of the basic
-  Hamiltonian PGF (the Exner form ``cp_d theta_v grad(Pi_d)`` from Eq. 5.2),
-  i.e. the adjoint of the skew-symmetric thermo divergence::
+  Hamiltonian PGF (the Exner form ``cp_d theta_v grad(Pi_d)``), i.e. the
+  adjoint of the skew-symmetric thermo divergence.  Adding the
+  moisture-loading correction from the math-summary Eq. 5.2 gives the
+  full three-term form for the dry-Exner coordinate::
 
-      G_split = 1/2  cp_d theta_v G[Pi_d]                                 # full / flux half
-              + 1/2  cp_d (G[theta_v * Pi_d] - Pi_d G[theta_v])           # split / product-rule half
-              + (R_d T_v / p) pi_d G[sum_ell m^(ell)]                     # moisture loading (pointwise)
+      G_split = 1/2  cp_d theta_v G[Pi_d]                              # flux half
+              + 1/2  cp_d (G[theta_v * Pi_d] - Pi_d G[theta_v])        # product-rule half
+              +     (R_d T_v / p) pi_d G[sum_ell m^(ell)]              # moisture loading (pointwise)
 
-  Analytically the first two halves both equal ``cp_d theta_v G[Pi_d]``
-  (product rule on G[theta_v Pi_d]); discretely they differ, and averaging
-  the two preserves SBP / Hamiltonian adjointness with the splitform thermo
-  divergence.  Pairing the splitform thermo with the basic
-  (conservation-form) PGF (full ``cp_d theta_v G[Pi_d]``) violates the
-  cancellation and is *worse* than either pure form -- this is exactly the
-  HOMME ``eval_pgrad_pressure_term`` pattern, derived from CAM-SE/EAMv3
-  splitform momentum equations.  The moisture-loading term is already
-  pointwise and does not need splitting.
+  The first two halves are analytically equal to ``cp_d theta_v G[Pi_d]``
+  by the product rule on ``G[theta_v Pi_d]``; discretely they differ, and
+  averaging preserves SBP / Hamiltonian adjointness with the splitform
+  thermo divergence (this is the standard HOMME splitform writeup pattern,
+  here corrected to drop the stray inner ``cp`` factor on the
+  ``Pi_d G[theta_v]`` subterm).  The loading correction is already
+  pointwise and does not need splitting; it vanishes in the dry limit and
+  carries the real moisture-mass-loading physics in moist regimes.
 
-  Two extra horizontal gradients are taken here (``G[theta_v * Pi_d]`` and
-  ``G[theta_v]``); ``G[Pi_d]`` is reused from :func:`init_common_variables`.
+  ``G[Pi_d]`` is reused from :func:`init_common_variables`; this function
+  evaluates two additional gradients (``G[theta_v Pi_d]`` and
+  ``G[theta_v]``).  ``G[sum_species]`` is also pre-computed in
+  :func:`init_common_variables`.
+
+  Caveat for nearly-dry tests: the loading prefactor ``(R_d T_v / p) pi_d``
+  is ~7e4 m^2/s^2 at the model top.  If ``sum_species`` carries sub-grid
+  noise (e.g. the ~1e-7 floating-point residual the dry-vs-moist pressure
+  decomposition in :func:`init_model_pressure` leaves in ``q`` for
+  nominally dry atmospheres), the loading term contributes a small but
+  non-zero spurious wind tendency.  This is a separate, smaller stability
+  margin issue than the broader theta-form CFL margin documented at the
+  call site -- both are mitigated by increasing the remap frequency
+  (``dyn_steps_per_tracer = 1`` for the ``_stable`` model variants).
 
   Parameters
   ----------
@@ -489,7 +502,7 @@ def eval_pressure_gradient_force_term(common_variables,
                    exner_dry[:, :, :, :, np.newaxis] * grad_theta_v))
   exner_pgf = 0.5 * (flux_half + product_half)
 
-  # moisture-loading correction (pointwise; identical to Eq. 5.2's G_load)
+  # moisture-loading correction (Eq. 5.2 G_load); pointwise, not split
   loading_pgf = ((R_dry * T_v / p * pi_d)[:, :, :, :, np.newaxis] *
                  grad_sum_species)
   return -(exner_pgf + loading_pgf)

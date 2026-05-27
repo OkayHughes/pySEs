@@ -12,7 +12,8 @@ from .model_state import (sum_dynamics_series,
                           check_tracers_nan,
                           sum_consistency_struct,
                           se_T_to_theta_d_d_mass,
-                          se_theta_d_d_mass_to_T)
+                          se_theta_d_d_mass_to_T,
+                          renormalize_dry_air_species)
 from .physics_dynamics_coupling import coupling_types
 from .tracer_advection.eulerian_spectral import advance_tracers
 from .model_info import cam_se_models, cam_se_stable_models
@@ -183,7 +184,7 @@ def advance_coupling_step(state_in,
                                                                tracer_consist_visc,
                                                                1.0 / timestep_config["dynamics_subcycle"],
                                                                0.0)
-        if "enable_sponge_layer" in diffusion_config.keys():
+        if "sponge_layer" in diffusion_config.keys():
           dynamics_next = advance_sponge_euler(dynamics_next,
                                                h_grid,
                                                physics_config,
@@ -223,6 +224,15 @@ def advance_coupling_step(state_in,
                                    v_grid,
                                    len(v_grid["hybrid_b_m"]),
                                    model)
+    # PPM remap (and any horizontal tracer transport) is conservative on
+    # tracer mass but not bit-exact on mixing ratio, so the sum of dry-air
+    # species drifts from 1 by tiny element-scale residuals each cycle.
+    # Those residuals corrupt R_dry / cp_dry and the splitform PGF chain,
+    # seeding a top-layer d_mass oscillation that compounds across cycles.
+    # Renormalise to enforce sum(dry_air_species) == 1 pointwise; for
+    # non-cam_se models this is a no-op.  Placed here at the coupling-step
+    # boundary so any future tracer-transport scheme inherits the fix.
+    tracer_state = renormalize_dry_air_species(tracer_state, model)
   return wrap_model_state(dynamics_state,
                           static_forcing,
                           tracer_state)

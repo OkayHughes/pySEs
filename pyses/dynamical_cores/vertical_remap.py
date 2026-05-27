@@ -59,8 +59,11 @@ def zerroukat_remap(tracer_mass,
   values_model = jnp.concatenate((jnp.zeros_like(tracer_mass[:, :, :, 0:1, :]),
                                  jnp.cumsum(tracer_mass, axis=-2)), axis=-2)
   # binary search
-  # idxs is model to reference
-  idxs = jnp.zeros_like(pi_int_reference[:, :, :, 1:-1], dtype=jnp.float32)
+  # idxs is model to reference; inherit pi_int_reference's dtype (float64
+  # under PYSES_USE_DOUBLE=1, which is the default) so the bisection isn't
+  # silently downgraded to single precision relative to the pressures it
+  # indexes into.
+  idxs = jnp.zeros_like(pi_int_reference[:, :, :, 1:-1])
   frac = 0.5
   axis_size = 1.0 * num_lev
   for _ in range(8):
