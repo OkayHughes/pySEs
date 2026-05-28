@@ -1,7 +1,6 @@
 import numpy as np
 from .._config import get_backend as _get_backend
 from ..mpi.processor_decomposition import global_to_local, elem_idx_global_to_proc_idx
-from scipy.sparse import coo_array
 from functools import partial
 _be = _get_backend()
 jnp = _be.np
@@ -246,32 +245,32 @@ def minmax_scalar(f,
 project_scalar = project_scalar_wrapper
 
 
-def init_assembly_matrix(NELEM,
-                         npt,
-                         assembly_triple):
-  """
-  Build a sparse DSS assembly matrix from an assembly triple.
+# def init_assembly_matrix(NELEM,
+#                          npt,
+#                          assembly_triple):
+#   """
+#   Build a sparse DSS assembly matrix from an assembly triple.
 
-  Constructs a COO-format sparse matrix whose application is equivalent to
-  the Direct Stiffness Summation (DSS) projection over the global GLL DOFs.
+#   Constructs a COO-format sparse matrix whose application is equivalent to
+#   the Direct Stiffness Summation (DSS) projection over the global GLL DOFs.
 
-  Parameters
-  ----------
-  NELEM : int
-      Total number of elements in the grid.
-  npt : int
-      Number of GLL points per element edge.
-  assembly_triple : tuple[Array, list[Array], list[Array]]
-      Assembly triple ``(data, rows, cols)`` from :func:`init_assembly_local`.
+#   Parameters
+#   ----------
+#   NELEM : int
+#       Total number of elements in the grid.
+#   npt : int
+#       Number of GLL points per element edge.
+#   assembly_triple : tuple[Array, list[Array], list[Array]]
+#       Assembly triple ``(data, rows, cols)`` from :func:`init_assembly_local`.
 
-  Returns
-  -------
-  assembly_matrix : scipy.sparse.coo_array
-      Sparse assembly matrix of shape ``(NELEM*npt^2, NELEM*npt^2)``.
-  """
-  data, rows, cols = assembly_triple
-  assembly_matrix = coo_array((data, (rows, cols)), shape=(NELEM * npt * npt, NELEM * npt * npt))
-  return assembly_matrix
+#   Returns
+#   -------
+#   assembly_matrix : scipy.sparse.coo_array
+#       Sparse assembly matrix of shape ``(NELEM*npt^2, NELEM*npt^2)``.
+#   """
+#   data, rows, cols = assembly_triple
+#   assembly_matrix = coo_array((data, (rows, cols)), shape=(NELEM * npt * npt, NELEM * npt * npt))
+#   return assembly_matrix
 
 
 def init_assembly_local(vert_redundancy_local):
