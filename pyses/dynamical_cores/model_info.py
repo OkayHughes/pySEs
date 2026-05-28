@@ -7,6 +7,7 @@ models = Enum('dynamical_core',
                ("cam_se_whole_atmosphere_stable", 12),
                ("homme_hydrostatic", 3),
                ("homme_nonhydrostatic", 4),
+               ("homme_nonhydrostatic_eulerian", 13),
                ("homme_nonhydrostatic_deep", 5),
                ("homme_quasi_hydrostatic", 6),
                ("homme_hydrostatic_f_plane", 7),
@@ -17,9 +18,16 @@ models = Enum('dynamical_core',
 tracer_schemes = Enum('tracer_schemes',
                       [('eulerian_spectral', 1)])
 
+vertical_coord_types = Enum('vertical_coord', 
+                            [("eta_mass", 1)
+                             ("eta_height", 2)])
+
+height_coord_models = (models.homme_nonhydrostatic_eulerian,)
+
 homme_models = (models.homme_hydrostatic,
                 models.homme_hydrostatic_f_plane,
                 models.homme_nonhydrostatic,
+                models.homme_nonhydrostatic_eulerian,
                 models.homme_quasi_hydrostatic,
                 models.homme_nonhydrostatic_deep,
                 models.homme_nonhydrostatic_f_plane)
@@ -47,6 +55,7 @@ spherical_models = (models.cam_se,
                     models.cam_se_whole_atmosphere_stable,
                     models.homme_hydrostatic,
                     models.homme_nonhydrostatic,
+                    models.homme_nonhydrostatic_eulerian,
                     models.homme_quasi_hydrostatic,
                     models.homme_nonhydrostatic_deep,
                     models.shallow_water)
@@ -68,7 +77,8 @@ quasi_hydrostatic_models = (models.homme_quasi_hydrostatic,)
 
 vertically_buoyant_models = (models.homme_nonhydrostatic,
                              models.homme_nonhydrostatic_deep,
-                             models.homme_nonhydrostatic_f_plane)
+                             models.homme_nonhydrostatic_f_plane,
+                             models.homme_nonhydrostatic_eulerian)
 
 deep_atmosphere_models = (models.homme_nonhydrostatic_deep,
                           models.homme_quasi_hydrostatic)
@@ -78,7 +88,8 @@ moist_mixing_ratio_models = (models.homme_hydrostatic,
                              models.homme_nonhydrostatic_deep,
                              models.homme_quasi_hydrostatic,
                              models.homme_hydrostatic_f_plane,
-                             models.homme_nonhydrostatic_f_plane)
+                             models.homme_nonhydrostatic_f_plane,
+                             models.homme_nonhydrostatic_eulerian)
 
 dry_mixing_ratio_models = (models.cam_se,
                            models.cam_se_stable,
@@ -89,6 +100,8 @@ dry_mixing_ratio_models = (models.cam_se,
 
 variable_kappa_models = (models.cam_se_whole_atmosphere,
                          models.cam_se_whole_atmosphere_stable)
+
+eulerian_models = (models.homme_nonhydrostatic_eulerian,)
 
 _cam_se_thermo_name = "T"
 _cam_se_stable_thermo_name = "theta_d_d_mass"
@@ -105,5 +118,6 @@ thermodynamic_variable_names = {models.cam_se: _cam_se_thermo_name,
                                 models.homme_nonhydrostatic_deep: _homme_thermo_name,
                                 models.homme_quasi_hydrostatic: _homme_thermo_name,
                                 models.homme_nonhydrostatic_f_plane: _homme_thermo_name,
+                                models.homme_nonhydrostatic_eulerian: _homme_thermo_name,
                                 models.shallow_water: _shallow_water_thermo_name,
                                 models.shallow_water_f_plane: _shallow_water_thermo_name}

@@ -35,7 +35,8 @@ def init_vertical_grid(hybrid_a_i,
   """
   v_grid = {"reference_surface_mass": reference_surface_mass,
             "hybrid_a_i": hybrid_a_i,
-            "hybrid_b_i": hybrid_b_i}
+            "hybrid_b_i": hybrid_b_i,
+            "mass": True}
   v_grid["hybrid_a_m"] = 0.5 * (hybrid_a_i[1:] + hybrid_a_i[:-1])
   v_grid["hybrid_b_m"] = 0.5 * (hybrid_b_i[1:] + hybrid_b_i[:-1])
   if model in moist_mixing_ratio_models:

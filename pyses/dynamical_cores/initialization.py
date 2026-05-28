@@ -9,6 +9,8 @@ from .utils_3d import interface_to_delta
 from .mass_coordinate import (surface_mass_to_midlevel_mass,
                               surface_mass_to_interface_mass,
                               eval_top_interface_mass)
+from .height_coordinate import (surface_height_to_interface_height,
+                                surface_height_to_midlevel_height)
 from .physics_config import typical_mass_ratios
 from .model_info import (hydrostatic_models,
                          moist_mixing_ratio_models,
@@ -16,7 +18,8 @@ from .model_info import (hydrostatic_models,
                          homme_models,
                          dry_mixing_ratio_models,
                          variable_kappa_models,
-                         shallow_water_models)
+                         shallow_water_models,
+                         height_coord_models)
 _be = _get_backend()
 jnp = _be.np
 device_wrapper = _be.array
@@ -207,20 +210,130 @@ def z_from_p_monotonic_moist(pressures,
   return z_guesses
 
 
-def init_model_pressure(z_pi_surf_func,
-                        p_moist_func,
-                        Tv_func,
-                        u_func,
-                        v_func,
-                        Q_func,
-                        h_grid,
-                        v_grid,
-                        config,
-                        dims,
-                        model,
-                        w_func=lambda lat, lon, z: 0.0,
-                        eps=1e-8,
-                        enforce_hydrostatic=False):
+def init_analytic_state_homme(z_pi_surf_func,
+                              p_moist_func,
+                              Tv_func,
+                              u_func,
+                              v_func,
+                              Q_func,
+                              h_grid,
+                              v_grid,
+                              config,
+                              dims,
+                              model,
+                              w_func=lambda lat, lon, z: 0.0,
+                              eps=1e-8,
+                              enforce_hydrostatic=False):
+  """
+  Initialise a 3-D model state by specifying the atmospheric fields as
+  functions of latitude, longitude, and height.
+
+  Converts analytic pressure/temperature/wind profiles into the
+  internal model representation (CAM-SE or HOMME) on the given
+  horizontal and vertical grids.
+
+  Parameters
+  ----------
+  z_pi_surf_func : callable
+      Function ``(lat, lon) -> (z_surf, surface_mass)`` returning the
+      surface geopotential height (m) and surface dry/moist pressure (Pa).
+  p_moist_func : callable
+      Function ``z -> p_moist`` returning total moist pressure (Pa) at
+      height ``z``.
+  Tv_func : callable
+      Function ``(lat, lon, z) -> Tv`` returning virtual temperature (K).
+  u_func : callable
+      Function ``(lat, lon, z) -> u`` returning the zonal wind (m/s).
+  v_func : callable
+      Function ``(lat, lon, z) -> v`` returning the meridional wind (m/s).
+  Q_func : callable
+      Function ``(lat, lon, z) -> q`` returning the water vapour mixing
+      ratio (kg/kg).
+  h_grid : `SpectralElementGrid`
+      Horizontal spectral element grid struct.
+  v_grid : `dict`
+      Vertical grid struct containing hybrid coordinate coefficients.
+  config : `dict`
+      Model physics configuration dict.
+  dims : frozendict[str, int]
+      Grid dimension metadata.
+  model : model_info.models
+      Dynamical core identifier (from ``model_info.models``).
+  w_func : callable, default ``lambda lat, lon, z: 0.0``
+      Function ``(lat, lon, z) -> w`` returning the vertical velocity
+      (m/s).  Only used by non-hydrostatic models.
+  eps : `float`, default=1e-8
+      Convergence tolerance passed to the height-inversion routines.
+  enforce_hydrostatic : `bool`, default=False
+      If ``True``, overwrite the initial interface geopotential with the
+      hydrostatically balanced value (HOMME non-hydrostatic only).
+
+  Returns
+  -------
+  initial_state : model state struct
+      Fully initialised model state struct suitable for passing to the
+      time-stepping routines.
+  """
+  lat = h_grid["physical_coords"][:, :, :, 0]
+  lon = h_grid["physical_coords"][:, :, :, 1]
+  z_surf, surface_mass = z_pi_surf_func(lat, lon)
+  if "height" in v_grid.keys():
+    z_mid = surface_height_to_midlevel_height(z_surf, v_grid)
+    z_int = surface_height_to_interface_height(z_surf, v_grid)
+    p_mid = p_moist_func(z_mid)
+    p_int = p_moist_func(z_int)
+  else:
+    p_mid = surface_mass_to_midlevel_mass(surface_mass, v_grid)
+    p_int = surface_mass_to_interface_mass(surface_mass, v_grid)
+    z_mid = z_from_p_monotonic_moist(p_mid, p_moist_func, eps=eps)
+    z_int = z_from_p_monotonic_moist(p_int, p_moist_func, eps=eps)
+  if model not in hydrostatic_models:
+    w_i = device_wrapper(w_func(lat, lon, z_int), elem_sharding_axis=0)
+    phi_i = device_wrapper(z_int * config["gravity"], elem_sharding_axis=0)
+  else:
+    w_i = None
+    phi_i = None
+
+  phi_surf = z_surf * config["gravity"]
+  d_mass = interface_to_delta(p_int)
+
+  u = u_func(lat, lon, z_mid)
+  v = v_func(lat, lon, z_mid)
+  wind = jnp.stack((u, v), axis=-1)
+
+  theta_v = Tv_func(lat, lon, z_mid) * (config["p0"] / p_mid)**(config["Rgas"] / config["cp"])
+  moisture_moist_ratio = Q_func(lat, lon, z_mid)
+  theta_v_d_mass = theta_v * d_mass
+  if enforce_hydrostatic and model not in hydrostatic_models:
+    phi_i, _ = eval_balanced_geopotential(phi_surf, p_mid, theta_v_d_mass, v_grid, config)
+
+  moisture_species = {"water_vapor": device_wrapper(moisture_moist_ratio, elem_sharding_axis=0)}
+  initial_state = init_model_struct_homme(device_wrapper(wind, elem_sharding_axis=0),
+                                          device_wrapper(theta_v_d_mass, elem_sharding_axis=0),
+                                          device_wrapper(d_mass, elem_sharding_axis=0),
+                                          device_wrapper(phi_surf, elem_sharding_axis=0),
+                                          moisture_species,
+                                          {},
+                                          h_grid,
+                                          dims,
+                                          config,
+                                          model,
+                                          phi_i=phi_i,
+                                          w_i=w_i)
+  return initial_state
+
+def init_analytic_state_cam_se(z_pi_surf_func,
+                               p_moist_func,
+                               Tv_func,
+                               u_func,
+                               v_func,
+                               Q_func,
+                               h_grid,
+                               v_grid,
+                               config,
+                               dims,
+                               model,
+                               eps=1e-8):
   """
   Initialise a 3-D model state by specifying the atmospheric fields as
   functions of latitude, longitude, and height.
@@ -275,42 +388,31 @@ def init_model_pressure(z_pi_surf_func,
   lon = h_grid["physical_coords"][:, :, :, 1]
   z_surf, surface_mass = z_pi_surf_func(lat, lon)
 
-  if model in dry_mixing_ratio_models:
-    p_top = eval_top_interface_mass(v_grid)
-    z_top = z_from_p_monotonic_moist(p_top * jnp.ones_like(surface_mass)[:, :, :, np.newaxis], p_moist_func, eps)
-    weight_of_vapor = integrate_weight_of_vapor(p_moist_func,
-                                                lambda z: Tv_func(lat, lon, z),
-                                                lambda z: Q_func(lat, lon, z),
-                                                z_surf[:, :, :, np.newaxis],
-                                                z_top,
-                                                config)
-    surface_mass -= weight_of_vapor.squeeze()
+  p_top = eval_top_interface_mass(v_grid)
+  z_top = z_from_p_monotonic_moist(p_top * jnp.ones_like(surface_mass)[:, :, :, np.newaxis], p_moist_func, eps)
+  weight_of_vapor = integrate_weight_of_vapor(p_moist_func,
+                                              lambda z: Tv_func(lat, lon, z),
+                                              lambda z: Q_func(lat, lon, z),
+                                              z_surf[:, :, :, np.newaxis],
+                                              z_top,
+                                              config)
+  surface_mass -= weight_of_vapor.squeeze()
   p_mid = surface_mass_to_midlevel_mass(surface_mass, v_grid)
   p_int = surface_mass_to_interface_mass(surface_mass, v_grid)
-  if model in moist_mixing_ratio_models:
-    z_mid = z_from_p_monotonic_moist(p_mid, p_moist_func, eps=eps)
-    z_int = z_from_p_monotonic_moist(p_int, p_moist_func, eps=eps)
-  elif model in dry_mixing_ratio_models:
-    z_mid = z_from_p_monotonic_dry(p_mid,
-                                   p_moist_func,
-                                   lambda z: Q_func(lat, lon, z),
-                                   lambda z: Tv_func(lat, lon, z),
-                                   v_grid,
-                                   config,
-                                   eps=eps)
-    z_int = z_from_p_monotonic_dry(p_int,
-                                   p_moist_func,
-                                   lambda z: Q_func(lat, lon, z),
-                                   lambda z: Tv_func(lat, lon, z),
-                                   v_grid,
-                                   config,
-                                   eps=eps)
-  if model not in hydrostatic_models:
-    w_i = device_wrapper(w_func(lat, lon, z_int), elem_sharding_axis=0)
-    phi_i = device_wrapper(z_int * config["gravity"], elem_sharding_axis=0)
-  else:
-    w_i = None
-    phi_i = None
+  z_mid = z_from_p_monotonic_dry(p_mid,
+                                p_moist_func,
+                                lambda z: Q_func(lat, lon, z),
+                                lambda z: Tv_func(lat, lon, z),
+                                v_grid,
+                                config,
+                                eps=eps)
+  z_int = z_from_p_monotonic_dry(p_int,
+                                p_moist_func,
+                                lambda z: Q_func(lat, lon, z),
+                                lambda z: Tv_func(lat, lon, z),
+                                v_grid,
+                                config,
+                                eps=eps)
 
   phi_surf = z_surf * config["gravity"]
   d_mass = interface_to_delta(p_int)
@@ -318,54 +420,32 @@ def init_model_pressure(z_pi_surf_func,
   u = u_func(lat, lon, z_mid)
   v = v_func(lat, lon, z_mid)
   wind = jnp.stack((u, v), axis=-1)
-  if model in cam_se_models:
-    p_int_moist = p_moist_func(z_int)
-    virtual_temperature = Tv_func(lat, lon, z_mid)
-    d_mass_moist = (p_int_moist[:, :, :, 1:] - p_int_moist[:, :, :, :-1])
-    d_mass_dry = (p_int[:, :, :, 1:] - p_int[:, :, :, :-1])
-    moisture_dry_ratio = (d_mass_moist / d_mass_dry) - 1.0
-    temperature = virtual_temperature * ((1.0 + moisture_dry_ratio) /
-                                         (1.0 + (1.0 / config["epsilon"]) * moisture_dry_ratio))
-    moisture_species = {"water_vapor": device_wrapper(moisture_dry_ratio, elem_sharding_axis=0)}
-    if model in variable_kappa_models:
-      species_names = config["dry_air_species_Rgas"].keys()
-      ratios = typical_mass_ratios[frozenset(species_names)]
-      dry_air_species = {}
-      for species in species_names:
-        dry_air_species[species] = ratios[species] * jnp.ones_like(moisture_species["water_vapor"])
-    else:
-      dry_air_species = None
-    initial_state = init_model_struct_se(device_wrapper(wind, elem_sharding_axis=0),
-                                         device_wrapper(temperature, elem_sharding_axis=0),
-                                         device_wrapper(d_mass, elem_sharding_axis=0),
-                                         device_wrapper(phi_surf, elem_sharding_axis=0),
-                                         moisture_species,
-                                         {},
-                                         h_grid,
-                                         dims,
-                                         config, model,
-                                         dry_air_species=dry_air_species)
-
-  elif model in homme_models:
-    theta_v = Tv_func(lat, lon, z_mid) * (config["p0"] / p_mid)**(config["Rgas"] / config["cp"])
-    moisture_moist_ratio = Q_func(lat, lon, z_mid)
-    theta_v_d_mass = theta_v * d_mass
-    if enforce_hydrostatic and model not in hydrostatic_models:
-      phi_i = eval_balanced_geopotential(phi_surf, p_mid, theta_v_d_mass, config)
-
-    moisture_species = {"water_vapor": device_wrapper(moisture_moist_ratio, elem_sharding_axis=0)}
-    initial_state = init_model_struct_homme(device_wrapper(wind, elem_sharding_axis=0),
-                                            device_wrapper(theta_v_d_mass, elem_sharding_axis=0),
-                                            device_wrapper(d_mass, elem_sharding_axis=0),
-                                            device_wrapper(phi_surf, elem_sharding_axis=0),
-                                            moisture_species,
-                                            {},
-                                            h_grid,
-                                            dims,
-                                            config,
-                                            model,
-                                            phi_i=phi_i,
-                                            w_i=w_i)
+  p_int_moist = p_moist_func(z_int)
+  virtual_temperature = Tv_func(lat, lon, z_mid)
+  d_mass_moist = (p_int_moist[:, :, :, 1:] - p_int_moist[:, :, :, :-1])
+  d_mass_dry = (p_int[:, :, :, 1:] - p_int[:, :, :, :-1])
+  moisture_dry_ratio = (d_mass_moist / d_mass_dry) - 1.0
+  temperature = virtual_temperature * ((1.0 + moisture_dry_ratio) /
+                                        (1.0 + (1.0 / config["epsilon"]) * moisture_dry_ratio))
+  moisture_species = {"water_vapor": device_wrapper(moisture_dry_ratio, elem_sharding_axis=0)}
+  if model in variable_kappa_models:
+    species_names = config["dry_air_species_Rgas"].keys()
+    ratios = typical_mass_ratios[frozenset(species_names)]
+    dry_air_species = {}
+    for species in species_names:
+      dry_air_species[species] = ratios[species] * jnp.ones_like(moisture_species["water_vapor"])
+  else:
+    dry_air_species = None
+  initial_state = init_model_struct_se(device_wrapper(wind, elem_sharding_axis=0),
+                                        device_wrapper(temperature, elem_sharding_axis=0),
+                                        device_wrapper(d_mass, elem_sharding_axis=0),
+                                        device_wrapper(phi_surf, elem_sharding_axis=0),
+                                        moisture_species,
+                                        {},
+                                        h_grid,
+                                        dims,
+                                        config, model,
+                                        dry_air_species=dry_air_species)
   return initial_state
 
 
