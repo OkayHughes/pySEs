@@ -7,7 +7,7 @@ jnp = _be.np
 device_wrapper = _be.array
 
 
-def init_solid_body_config(T0=300.0,
+def init_solid_body_config(T0=275.0,
                            lapse=0.005,
                            u_max=0.0,
                            p0=1e5,

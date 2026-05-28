@@ -2,7 +2,7 @@ from .time_stepping import (advance_dynamics_euler,
                             advance_hypervis_euler,
                             advance_dynamics_ullrich_5stage,
                             advance_sponge_euler)
-from .._config import get_backend as _get_backend
+from .._config import get_backend as _get_backend, runtime_assert
 from .model_state import remap_dynamics, remap_tracers
 from .time_step import time_step_options
 from .model_state import (sum_dynamics_series,
@@ -14,12 +14,15 @@ from .model_state import (sum_dynamics_series,
                           se_T_to_theta_d_d_mass,
                           se_theta_d_d_mass_to_T,
                           renormalize_dry_air_species)
+from .homme.thermodynamics import eval_balanced_geopotential
+from .mass_coordinate import d_mass_to_surface_mass, surface_mass_to_midlevel_mass
 from .physics_dynamics_coupling import coupling_types
 from .tracer_advection.eulerian_spectral import advance_tracers
 from .model_info import cam_se_models, cam_se_stable_models
 from functools import partial
 _be = _get_backend()
 jit = _be.jit
+DEBUG = _be.debug
 
 
 

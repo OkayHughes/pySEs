@@ -24,6 +24,7 @@ from ..mpi.global_communication import global_sum
 _be = _get_backend()
 jnp = _be.np
 jit = _be.jit
+DEBUG = _be.debug
 do_mpi_communication = _be.do_mpi_communication
 
 
@@ -1188,7 +1189,15 @@ def check_dynamics_nan(dynamics,
   if model not in hydrostatic_models:
     fields += ["w_i", "phi_i"]
   for field in fields:
-    is_nan = is_nan or jnp.any(jnp.isnan(apply_mask(dynamics[field], h_grid)))
+    field_is_nan =  jnp.any(jnp.isnan(apply_mask(dynamics[field], h_grid)))
+    if DEBUG:
+      if field_is_nan:
+        print(f"{field} contains NaN values.")
+      else:
+        pass
+        #print(f"{field}: min {jnp.min(apply_mask(dynamics[field], h_grid))}, max {jnp.max(apply_mask(dynamics[field], h_grid))}")
+    
+    is_nan = is_nan or field_is_nan
   is_nan = int(is_nan)
   return global_sum(is_nan) > 0
 
@@ -1220,11 +1229,20 @@ def check_tracers_nan(tracers,
   """
   is_nan = False
   for field_name in tracers["moisture_species"].keys():
-    is_nan = is_nan or jnp.any(jnp.isnan(apply_mask(tracers["moisture_species"][field_name], h_grid)))
+    field_is_nan = jnp.any(jnp.isnan(apply_mask(tracers["moisture_species"][field_name], h_grid)))
+    is_nan = is_nan or field_is_nan
+    if DEBUG and field_is_nan:
+      print(f"{field_name} contains NaN values.")
   for field_name in tracers["tracers"].keys():
-    is_nan = is_nan or jnp.any(jnp.isnan(apply_mask(tracers["tracers"][field_name], h_grid)))
+    field_is_nan = jnp.any(jnp.isnan(apply_mask(tracers["tracers"][field_name], h_grid))) 
+    is_nan = is_nan or field_is_nan
+    if DEBUG and field_is_nan:
+      print(f"{field_name} contains NaN values.")
   if model in cam_se_models:
     for field_name in tracers["dry_air_species"].keys():
-      is_nan = is_nan or jnp.any(jnp.isnan(apply_mask(tracers["dry_air_species"][field_name], h_grid)))
+      field_is_nan = jnp.any(jnp.isnan(apply_mask(tracers["dry_air_species"][field_name], h_grid)))
+      is_nan = is_nan or field_is_nan
+      if DEBUG and field_is_nan:
+        print(f"{field_name} contains NaN values.")
   is_nan = int(is_nan)
   return global_sum(is_nan) > 0
