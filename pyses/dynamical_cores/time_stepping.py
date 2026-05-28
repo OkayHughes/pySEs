@@ -4,6 +4,7 @@ from .homme.explicit_terms import eval_explicit_tendency as eval_explicit_tenden
 from .cam_se.explicit_terms import eval_explicit_tendency as eval_explicit_tendency_se
 from .cam_se.explicit_terms_theta import eval_explicit_tendency as eval_explicit_tendency_se_theta
 from .shallow_water_3d.explicit_terms import eval_explicit_tendency as eval_explicit_tendency_sw
+from .homme.implicit_terms import calc_implicit_update, advance_buoyancy_explicit
 from .homme.explicit_terms import correct_state
 from .hyperviscosity import eval_hypervis_terms, advance_sponge_layer
 from ..operations_2d.horizontal_grid import eval_cfl
@@ -11,7 +12,7 @@ from .time_step import time_step_options, stability_info
 from functools import partial
 from frozendict import frozendict
 from .physics_dynamics_coupling import coupling_types
-from .model_info import cam_se_models, cam_se_stable_models, homme_models, shallow_water_models
+from .model_info import cam_se_models, cam_se_stable_models, homme_models, shallow_water_models, hydrostatic_models
 _be = _get_backend()
 jit = _be.jit
 jnp = _be.np
@@ -513,6 +514,37 @@ def advance_sponge_euler(dynamics,
   return dynamics_out
 
 
+def advance_implicit(dt_implicit,
+                      dynamics_before_implicit,
+                      static_forcing,
+                      v_grid,
+                      physics_config,
+                      model,
+                      alpha_dts=None,
+                      dynamics_series=None):
+  if model not in hydrostatic_models:
+    if dynamics_series is not None:
+      nh_vars_before_implicit = advance_buoyancy_explicit(alpha_dts,
+                                                          dynamics_series,
+                                                          static_forcing,
+                                                          physics_config,
+                                                          v_grid,
+                                                          model)
+    else:
+      nh_vars_before_implicit = {"w_i": dynamics_before_implicit["w_i"],
+                                 "phi_i": dynamics_before_implicit["phi_i"]}
+    dyn_with_imp = calc_implicit_update(dt_implicit,
+                                        nh_vars_before_implicit,
+                                        dynamics_before_implicit,
+                                        static_forcing,
+                                        v_grid,
+                                        physics_config,
+                                        model)
+  else:
+    dyn_with_imp = dynamics_before_implicit
+  return dyn_with_imp
+
+
 @partial(jit, static_argnames=["dims", "model", "timestep_config"])
 def advance_dynamics_ullrich_5stage(dynamics_in,
                                     static_forcing,
@@ -523,7 +555,8 @@ def advance_dynamics_ullrich_5stage(dynamics_in,
                                     dims,
                                     model,
                                     moisture_species=None,
-                                    dry_air_species=None):
+                                    dry_air_species=None,
+                                    horiz_exp_vert_imp=False):
   """
   Advance the dynamics state by one step of the Ullrich 5-stage RK3 scheme.
 
@@ -566,6 +599,7 @@ def advance_dynamics_ullrich_5stage(dynamics_in,
   """
   dt = timestep_config["dynamics"]["dt"]
   tracer_consist_frac = 1.0 / timestep_config["dynamics_subcycle"]
+  dt_1 = dt / 5.0
   dynamics_tend, tracer_consist_0 = dynamics_tendency(dynamics_in,
                                                       static_forcing,
                                                       h_grid,
@@ -575,12 +609,19 @@ def advance_dynamics_ullrich_5stage(dynamics_in,
                                                       model,
                                                       moisture_species=moisture_species,
                                                       dry_air_species=dry_air_species)
-  dynamics_keep = sum_dynamics_series([dynamics_in, dynamics_tend], [1.0, dt / 5.0], model)
+  dynamics_keep = sum_dynamics_series([dynamics_in, dynamics_tend], [1.0, dt_1], model)
   dynamics_keep = enforce_conservation(dynamics_keep,
                                        static_forcing,
-                                       dt / 5.0,
+                                       dt_1,
                                        physics_config,
                                        model)
+  if horiz_exp_vert_imp:
+    dynamics_keep = advance_implicit(dt_1,
+                                    dynamics_keep,
+                                    static_forcing,
+                                    v_grid,
+                                    physics_config,
+                                    model)
 
   dynamics_tend, _ = dynamics_tendency(dynamics_keep,
                                        static_forcing,
@@ -591,14 +632,22 @@ def advance_dynamics_ullrich_5stage(dynamics_in,
                                        model,
                                        moisture_species=moisture_species,
                                        dry_air_species=dry_air_species)
+  dt_2 = dt / 5.0
   dynamics_tmp = sum_dynamics_series([dynamics_in, dynamics_tend],
-                                     [1.0, dt / 5.0],
+                                     [1.0, dt_2],
                                      model)
   dynamics_tmp = enforce_conservation(dynamics_tmp,
                                       static_forcing,
-                                      dt / 5.0,
+                                      dt_2,
                                       physics_config,
                                       model)
+  if horiz_exp_vert_imp:
+    dynamics_tmp = advance_implicit(dt_2,
+                                    dynamics_tmp,
+                                    static_forcing,
+                                    v_grid,
+                                    physics_config,
+                                    model)
 
   dynamics_tend, _ = dynamics_tendency(dynamics_tmp,
                                        static_forcing,
@@ -609,14 +658,22 @@ def advance_dynamics_ullrich_5stage(dynamics_in,
                                        model,
                                        moisture_species=moisture_species,
                                        dry_air_species=dry_air_species)
+  dt_3 = dt / 3.0
   dynamics_tmp = sum_dynamics_series([dynamics_in, dynamics_tend],
-                                     [1.0, dt / 3.0],
+                                     [1.0, dt_3],
                                      model)
   dynamics_tmp = enforce_conservation(dynamics_tmp,
                                       static_forcing,
-                                      dt / 3.0,
+                                      dt_3,
                                       physics_config,
                                       model)
+  if horiz_exp_vert_imp:
+    dynamics_tmp = advance_implicit(dt_3,
+                                    dynamics_tmp,
+                                    static_forcing,
+                                    v_grid,
+                                    physics_config,
+                                    model)
 
   dynamics_tend, _ = dynamics_tendency(dynamics_tmp,
                                        static_forcing,
@@ -627,14 +684,22 @@ def advance_dynamics_ullrich_5stage(dynamics_in,
                                        model,
                                        moisture_species=moisture_species,
                                        dry_air_species=dry_air_species)
+  dt_4 = 2.0 * dt / 3.0
   dynamics_tmp = sum_dynamics_series([dynamics_in, dynamics_tend],
-                                     [1.0, 2.0 * dt / 3.0],
+                                     [1.0, dt_4],
                                      model)
   dynamics_tmp = enforce_conservation(dynamics_tmp,
                                       static_forcing,
-                                      2.0 * dt / 3.0,
+                                      dt_4,
                                       physics_config,
                                       model)
+  if horiz_exp_vert_imp:
+    dynamics_tmp = advance_implicit(dt_4,
+                                    dynamics_tmp,
+                                    static_forcing,
+                                    v_grid,
+                                    physics_config,
+                                    model)
 
   dynamics_tend, tracer_consist_1 = dynamics_tendency(dynamics_tmp,
                                                       static_forcing,
@@ -645,18 +710,38 @@ def advance_dynamics_ullrich_5stage(dynamics_in,
                                                       model,
                                                       moisture_species=moisture_species,
                                                       dry_air_species=dry_air_species)
+
+  dynamics_last = sum_dynamics_series([dynamics_keep,
+                                       dynamics_tend],
+                                       [1.0 / 4.0,
+                                        3.0 * dt / 4.0],
+                                        model)
+
+  dynamics_last = enforce_conservation(dynamics_last,
+                                       static_forcing,
+                                       3.0 * dt / 4.0,
+                                       physics_config,
+                                       model)
+
   final_state = sum_dynamics_series([dynamics_in,
                                      dynamics_keep,
-                                     dynamics_tend],
+                                     dynamics_last],
                                     [-1.0 / 4.0,
-                                     5.0 / 4.0,
-                                     3.0 * dt / 4.0],
-                                    model)
-  final_state = enforce_conservation(final_state,
-                                     static_forcing,
-                                     2.0 * dt / 3.0,
-                                     physics_config,
+                                     1.0 / 4.0,
+                                     1.0],
                                      model)
+  if horiz_exp_vert_imp:
+    final_state = advance_implicit(8.0 * dt / 18.0,
+                                  final_state,
+                                  static_forcing,
+                                  v_grid,
+                                  physics_config,
+                                  model,
+                                  alpha_dts=[5.0 * dt / 18.0,
+                                              dt / 36.0],
+                                  states=[dynamics_in,
+                                          dynamics_keep])
+
   tracer_consist_total = sum_consistency_struct(tracer_consist_0,
                                                 tracer_consist_1,
                                                 1.0 / 4.0 * tracer_consist_frac,
