@@ -1,7 +1,7 @@
 from .._config import get_backend as _get_backend
 from enum import Enum
 import numpy as np
-from ..dynamical_cores.initialization import init_model_pressure
+from ..dynamical_cores.initialization import init_analytic_state
 from ..dynamical_cores.model_info import deep_atmosphere_models
 _be = _get_backend()
 jnp = _be.np
@@ -618,7 +618,7 @@ def init_baroclinic_wave_state(h_grid,
   Initialise model state for the Ullrich et al. (2014), Ullrich et al. (2016),
    and Hughes & Jablonowski (2023) baroclinic wave test cases.
 
-  Wraps ``init_model_pressure`` with the analytic surface state,
+  Wraps ``init_analytic_state`` with the analytic surface state,
   pressure/temperature profile, and wind functions from the
   moist baroclinic wave analytic initialisation module.
 
@@ -705,7 +705,7 @@ def init_baroclinic_wave_state(h_grid,
   def w_func(lat, lon, z):
     return jnp.zeros_like(z)
 
-  model_state = init_model_pressure(z_pi_surf_func,
+  model_state = init_analytic_state(z_pi_surf_func,
                                     p_func,
                                     Tv_func,
                                     u_func,

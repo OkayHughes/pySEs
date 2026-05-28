@@ -123,7 +123,7 @@ def init_williamson_steady_state_state(h_grid,
   Initialise model state for the 
   wave test case.
 
-  Wraps ``init_model_pressure`` with the analytic surface state,
+  Wraps ``init_analytic_state`` with the analytic surface state,
   pressure/temperature profile, and wind functions from the
   moist baroclinic wave analytic initialisation module.
 

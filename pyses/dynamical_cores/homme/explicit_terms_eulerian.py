@@ -300,7 +300,7 @@ def init_common_variables(dynamics,
     # density-weighted mean would *not* close this cancellation -- the
     # specific form below is forced by the discrete identity.
     d_pi_ds_i = _vertical_diff_m_to_i(exner, delta_s_i)
-    theta_v_tilde_i = -(mu / config["cp"]) * d_phi_ds_i / d_pi_ds_i
+    theta_v_tilde_i = -(mu / physics_config["cp"]) * d_phi_ds_i / d_pi_ds_i
 
     common_variables["delta_s_m"] = delta_s_m
     common_variables["delta_s_i"] = delta_s_i

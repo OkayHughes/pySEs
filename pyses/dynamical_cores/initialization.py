@@ -209,6 +209,100 @@ def z_from_p_monotonic_moist(pressures,
     ct += 1
   return z_guesses
 
+def init_analytic_state(z_pi_surf_func,
+                              p_moist_func,
+                              Tv_func,
+                              u_func,
+                              v_func,
+                              Q_func,
+                              h_grid,
+                              v_grid,
+                              config,
+                              dims,
+                              model,
+                              w_func=lambda lat, lon, z: 0.0,
+                              eps=1e-8,
+                              enforce_hydrostatic=False):
+  """
+  Initialise a 3-D model state by specifying the atmospheric fields as
+  functions of latitude, longitude, and height.
+
+  Converts analytic pressure/temperature/wind profiles into the
+  internal model representation (CAM-SE or HOMME) on the given
+  horizontal and vertical grids.
+
+  Parameters
+  ----------
+  z_pi_surf_func : callable
+      Function ``(lat, lon) -> (z_surf, surface_mass)`` returning the
+      surface geopotential height (m) and surface dry/moist pressure (Pa).
+  p_moist_func : callable
+      Function ``z -> p_moist`` returning total moist pressure (Pa) at
+      height ``z``.
+  Tv_func : callable
+      Function ``(lat, lon, z) -> Tv`` returning virtual temperature (K).
+  u_func : callable
+      Function ``(lat, lon, z) -> u`` returning the zonal wind (m/s).
+  v_func : callable
+      Function ``(lat, lon, z) -> v`` returning the meridional wind (m/s).
+  Q_func : callable
+      Function ``(lat, lon, z) -> q`` returning the water vapour mixing
+      ratio (kg/kg).
+  h_grid : `SpectralElementGrid`
+      Horizontal spectral element grid struct.
+  v_grid : `dict`
+      Vertical grid struct containing hybrid coordinate coefficients.
+  config : `dict`
+      Model physics configuration dict.
+  dims : frozendict[str, int]
+      Grid dimension metadata.
+  model : model_info.models
+      Dynamical core identifier (from ``model_info.models``).
+  w_func : callable, default ``lambda lat, lon, z: 0.0``
+      Function ``(lat, lon, z) -> w`` returning the vertical velocity
+      (m/s).  Only used by non-hydrostatic models.
+  eps : `float`, default=1e-8
+      Convergence tolerance passed to the height-inversion routines.
+  enforce_hydrostatic : `bool`, default=False
+      If ``True``, overwrite the initial interface geopotential with the
+      hydrostatically balanced value (HOMME non-hydrostatic only).
+
+  Returns
+  -------
+  initial_state : model state struct
+      Fully initialised model state struct suitable for passing to the
+      time-stepping routines.
+  """
+  if model in cam_se_models:
+    model_state = init_analytic_state_cam_se(z_pi_surf_func,
+                                      p_moist_func,
+                                      Tv_func,
+                                      u_func,
+                                      v_func,
+                                      Q_func,
+                                      h_grid,
+                                      v_grid,
+                                      config,
+                                      dims,
+                                      model,
+                                      eps=eps)
+  elif model in homme_models:
+    model_state =  init_analytic_state_homme(z_pi_surf_func,
+                                      p_moist_func,
+                                      Tv_func,
+                                      u_func,
+                                      v_func,
+                                      Q_func,
+                                      h_grid,
+                                      v_grid,
+                                      config,
+                                      dims,
+                                      model,
+                                      eps=eps,
+                                      w_func=w_func,
+                                      enforce_hydrostatic=enforce_hydrostatic)
+  return model_state
+
 
 def init_analytic_state_homme(z_pi_surf_func,
                               p_moist_func,
@@ -305,7 +399,8 @@ def init_analytic_state_homme(z_pi_surf_func,
   moisture_moist_ratio = Q_func(lat, lon, z_mid)
   theta_v_d_mass = theta_v * d_mass
   if enforce_hydrostatic and model not in hydrostatic_models:
-    phi_i, _ = eval_balanced_geopotential(phi_surf, p_mid, theta_v_d_mass, v_grid, config)
+    #phi_i, _ = eval_balanced_geopotential(phi_surf, p_mid, theta_v_d_mass, v_grid, config)
+    phi_i = eval_balanced_geopotential(phi_surf, p_mid, theta_v_d_mass, config)
 
   moisture_species = {"water_vapor": device_wrapper(moisture_moist_ratio, elem_sharding_axis=0)}
   initial_state = init_model_struct_homme(device_wrapper(wind, elem_sharding_axis=0),

@@ -15,11 +15,18 @@ models = Enum('dynamical_core',
                ("shallow_water", 9),
                ("shallow_water_f_plane", 10)])
 
+import jax
+jax.tree_util.register_pytree_node(
+    models,
+    lambda c: ((), c),      # no array children; member is aux_data
+    lambda c, _: c,         # reconstruct from aux_data
+)
+
 tracer_schemes = Enum('tracer_schemes',
                       [('eulerian_spectral', 1)])
 
 vertical_coord_types = Enum('vertical_coord', 
-                            [("eta_mass", 1)
+                            [("eta_mass", 1),
                              ("eta_height", 2)])
 
 height_coord_models = (models.homme_nonhydrostatic_eulerian,)

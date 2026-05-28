@@ -454,7 +454,7 @@ def eval_pressure_gradient_force_term(common_variables,
   Caveat for nearly-dry tests: the loading prefactor ``(R_d T_v / p) pi_d``
   is ~7e4 m^2/s^2 at the model top.  If ``sum_species`` carries sub-grid
   noise (e.g. the ~1e-7 floating-point residual the dry-vs-moist pressure
-  decomposition in :func:`init_model_pressure` leaves in ``q`` for
+  decomposition in :func:`init_analytic_state` leaves in ``q`` for
   nominally dry atmospheres), the loading term contributes a small but
   non-zero spurious wind tendency.  This is a separate, smaller stability
   margin issue than the broader theta-form CFL margin documented at the

@@ -13,7 +13,7 @@ Initial state
 * Pressure: a sea-level-pressure field of mean 1000 hPa plus randomly placed
   Gaussian-hill perturbations.  Under hydrostatic balance with the constant
   lapse rate this gives a closed-form ``p(z)`` (the standard barometric power
-  law) that is handed to ``init_model_pressure`` as ``p_moist``.  The expensive
+  law) that is handed to ``init_analytic_state`` as ``p_moist``.  The expensive
   per-column quantities (SLP, surface temperature) are precomputed once on the
   grid and captured, so each ``p_moist`` call is a cheap power law.
 * Surface geopotential (topography test only): the product of a "continent"
@@ -34,7 +34,7 @@ import numpy as np
 import pytest
 
 from pyses._config import get_backend as _get_backend
-from pyses.dynamical_cores.initialization import (init_model_pressure,
+from pyses.dynamical_cores.initialization import (init_analytic_state,
                                                   surface_mass_to_midlevel_mass,
                                                   z_from_p_monotonic_moist)
 from pyses.dynamical_cores.operators_3d import horizontal_gradient_3d
@@ -248,7 +248,7 @@ def _build_state(h_grid, v_grid, physics_config, dims, mountain, rng,
   def v_func(lat_in, lon_in, z):
     return v_geo
 
-  return init_model_pressure(z_pi_surf_func, p_moist_func, Tv_func,
+  return init_analytic_state(z_pi_surf_func, p_moist_func, Tv_func,
                              u_func, v_func, Q_func,
                              h_grid, v_grid, physics_config, dims, model,
                              w_func=w_func)

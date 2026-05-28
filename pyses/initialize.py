@@ -7,7 +7,7 @@ from .dynamical_cores.cam_se import se_state as _se_state
 
 class custom_init:
   init_static_forcing = staticmethod(_model_state.init_static_forcing)
-  init_model_pressure = staticmethod(_initialization.init_model_pressure)
+  init_analytic_state = staticmethod(_initialization.init_analytic_state)
   init_model_struct_homme = staticmethod(_homme_state.init_model_struct)
   init_model_struct_cam_se = staticmethod(_se_state.init_model_struct)
 

@@ -111,7 +111,7 @@ standard benchmark for 3-D dynamical cores in pySEs.
 For users building custom initial conditions rather than using an analytic
 test case.
 
-``custom_init.init_model_pressure(...)``
+``custom_init.init_analytic_state(...)``
     Compute the initial pressure profile given a surface-pressure field.
 
 ``custom_init.init_static_forcing(phi_surf, h_grid, physics_config, dims, model)``

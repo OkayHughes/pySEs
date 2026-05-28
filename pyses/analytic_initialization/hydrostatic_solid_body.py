@@ -1,6 +1,6 @@
 from .._config import get_backend as _get_backend
 import numpy as np
-from ..dynamical_cores.initialization import init_model_pressure
+from ..dynamical_cores.initialization import init_analytic_state
 from ..dynamical_cores.model_info import deep_atmosphere_models
 _be = _get_backend()
 jnp = _be.np
@@ -351,7 +351,7 @@ def init_solid_body_state(h_grid,
   """
   Initialise model state for the hydrostatic solid body rotation test case.
 
-  Wraps :func:`init_model_pressure` with the analytic surface state,
+  Wraps :func:`init_analytic_state` with the analytic surface state,
   pressure / temperature profile, and wind functions of the constant-lapse
   solid body rotation atmosphere.
 
@@ -411,7 +411,7 @@ def init_solid_body_state(h_grid,
   def w_func(lat, lon, z):
     return jnp.zeros_like(z)
 
-  model_state = init_model_pressure(z_pi_surf_func,
+  model_state = init_analytic_state(z_pi_surf_func,
                                     p_func,
                                     Tv_func,
                                     u_func,

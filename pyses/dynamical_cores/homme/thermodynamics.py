@@ -129,7 +129,10 @@ def eval_mu(state,
   if model in hydrostatic_models or model in quasi_hydrostatic_models:
       d_nh_pressure_d_mass = jnp.ones_like(phi_i)
   else:
-    p_top = v_grid["hybrid_a_i"][0] * v_grid["reference_surface_mass"]
+    if "height" in v_grid.keys():
+      p_top = p_model[:, :, :, 0] - d_mass_i[:, :, :, 0] / 2.0
+    else:
+      p_top = v_grid["hybrid_a_i"][0] * v_grid["reference_surface_mass"]
     if model in deep_atmosphere_models:
       # rebind rather than in-place: p_top may be a 0-d scalar and the rhs a
       # full field; numpy scalars rebind on /=, torch 0-d tensors raise.
@@ -180,7 +183,6 @@ def eval_midlevel_pressure(state,
 def eval_balanced_geopotential(phi_surf,
                                p_mid,
                                theta_v_d_mass,
-                               v_grid,
                                physics_config):
   """
   Compute the hydrostatically balanced interface geopotential.
@@ -207,19 +209,65 @@ def eval_balanced_geopotential(phi_surf,
       Interface geopotential (m^2 s^-2) in hydrostatic balance.
   """
   # p = get_p_mid(state, v_grid, config)
-  if "height" in v_grid.keys():
-    exponent = (physics_config["Rgas"] / physics_config["cp"] - 1.0)
-    phi_i = physics_config["gravity"] * surface_height_to_interface_height(phi_surf / physics_config["gravity"], v_grid)
+  exponent = (physics_config["Rgas"] / physics_config["cp"] - 1.0)
+  d_phi = physics_config["Rgas"] * (theta_v_d_mass *
+                                    (p_mid / physics_config["p0"])**exponent / physics_config["p0"])
+  d_phi_augment = jnp.flip(jnp.concatenate((d_phi[:, :, :, :-1],
+                                        (d_phi[:, :, :, -1] + phi_surf)[:, :, :, np.newaxis]),
+                                      axis=-1), -1)
+  phi_i_above_surf = jnp.cumsum(d_phi_augment, axis=-1)
+  phi_i_out = jnp.concatenate((jnp.flip(phi_i_above_surf, -1), phi_surf[:, :, :, np.newaxis]), axis=-1)
+  theta_v_d_mass_out = theta_v_d_mass
+  return phi_i_out
 
-    phi_i_above_surf = jnp.cumsum(d_phi_augment, axis=-1)
-  else:
-    exponent = (physics_config["Rgas"] / physics_config["cp"] - 1.0)
-    d_phi = physics_config["Rgas"] * (theta_v_d_mass *
-                                      (p_mid / physics_config["p0"])**exponent / physics_config["p0"])
-    d_phi_augment = jnp.flip(jnp.concatenate((d_phi[:, :, :, :-1],
-                                          (d_phi[:, :, :, -1] + phi_surf)[:, :, :, np.newaxis]),
-                                        axis=-1), -1)
-    phi_i_above_surf = jnp.cumsum(d_phi_augment, axis=-1)
-    phi_i_out = jnp.concatenate((jnp.flip(phi_i_above_surf, -1), phi_surf[:, :, :, np.newaxis]), axis=-1)
-    theta_v_d_mass_out = theta_v_d_mass
-  return phi_i_out, theta_v_d_mass_out
+
+# @jit
+# def eval_balanced_geopotential(phi_surf,
+#                                p_mid,
+#                                theta_v_d_mass,
+#                                v_grid,
+#                                physics_config):
+#   """
+#   Compute the hydrostatically balanced interface geopotential.
+
+#   Integrates the hydrostatic equation upward from the surface using the
+#   virtual potential temperature and the Exner pressure relationship.  The
+#   result is the interface geopotential that would be in exact hydrostatic
+#   balance with the given ``theta_v_d_mass`` profile.
+
+#   Parameters
+#   ----------
+#   phi_surf : Array[tuple[elem_idx, gll_idx, gll_idx], Float]
+#       Surface geopotential (m^2 s^-2).
+#   p_mid : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]
+#       Mid-level pressure (Pa) from :func:`eval_midlevel_pressure`.
+#   theta_v_d_mass : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]
+#       Virtual potential temperature times layer mass.
+#   physics_config : dict
+#       Physics configuration dict with ``"Rgas"``, ``"cp"``, and ``"p0"``.
+
+#   Returns
+#   -------
+#   phi_i : Array[tuple[elem_idx, gll_idx, gll_idx, ilev_idx], Float]
+#       Interface geopotential (m^2 s^-2) in hydrostatic balance.
+#   """
+#   # p = get_p_mid(state, v_grid, config)
+#   if "height" in v_grid.keys():
+#     kappa = physics_config["Rgas"] / physics_config["cp"]
+#     phi_i = physics_config["gravity"] * surface_height_to_interface_height(phi_surf / physics_config["gravity"], v_grid)
+#     d_phi = interface_to_delta(phi_i)
+#     exner = (p_mid/physics_config["p0"])**kappa
+#     theta_v_d_mass_out = d_phi * p_mid / (physics_config["Rgas"] * exner)
+#     phi_i_out = phi_i
+#   else:
+#     exponent = (physics_config["Rgas"] / physics_config["cp"] - 1.0)
+#     d_phi = physics_config["Rgas"] * (theta_v_d_mass *
+#                                       (p_mid / physics_config["p0"])**exponent / physics_config["p0"])
+#     d_phi_augment = jnp.flip(jnp.concatenate((d_phi[:, :, :, :-1],
+#                                           (d_phi[:, :, :, -1] + phi_surf)[:, :, :, np.newaxis]),
+#                                         axis=-1), -1)
+#     phi_i_above_surf = jnp.cumsum(d_phi_augment, axis=-1)
+#     phi_i_out = jnp.concatenate((jnp.flip(phi_i_above_surf, -1), phi_surf[:, :, :, np.newaxis]), axis=-1)
+#     theta_v_d_mass_out = theta_v_d_mass
+#   return phi_i_out, theta_v_d_mass_out
+
