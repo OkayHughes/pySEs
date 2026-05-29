@@ -18,8 +18,8 @@ from .model_info import (hydrostatic_models,
                          homme_models,
                          dry_mixing_ratio_models,
                          variable_kappa_models,
-                         shallow_water_models,
-                         height_coord_models)
+#                          height_coord_models,
+                         shallow_water_models)
 _be = _get_backend()
 jnp = _be.np
 device_wrapper = _be.array

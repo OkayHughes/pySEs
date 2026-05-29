@@ -321,7 +321,7 @@ def init_timestep_config(dt_coupling,
                     physics_dynamics_coupling=physics_dynamics_coupling)
 
 
-@partial(jit, static_argnames=["dims", "model", "timestep_config", "apply_buoyant"])
+@partial(jit, static_argnames=["dims", "model", "timestep_config"])
 def advance_dynamics_euler(dynamics_in,
                            static_forcing,
                            h_grid,
@@ -331,8 +331,7 @@ def advance_dynamics_euler(dynamics_in,
                            dims,
                            model,
                            moisture_species=None,
-                           dry_air_species=None,
-                           apply_buoyant=True):
+                           dry_air_species=None):
   """
   Advance the dynamics state by one forward-Euler step.
 
@@ -380,8 +379,7 @@ def advance_dynamics_euler(dynamics_in,
                                                          dims,
                                                          model,
                                                          moisture_species=moisture_species,
-                                                         dry_air_species=dry_air_species,
-                                                         apply_buoyant=apply_buoyant)
+                                                         dry_air_species=dry_air_species)
   dynamics_out_discont = sum_dynamics_series([dynamics_in, dynamics_tend_cont],
                                              [1.0, dt],
                                              model)
@@ -558,7 +556,7 @@ def advance_implicit(dt_implicit,
   return dyn_with_imp
 
 
-@partial(jit, static_argnames=["dims", "model", "timestep_config","apply_buoyant"])
+@partial(jit, static_argnames=["dims", "model", "timestep_config"])
 def advance_dynamics_ullrich_5stage(dynamics_in,
                                     static_forcing,
                                     h_grid,
@@ -568,8 +566,7 @@ def advance_dynamics_ullrich_5stage(dynamics_in,
                                     dims,
                                     model,
                                     moisture_species=None,
-                                    dry_air_species=None,
-                                    apply_buoyant=True):
+                                    dry_air_species=None):
   """
   Advance the dynamics state by one step of the Ullrich 5-stage RK3 scheme.
 
@@ -611,6 +608,13 @@ def advance_dynamics_ullrich_5stage(dynamics_in,
       the dynamics subcycle fraction.
   """
   horiz_exp_vert_imp = timestep_config["dynamics"]["step_type"] == time_step_options.RK3_5STAGE_HEVI
+  # When the IMEX scheme is active the buoyancy ``(g w, g (mu - 1))``
+  # contributions are handled in ``advance_implicit`` via
+  # ``advance_buoyancy_explicit``; the explicit RK3 stages must omit
+  # them or the per-stage state would double-count gravity-buoyancy
+  # coupling.  ``timestep_config`` is static under JIT, so this is a
+  # trace-time decision.
+  apply_buoyant = not horiz_exp_vert_imp
 
   dt = timestep_config["dynamics"]["dt"]
   tracer_consist_frac = 1.0 / timestep_config["dynamics_subcycle"]
@@ -731,24 +735,32 @@ def advance_dynamics_ullrich_5stage(dynamics_in,
                                                       dry_air_species=dry_air_species,
                                                       apply_buoyant=apply_buoyant)
 
+  # Final stage of the Ullrich (2010) 5-stage RK3:
+  #
+  #   u^{n+1} = (1/4) u^n + (3/4) * [u^{(4)} + (dt/3) F(u^{(4)})]
+  #
+  # ``dynamics_last`` holds the bracketed expression; ``final_state`` is
+  # the convex combination of ``dynamics_in`` and ``dynamics_last`` --
+  # which collapses to ``u^n`` exactly when ``F == 0``, so a state at
+  # rest stays at rest.  The previous form was algebraically
+  # ``(-1/4) u^n + (1/2) u^{(4)} + (3 dt/4) F``, which shrinks any
+  # steady state by 4x every step.
   dynamics_last = sum_dynamics_series([dynamics_keep,
                                        dynamics_tend],
-                                       [1.0 / 4.0,
-                                        3.0 * dt / 4.0],
+                                       [1.0,
+                                        dt / 3.0],
                                         model)
 
   dynamics_last = enforce_conservation(dynamics_last,
                                        static_forcing,
-                                       3.0 * dt / 4.0,
+                                       dt / 3.0,
                                        physics_config,
                                        model)
 
   final_state = sum_dynamics_series([dynamics_in,
-                                     dynamics_keep,
                                      dynamics_last],
-                                    [-1.0 / 4.0,
-                                     1.0 / 4.0,
-                                     1.0],
+                                    [1.0 / 4.0,
+                                     3.0 / 4.0],
                                      model)
   if horiz_exp_vert_imp:
     # ``alpha_dts`` and ``dynamics_series`` are paired ``(alpha dt, u_nt)``

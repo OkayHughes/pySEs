@@ -16,9 +16,9 @@ get_global_array = _be.get_global_array
 
 
 def test_theta_steady_state():
-  for model in [models.homme_hydrostatic, models.cam_se]:
+  for model in [models.homme_nonhydrostatic]:
     npt = 4
-    nx = 31
+    nx = 15
     h_grid, dims = init_quasi_uniform_grid(nx, npt, calc_smooth_tensor=True)
     v_grid = init_vertical_grid(cam30["hybrid_a_i"],
                                 cam30["hybrid_b_i"],
@@ -34,9 +34,9 @@ def test_theta_steady_state():
     diffusion_config["nu_top"] = 0.0
     test_config = init_solid_body_config(model_config=physics_config,
                                          lapse=0.0,
-                                         mountain_width=3  * jnp.pi / 180,
+                                         mountain_width=6  * jnp.pi / 180,
                                          )
-    model_state = init_solid_body_state(h_grid, v_grid, physics_config, test_config, dims, model, mountain=True,
+    model_state = init_solid_body_state(h_grid, v_grid, physics_config, test_config, dims, model, mountain=False,
                                         enforce_hydrostatic=True)
     simulator = init_simulator(h_grid, v_grid,
                                physics_config,

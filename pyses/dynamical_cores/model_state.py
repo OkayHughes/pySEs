@@ -13,8 +13,7 @@ from .model_info import (f_plane_models,
                          cam_se_stable_models,
                          moist_mixing_ratio_models,
                          shallow_water_models,
-                         variable_kappa_models,
-                         quasi_hydrostatic_models)
+                         variable_kappa_models)
 from .mass_coordinate import surface_mass_to_d_mass, surface_mass_to_midlevel_mass, d_mass_to_surface_mass
 from .homme.thermodynamics import eval_balanced_geopotential, eval_midlevel_pressure
 from .cam_se import thermodynamics as _cam_se_thermo

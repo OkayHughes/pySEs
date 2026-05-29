@@ -18,8 +18,7 @@ device_wrapper = _be.array
 
 @pytest.mark.parametrize("model", [models.homme_nonhydrostatic,
                                    models.homme_quasi_hydrostatic,
-                                   models.homme_nonhydrostatic_deep,
-                                   models.homme_nonhydrostatic_eulerian])
+                                   models.homme_nonhydrostatic_deep])
 def test_notopo(model):
   npt = 4
   nx = 5

@@ -4,7 +4,7 @@ from ..utils_3d import midlevel_to_interface, interface_to_delta, phi_to_r_hat, 
 from ..height_coordinate import surface_height_to_interface_height
 from ..mass_coordinate import d_mass_to_surface_mass, surface_mass_to_midlevel_mass
 from functools import partial
-from ..model_info import hydrostatic_models, deep_atmosphere_models, quasi_hydrostatic_models
+from ..model_info import hydrostatic_models, deep_atmosphere_models
 _be = _get_backend()
 jnp = _be.np
 jit = _be.jit
@@ -126,7 +126,7 @@ def eval_mu(state,
     r_hat_i = 1.0
     r_hat_sq_avg = 1.0
   p_model, exner = eval_pressure_exner_nonhydrostatic(theta_v_d_mass, d_phi, r_hat_sq_avg, config)
-  if model in hydrostatic_models or model in quasi_hydrostatic_models:
+  if model in hydrostatic_models:
       d_nh_pressure_d_mass = jnp.ones_like(phi_i)
   else:
     if "height" in v_grid.keys():
