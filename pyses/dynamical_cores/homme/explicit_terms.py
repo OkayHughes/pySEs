@@ -4,7 +4,7 @@ from ..utils_3d import (midlevel_to_interface_vel,
                         midlevel_to_interface,
                         interface_to_midlevel,
                         interface_to_midlevel_vec)
-from ..utils_3d import phi_to_z, z_to_g, phi_to_g, physical_dot_product
+from ..utils_3d import phi_to_z, z_to_g, phi_to_g, physical_dot_product, calc_perceived_phi_tend
 from .thermodynamics import eval_mu, eval_balanced_geopotential, eval_midlevel_pressure
 from ..operators_3d import horizontal_gradient_3d, horizontal_vorticity_3d, horizontal_divergence_3d
 from ..model_state import wrap_dynamics, wrap_tracer_consist_dynamics
@@ -597,13 +597,15 @@ def eval_tracer_velocity_term(common_variables):
           common_variables["horizontal_wind"] / common_variables["r_hat_m"][:, :, :, :, jnp.newaxis])
 
 
-@partial(jit, static_argnames=["model"])
+
+@partial(jit, static_argnames=["model", "apply_buoyant"])
 def eval_explicit_tendency(dynamics,
                            static_forcing,
                            h_grid,
                            v_grid,
                            config,
-                           model):
+                           model,
+                           apply_buoyant=True):
   """
   Evaluate the full explicit adiabatic tendency for HOMME.
 
@@ -650,10 +652,17 @@ def eval_explicit_tendency(dynamics,
   if model not in hydrostatic_models:
     u_tend += (eval_grad_kinetic_energy_v_term(common_variables, h_grid, config) +
                eval_w_vorticity_correction_term(common_variables))
-    w_tend = (eval_w_advection_term(common_variables) +
-              eval_w_buoyancy_term(common_variables))
-    phi_tend = (eval_phi_advection_term(common_variables) +
-                eval_phi_acceleration_v_term(common_variables))
+    w_tend = (eval_w_advection_term(common_variables))
+    phi_tend = (eval_phi_advection_term(common_variables))
+    if apply_buoyant:
+      phi_tend += eval_phi_acceleration_v_term(common_variables)
+      w_tend += eval_w_buoyancy_term(common_variables)
+    else:
+      phi_tend += calc_perceived_phi_tend(common_variables["horizontal_wind"],
+                                          common_variables["d_mass"],
+                                          static_forcing["grad_phi_surf"],
+                                          common_variables["phi_i"],
+                                          config, v_grid, model)
   else:
     w_tend = None
     phi_tend = None

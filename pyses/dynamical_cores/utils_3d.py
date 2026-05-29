@@ -294,3 +294,33 @@ def physical_dot_product(u, v):
   """
   return (u[:, :, :, :, 0] * v[:, :, :, :, 0] +
           u[:, :, :, :, 1] * v[:, :, :, :, 1])
+
+
+@partial(jit, static_argnames=["model"])
+def calc_perceived_phi_tend(v, d_mass, grad_phi_surf, phi_i,
+                            physics_config, v_grid, model):
+  """Surface-topography contribution to the interface phi tendency.
+
+  Equivalent to HOMME's ``compute_gwphis`` evaluated as
+  ``g(phi_i) * (u_bar . grad_z_surf) * hybi`` so the variable-gravity /
+  deep-atmosphere correction is applied per interface.  ``u_bar`` is
+  the mass-weighted interpolation of the mid-level horizontal wind
+  onto each interior interface; the top and surface interfaces are
+  zero.
+  """
+  v_d_mass = v * d_mass[:, :, :, :, jnp.newaxis]
+  grad_z_surf = grad_phi_surf / phi_to_g(phi_i[:, :, :, -1:],
+                                          physics_config, model)
+  v_i_exl_boundaries = ((v_d_mass[:, :, :, :-1, :] +
+                         v_d_mass[:, :, :, 1:, :]) /
+                        (d_mass[:, :, :, :-1, jnp.newaxis] +
+                         d_mass[:, :, :, 1:, jnp.newaxis]))
+  w_i_exl_boundaries = (
+      (v_i_exl_boundaries[:, :, :, :, 0] *
+       grad_z_surf[:, :, :, jnp.newaxis, 0] +
+       v_i_exl_boundaries[:, :, :, :, 1] *
+       grad_z_surf[:, :, :, jnp.newaxis, 1])
+      * v_grid["hybrid_b_i"][jnp.newaxis, jnp.newaxis, jnp.newaxis, 1:-1])
+  zero = jnp.zeros_like(d_mass[:, :, :, 0:1])
+  gw_hat = jnp.concatenate((zero, w_i_exl_boundaries, zero), axis=-1)
+  return gw_hat * phi_to_g(phi_i, physics_config, model)

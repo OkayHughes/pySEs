@@ -1,7 +1,8 @@
 from .physics_config import init_physics_config
-from .model_info import shallow_water_models
+from .model_info import shallow_water_models, vertically_buoyant_models
 from .hyperviscosity import init_hypervis_config_stub, init_hypervis_config_tensor, init_hypervis_config_const
 from .time_stepping import init_timestep_config
+from .time_step import time_step_options
 from math import floor, log10
 from enum import Enum
 
@@ -18,7 +19,8 @@ def init_default_config(nx,
                         dims,
                         model,
                         physics_dt=-1.0,
-                        hypervis_type=hypervis_opts.variable_resolution):
+                        hypervis_type=hypervis_opts.variable_resolution,
+                        force_nonhydro_explicit=False):
   """
   Build physics, diffusion, and time-stepping configs with sensible defaults.
 
@@ -73,10 +75,15 @@ def init_default_config(nx,
     diffusion_config = init_hypervis_config_const(nx, physics_config, v_grid, n_sponge=n_sponge)
   elif hypervis_type is hypervis_opts.none:
     diffusion_config = init_hypervis_config_stub()
+  if model in vertically_buoyant_models and not force_nonhydro_explicit:
+    tstep_type = time_step_options.RK3_5STAGE_HEVI
+  else:
+    tstep_type = time_step_options.RK3_5STAGE
   timestep_config = init_timestep_config(physics_dt,
                                          h_grid,
                                          physics_config,
                                          diffusion_config,
                                          dims,
-                                         model)
+                                         model,
+                                         dynamics_tstep_type=tstep_type)
   return physics_config, diffusion_config, timestep_config

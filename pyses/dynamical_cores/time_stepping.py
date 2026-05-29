@@ -19,7 +19,7 @@ jnp = _be.np
 DEBUG = _be.debug
 
 
-@partial(jit, static_argnames=["dims", "model"])
+@partial(jit, static_argnames=["dims", "model", "apply_buoyant"])
 def dynamics_tendency(dynamics,
                       static_forcing,
                       h_grid,
@@ -28,7 +28,8 @@ def dynamics_tendency(dynamics,
                       dims,
                       model,
                       moisture_species=None,
-                      dry_air_species=None):
+                      dry_air_species=None,
+                      apply_buoyant=True):
   """
   Evaluate the explicit adiabatic tendency and apply DSS projection.
 
@@ -90,7 +91,8 @@ def dynamics_tendency(dynamics,
                                                                  h_grid,
                                                                  v_grid,
                                                                  physics_config,
-                                                                 model)
+                                                                 model,
+                                                                 apply_buoyant=apply_buoyant)
   elif model in shallow_water_models:
     dynamics_tend, tracer_consist = eval_explicit_tendency_sw(dynamics,
                                                               static_forcing,
@@ -319,7 +321,7 @@ def init_timestep_config(dt_coupling,
                     physics_dynamics_coupling=physics_dynamics_coupling)
 
 
-@partial(jit, static_argnames=["dims", "model", "timestep_config"])
+@partial(jit, static_argnames=["dims", "model", "timestep_config", "apply_buoyant"])
 def advance_dynamics_euler(dynamics_in,
                            static_forcing,
                            h_grid,
@@ -329,7 +331,8 @@ def advance_dynamics_euler(dynamics_in,
                            dims,
                            model,
                            moisture_species=None,
-                           dry_air_species=None):
+                           dry_air_species=None,
+                           apply_buoyant=True):
   """
   Advance the dynamics state by one forward-Euler step.
 
@@ -377,7 +380,8 @@ def advance_dynamics_euler(dynamics_in,
                                                          dims,
                                                          model,
                                                          moisture_species=moisture_species,
-                                                         dry_air_species=dry_air_species)
+                                                         dry_air_species=dry_air_species,
+                                                         apply_buoyant=apply_buoyant)
   dynamics_out_discont = sum_dynamics_series([dynamics_in, dynamics_tend_cont],
                                              [1.0, dt],
                                              model)
@@ -524,12 +528,21 @@ def advance_implicit(dt_implicit,
                       dynamics_series=None):
   if model not in hydrostatic_models:
     if dynamics_series is not None:
-      nh_vars_before_implicit = advance_buoyancy_explicit(alpha_dts,
-                                                          dynamics_series,
-                                                          static_forcing,
-                                                          physics_config,
-                                                          v_grid,
-                                                          model)
+      # advance_buoyancy_explicit folds the per-stage ``alpha dt * S(u_nt)``
+      # contributions into a running ``(w_n0, phi_n0)`` accumulator that
+      # starts from the current state -- matching Fortran's
+      # ``w_n0 = w_i(np1); phi_n0 = phi_i(np1)`` initialisation before the
+      # ``alphadt_n0`` / ``alphadt_nm1`` blocks in
+      # ``compute_stage_value_dirk``.
+      nh_vars_before_implicit = advance_buoyancy_explicit(
+          alpha_dts,
+          dynamics_series,
+          dynamics_before_implicit["w_i"],
+          dynamics_before_implicit["phi_i"],
+          static_forcing,
+          physics_config,
+          v_grid,
+          model)
     else:
       nh_vars_before_implicit = {"w_i": dynamics_before_implicit["w_i"],
                                  "phi_i": dynamics_before_implicit["phi_i"]}
@@ -545,7 +558,7 @@ def advance_implicit(dt_implicit,
   return dyn_with_imp
 
 
-@partial(jit, static_argnames=["dims", "model", "timestep_config"])
+@partial(jit, static_argnames=["dims", "model", "timestep_config","apply_buoyant"])
 def advance_dynamics_ullrich_5stage(dynamics_in,
                                     static_forcing,
                                     h_grid,
@@ -556,7 +569,7 @@ def advance_dynamics_ullrich_5stage(dynamics_in,
                                     model,
                                     moisture_species=None,
                                     dry_air_species=None,
-                                    horiz_exp_vert_imp=False):
+                                    apply_buoyant=True):
   """
   Advance the dynamics state by one step of the Ullrich 5-stage RK3 scheme.
 
@@ -597,6 +610,8 @@ def advance_dynamics_ullrich_5stage(dynamics_in,
       Tracer-consistency struct accumulated from stages 1 and 5, scaled by
       the dynamics subcycle fraction.
   """
+  horiz_exp_vert_imp = timestep_config["dynamics"]["step_type"] == time_step_options.RK3_5STAGE_HEVI
+
   dt = timestep_config["dynamics"]["dt"]
   tracer_consist_frac = 1.0 / timestep_config["dynamics_subcycle"]
   dt_1 = dt / 5.0
@@ -608,7 +623,8 @@ def advance_dynamics_ullrich_5stage(dynamics_in,
                                                       dims,
                                                       model,
                                                       moisture_species=moisture_species,
-                                                      dry_air_species=dry_air_species)
+                                                      dry_air_species=dry_air_species,
+                                                      apply_buoyant=apply_buoyant)
   dynamics_keep = sum_dynamics_series([dynamics_in, dynamics_tend], [1.0, dt_1], model)
   dynamics_keep = enforce_conservation(dynamics_keep,
                                        static_forcing,
@@ -631,7 +647,8 @@ def advance_dynamics_ullrich_5stage(dynamics_in,
                                        dims,
                                        model,
                                        moisture_species=moisture_species,
-                                       dry_air_species=dry_air_species)
+                                       dry_air_species=dry_air_species,
+                                       apply_buoyant=apply_buoyant)
   dt_2 = dt / 5.0
   dynamics_tmp = sum_dynamics_series([dynamics_in, dynamics_tend],
                                      [1.0, dt_2],
@@ -657,7 +674,8 @@ def advance_dynamics_ullrich_5stage(dynamics_in,
                                        dims,
                                        model,
                                        moisture_species=moisture_species,
-                                       dry_air_species=dry_air_species)
+                                       dry_air_species=dry_air_species,
+                                       apply_buoyant=apply_buoyant)
   dt_3 = dt / 3.0
   dynamics_tmp = sum_dynamics_series([dynamics_in, dynamics_tend],
                                      [1.0, dt_3],
@@ -683,7 +701,8 @@ def advance_dynamics_ullrich_5stage(dynamics_in,
                                        dims,
                                        model,
                                        moisture_species=moisture_species,
-                                       dry_air_species=dry_air_species)
+                                       dry_air_species=dry_air_species,
+                                       apply_buoyant=apply_buoyant)
   dt_4 = 2.0 * dt / 3.0
   dynamics_tmp = sum_dynamics_series([dynamics_in, dynamics_tend],
                                      [1.0, dt_4],
@@ -709,7 +728,8 @@ def advance_dynamics_ullrich_5stage(dynamics_in,
                                                       dims,
                                                       model,
                                                       moisture_species=moisture_species,
-                                                      dry_air_species=dry_air_species)
+                                                      dry_air_species=dry_air_species,
+                                                      apply_buoyant=apply_buoyant)
 
   dynamics_last = sum_dynamics_series([dynamics_keep,
                                        dynamics_tend],
@@ -731,6 +751,10 @@ def advance_dynamics_ullrich_5stage(dynamics_in,
                                      1.0],
                                      model)
   if horiz_exp_vert_imp:
+    # ``alpha_dts`` and ``dynamics_series`` are paired ``(alpha dt, u_nt)``
+    # contributions folded into the implicit RHS by
+    # ``advance_buoyancy_explicit``; the kwarg name must match the
+    # signature in ``implicit_terms``.
     final_state = advance_implicit(8.0 * dt / 18.0,
                                   final_state,
                                   static_forcing,
@@ -739,8 +763,8 @@ def advance_dynamics_ullrich_5stage(dynamics_in,
                                   model,
                                   alpha_dts=[5.0 * dt / 18.0,
                                               dt / 36.0],
-                                  states=[dynamics_in,
-                                          dynamics_keep])
+                                  dynamics_series=[dynamics_in,
+                                                   dynamics_keep])
 
   tracer_consist_total = sum_consistency_struct(tracer_consist_0,
                                                 tracer_consist_1,
