@@ -74,7 +74,12 @@ the rest of the API.
 
 .. code-block:: python
 
-    from pyses.initialize import ullrich_baroclinic_wave, custom_init
+    from pyses.initialize import (
+        ullrich_baroclinic_wave,
+        williamson_steady_state,
+        galewsky_barotropic_instability,
+        custom_init,
+    )
 
 ``ullrich_baroclinic_wave`` — DCMIP 2016 moist baroclinic wave
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -105,6 +110,65 @@ standard benchmark for 3-D dynamical cores in pySEs.
 ``ullrich_baroclinic_wave.perturbation_opts``
     Enum of perturbation types described above.
 
+``williamson_steady_state`` — Williamson 1992 test case 2 (3-D shallow water)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Steady geostrophic flow on the sphere from the canonical shallow-water test
+suite (`Williamson et al. 1992
+<https://doi.org/10.1016/0021-9991(92)90260-5>`_).  Use this with
+``models.shallow_water`` and a single-layer ``v_grid``
+(``hybrid_a_i`` / ``hybrid_b_i`` of length 2,
+``reference_surface_mass = 0``).
+
+``williamson_steady_state.init_williamson_steady_state_config(model_config)``
+    Derive the test-case configuration (``u0``, ``h0``, ``alpha``,
+    planetary constants) from the physics config dict.
+
+``williamson_steady_state.init_williamson_steady_state_state(h_grid, v_grid, model_config, test_config, dims, model)``
+    Build a complete model state dict by evaluating the analytic
+    ``(u, v, h)`` fields on the grid; wraps
+    ``custom_init.init_model_shallow_water``.
+
+``williamson_steady_state.eval_williamson_tc2_u(lat, lon, v_grid, config)``
+    Analytic horizontal wind ``(u, v)`` broadcast onto the single-layer
+    interface.
+
+``williamson_steady_state.eval_williamson_tc2_h(lat, lon, config)``
+    Analytic free-surface height (m).
+
+``williamson_steady_state.eval_williamson_tc2_hs(lat, lon, config)``
+    Analytic surface topography (identically zero for TC2).
+
+``galewsky_barotropic_instability`` — Galewsky-Scott-Polvani 2004 jet (3-D shallow water)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Mid-latitude unstable zonal jet plus a Gaussian height perturbation that
+triggers a roll-up instability (`Galewsky, Scott & Polvani 2004
+<https://doi.org/10.3402/tellusa.v56i5.14436>`_).  Uses
+``models.shallow_water`` and the same single-layer ``v_grid`` shape as
+the Williamson case.
+
+``galewsky_barotropic_instability.init_galewsky_config(model_config)``
+    Derive the test-case configuration (jet bounds ``phi0`` / ``phi1``,
+    peak speed ``u_max``, height-perturbation parameters, Gauss-Legendre
+    quadrature nodes used by the height integral).
+
+``galewsky_barotropic_instability.init_galewsky_state(h_grid, v_grid, model_config, test_config, dims, model)``
+    Build a complete model state dict by evaluating the analytic
+    Galewsky jet, gradient-wind-balanced free-surface height, and
+    perturbation; wraps ``custom_init.init_model_shallow_water``.
+
+``galewsky_barotropic_instability.eval_galewsky_u(lat, config)`` /
+``eval_galewsky_wind(lat, lon, config)``
+    Analytic zonal wind speed and full ``(u, v)`` wind vector
+    respectively.
+
+``galewsky_barotropic_instability.eval_galewsky_h(lat, lon, config)``
+    Analytic free-surface height including the instability-seeding bump.
+
+``galewsky_barotropic_instability.eval_galewsky_hs(lat, lon, config)``
+    Analytic surface topography (identically zero for Galewsky).
+
 ``custom_init`` — low-level initialisation primitives
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -113,6 +177,16 @@ test case.
 
 ``custom_init.init_analytic_state(...)``
     Compute the initial pressure profile given a surface-pressure field.
+
+``custom_init.init_model_shallow_water(z_surf_total_height_func, u_func, v_func, h_grid, v_grid, model_config, dims, model)``
+    Lower-level entry point for the 3-D shallow-water core, used internally
+    by the Williamson / Galewsky wrappers above.  Pass three callbacks:
+
+    * ``z_surf_total_height_func(lat, lon) -> (hs, h)`` — surface
+      topography and free-surface height.
+    * ``u_func(lat, lon, v_grid)`` /
+      ``v_func(lat, lon, v_grid)`` — horizontal wind components
+      broadcast onto the single-layer interface.
 
 ``custom_init.init_static_forcing(phi_surf, h_grid, physics_config, dims, model)``
     Compute the time-invariant ``static_forcing`` dict (surface geopotential
@@ -151,6 +225,11 @@ test case.
     * ``models.cam_se`` — CAM-SE hydrostatic
     * ``models.cam_se_whole_atmosphere`` — CAM-SE with variable gas constant
       for whole-atmosphere runs
+    * ``models.shallow_water`` — 3-D shallow water on the sphere.  Uses the
+      same simulator and configuration machinery as the 3-D dry cores
+      with a single hybrid layer; the standalone
+      ``pyses.shallow_water`` model is deprecated in favour of this.
+    * ``models.shallow_water_f_plane`` — 3-D shallow water on an f-plane.
 
 ``model_config`` — physics and numerics configuration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -309,55 +388,51 @@ return the expected output shape.
 
 ----
 
-``pyses.shallow_water`` — Shallow-water models
-------------------------------------------------
+``pyses.shallow_water`` — Standalone shallow-water model (**deprecated**)
+--------------------------------------------------------------------------
 
-A self-contained set of 2-D shallow-water solvers on the sphere, useful for
-testing the horizontal discretisation in isolation.
+.. deprecated::
+   The self-contained ``pyses.shallow_water`` package is deprecated and
+   slated for removal.  Its functionality is subsumed by the 3-D
+   dynamical core via ``models.shallow_water`` (and
+   ``models.shallow_water_f_plane`` for the f-plane variant), which uses
+   the same simulator, configuration, and analytic-init machinery as the
+   3-D dry cores.  New code should use the 3-D path:
 
-.. code-block:: python
+   .. code-block:: python
 
-    from pyses.shallow_water import (
-        simulate_shallow_water,
-        configure,
-        model_state,
-        galewsky_init,
-        williamson_init,
-    )
+       from pyses.grids import init
+       from pyses.initialize import galewsky_barotropic_instability
+       from pyses.model_utils import model_config, model_info, mass_coordinate
+       from pyses.run_model import init_simulator
 
-``simulate_shallow_water(h_grid, model_state, config, hv_config, timestep_config, dims, ...)``
-    Run the shallow-water model for a prescribed number of steps and return
-    the final state.
+       h_grid, dims = init.init_quasi_uniform_grid(60, 4, calc_smooth_tensor=True)
 
-``configure``
-    Configuration helpers analogous to those in ``model_utils.model_config``:
+       # Single-layer shallow-water vertical "grid"
+       v_grid = mass_coordinate.init_vertical_grid(
+           hybrid_a_i=[0.0, 0.0], hybrid_b_i=[0.0, 1.0],
+           p0=0.0, model=model_info.models.shallow_water)
 
-    * ``configure.init_hypervis_config_quasi_uniform(...)`` — constant-coefficient hyperviscosity for uniform grids.
-    * ``configure.init_hypervis_config_variable_res(...)`` — tensor hyperviscosity scaled by local element size for stretched grids.
-    * ``configure.init_timestep_config(...)`` — timestep and subcycle counts.
+       physics_config, diffusion_config, timestep_config = (
+           model_config.init_default_config(60, h_grid, v_grid, dims,
+                                            model_info.models.shallow_water))
 
-``model_state``
-    * ``model_state.wrap_model_state(height, wind)`` — assemble a shallow-water state dict.
-    * ``model_state.project_model_state(state, h_grid, dims)`` — DSS-project all fields.
+       test_config = galewsky_barotropic_instability.init_galewsky_config(
+           physics_config)
+       state = galewsky_barotropic_instability.init_galewsky_state(
+           h_grid, v_grid, physics_config, test_config, dims,
+           model_info.models.shallow_water)
 
-``williamson_init`` — Williamson test cases
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       simulator = init_simulator(h_grid, v_grid, physics_config,
+                                  diffusion_config, timestep_config, dims,
+                                  model_info.models.shallow_water)
+       for t, state in simulator(state):
+           ...
 
-Standard shallow-water test suite (`Williamson et al. 1992
-<https://doi.org/10.1016/S0021-9991(05)80016-6>`_).
-
-* ``williamson_init.init_williamson_steady_config(...)`` — planetary constants for Williamson Test Case 2.
-* ``williamson_init.init_williamson_tc2_wind(lat, lon, config)`` — analytic wind field.
-* ``williamson_init.init_williamson_tc2_h(lat, lon, config)`` — analytic height field.
-* ``williamson_init.init_williamson_tc2_hs(lat, lon, config)`` — analytic surface geopotential.
-
-``galewsky_init`` — Galewsky jet test case
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Mid-latitude jet instability test (`Galewsky et al. 2004
-<https://doi.org/10.3402/tellusa.v56i5.14436>`_).
-
-* ``galewsky_init.init_galewsky_config(...)`` — planetary constants and jet parameters.
-* ``galewsky_init.eval_galewky_wind(lat, config)`` — analytic zonal wind.
-* ``galewsky_init.eval_galewky_h(lat, config)`` — analytic height field.
-* ``galewsky_init.eval_galewky_hs(lat, config)`` — analytic surface height.
+   The Williamson TC2 and Galewsky analytic initialisations live in
+   ``pyses.initialize`` (see ``williamson_steady_state`` and
+   ``galewsky_barotropic_instability`` above).  The legacy
+   ``pyses.shallow_water`` import path still works as a thin shim while
+   the deprecation proceeds, but the underlying
+   ``pyses.shallow_water_models`` package will be removed once all
+   callers have migrated.

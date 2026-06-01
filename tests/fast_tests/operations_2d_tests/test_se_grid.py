@@ -1,4 +1,5 @@
 from pyses.mesh_generation.equiangular_metric import init_grid_from_topo, init_quasi_uniform_grid
+import pytest
 from pyses.mesh_generation.cubed_sphere import init_cube_topo
 from pyses.mesh_generation.mesh import init_element_corner_vert_redundancy
 from pyses.mesh_generation.mesh import vert_red_flat_to_hierarchy, vert_red_hierarchy_to_flat
@@ -204,77 +205,77 @@ def test_assembly_init():
   assert ct == 0
 
 
-def test_triples_order():
+@pytest.mark.parametrize("nx, npt",
+                         [(nx, npt) for nx in range(1, 5) for npt in test_npts])
+def test_triples_order(nx, npt):
   if do_sharding:
-    return
-  for npt in test_npts:
-    for nx in range(1, 5):
-      for nproc in range(1, 3):
-        grid_total, dim_total = init_quasi_uniform_grid(nx, npt, wrapped=True)
-        grid_total_n, dim_total_n = init_quasi_uniform_grid(nx, npt, wrapped=False)
-        decomp = init_decomp(dim_total["num_elem"], nproc)
-        grids = []
-        grids_nowrapper = []
-        dims = []
-        for proc_idx in range(nproc):
-          grid, dim = make_grid_mpi_ready(grid_total, dim_total, proc_idx, decomp, wrapped=True)
-          grid_nowrapper, dim_nowrapper = make_grid_mpi_ready(grid_total_n,
-                                                              dim_total_n,
-                                                              proc_idx,
-                                                              decomp,
-                                                              wrapped=False)
-          grids.append(grid)
-          grids_nowrapper.append(grid_nowrapper)
-          dims.append(dim)
-        for local_proc_idx in range(nproc):
-          # check that triples and vert redundancy structs are identical
-          local_triples_send = grids[local_proc_idx]["triples_send"]
-          local_triples_recv = grids[local_proc_idx]["triples_receive"]
-          local_vert_red_send = grids_nowrapper[local_proc_idx]["vertex_redundancy_send"]
-          local_vert_red_recv = grids_nowrapper[local_proc_idx]["vertex_redundancy_receive"]
-          local_coords = grids[local_proc_idx]["physical_coords"]
-          for remote_proc_idx in local_triples_send.keys():
-            assert remote_proc_idx in local_triples_recv.keys()
-            assert remote_proc_idx in local_vert_red_send.keys()
-            assert remote_proc_idx in local_vert_red_recv.keys()
-            remote_triples_send = grids[remote_proc_idx]["triples_send"]
-            remote_triples_recv = grids[remote_proc_idx]["triples_receive"]
-            remote_coords = grids[remote_proc_idx]["physical_coords"]
-            for k_idx in range(list(local_triples_send[remote_proc_idx][0].shape)[0]):
-              f_idx, i_idx, j_idx = local_vert_red_send[remote_proc_idx][k_idx]
-              # test that vert_red_send struct and triples_send point to coincident local points
+    pytest.skip("triples-order check is unsupported under sharding")
+  for nproc in range(1, 3):
+    grid_total, dim_total = init_quasi_uniform_grid(nx, npt, wrapped=True)
+    grid_total_n, dim_total_n = init_quasi_uniform_grid(nx, npt, wrapped=False)
+    decomp = init_decomp(dim_total["num_elem"], nproc)
+    grids = []
+    grids_nowrapper = []
+    dims = []
+    for proc_idx in range(nproc):
+      grid, dim = make_grid_mpi_ready(grid_total, dim_total, proc_idx, decomp, wrapped=True)
+      grid_nowrapper, dim_nowrapper = make_grid_mpi_ready(grid_total_n,
+                                                          dim_total_n,
+                                                          proc_idx,
+                                                          decomp,
+                                                          wrapped=False)
+      grids.append(grid)
+      grids_nowrapper.append(grid_nowrapper)
+      dims.append(dim)
+    for local_proc_idx in range(nproc):
+      # check that triples and vert redundancy structs are identical
+      local_triples_send = grids[local_proc_idx]["triples_send"]
+      local_triples_recv = grids[local_proc_idx]["triples_receive"]
+      local_vert_red_send = grids_nowrapper[local_proc_idx]["vertex_redundancy_send"]
+      local_vert_red_recv = grids_nowrapper[local_proc_idx]["vertex_redundancy_receive"]
+      local_coords = grids[local_proc_idx]["physical_coords"]
+      for remote_proc_idx in local_triples_send.keys():
+        assert remote_proc_idx in local_triples_recv.keys()
+        assert remote_proc_idx in local_vert_red_send.keys()
+        assert remote_proc_idx in local_vert_red_recv.keys()
+        remote_triples_send = grids[remote_proc_idx]["triples_send"]
+        remote_triples_recv = grids[remote_proc_idx]["triples_receive"]
+        remote_coords = grids[remote_proc_idx]["physical_coords"]
+        for k_idx in range(list(local_triples_send[remote_proc_idx][0].shape)[0]):
+          f_idx, i_idx, j_idx = local_vert_red_send[remote_proc_idx][k_idx]
+          # test that vert_red_send struct and triples_send point to coincident local points
 
-              def unwrap_rowcol(rowcol, k_idx):
-                f_out = rowcol[0][k_idx]
-                i_out = rowcol[1][k_idx]
-                j_out = rowcol[2][k_idx]
-                return f_out, i_out, j_out
+          def unwrap_rowcol(rowcol, k_idx):
+            f_out = rowcol[0][k_idx]
+            i_out = rowcol[1][k_idx]
+            j_out = rowcol[2][k_idx]
+            return f_out, i_out, j_out
 
-              f_out, i_out, j_out = unwrap_rowcol(local_triples_send[remote_proc_idx][2], k_idx)
-              assert(np.allclose(local_coords[f_idx, i_idx, j_idx, 0],
-                                 local_coords[f_out, i_out, j_out, 0]))
-              f_out, i_out, j_out = unwrap_rowcol(local_triples_send[remote_proc_idx][2], k_idx)
-              assert(np.allclose(local_coords[f_idx, i_idx, j_idx, 1],
-                                 local_coords[f_out, i_out, j_out, 1]))
-              f_out, i_out, j_out = unwrap_rowcol(remote_triples_recv[local_proc_idx][1], k_idx)
-              # test that local vert_red_send struct and remote triples_recv point to coincident points
-              assert(np.allclose(local_coords[f_idx, i_idx, j_idx, 0],
-                                 remote_coords[f_out, i_out, j_out, 0]))
-              f_out, i_out, j_out = unwrap_rowcol(remote_triples_recv[local_proc_idx][1], k_idx)
-              assert(np.allclose(local_coords[f_idx, i_idx, j_idx, 1],
-                                 remote_coords[f_out, i_out, j_out, 1]))
-              f_idx, i_idx, j_idx = local_vert_red_recv[remote_proc_idx][k_idx]
-              # test that vert_red_recv struct and triples_recv point to coincident local points
-              f_out, i_out, j_out = unwrap_rowcol(local_triples_recv[remote_proc_idx][1], k_idx)
-              assert(np.allclose(local_coords[f_idx, i_idx, j_idx, 0],
-                                 local_coords[f_out, i_out, j_out, 0]))
-              f_out, i_out, j_out = unwrap_rowcol(local_triples_recv[remote_proc_idx][1], k_idx)
-              assert(np.allclose(local_coords[f_idx, i_idx, j_idx, 1],
-                                 local_coords[f_out, i_out, j_out, 1]))
-              # test that local vert_red_recv struct and remote triples_send point to coincident points
-              f_out, i_out, j_out = unwrap_rowcol(remote_triples_send[local_proc_idx][2], k_idx)
-              assert(np.allclose(local_coords[f_idx, i_idx, j_idx, 0],
-                                 remote_coords[f_out, i_out, j_out, 0]))
-              f_out, i_out, j_out = unwrap_rowcol(remote_triples_send[local_proc_idx][2], k_idx)
-              assert(np.allclose(local_coords[f_idx, i_idx, j_idx, 1],
-                                 remote_coords[f_out, i_out, j_out, 1]))
+          f_out, i_out, j_out = unwrap_rowcol(local_triples_send[remote_proc_idx][2], k_idx)
+          assert(np.allclose(local_coords[f_idx, i_idx, j_idx, 0],
+                             local_coords[f_out, i_out, j_out, 0]))
+          f_out, i_out, j_out = unwrap_rowcol(local_triples_send[remote_proc_idx][2], k_idx)
+          assert(np.allclose(local_coords[f_idx, i_idx, j_idx, 1],
+                             local_coords[f_out, i_out, j_out, 1]))
+          f_out, i_out, j_out = unwrap_rowcol(remote_triples_recv[local_proc_idx][1], k_idx)
+          # test that local vert_red_send struct and remote triples_recv point to coincident points
+          assert(np.allclose(local_coords[f_idx, i_idx, j_idx, 0],
+                             remote_coords[f_out, i_out, j_out, 0]))
+          f_out, i_out, j_out = unwrap_rowcol(remote_triples_recv[local_proc_idx][1], k_idx)
+          assert(np.allclose(local_coords[f_idx, i_idx, j_idx, 1],
+                             remote_coords[f_out, i_out, j_out, 1]))
+          f_idx, i_idx, j_idx = local_vert_red_recv[remote_proc_idx][k_idx]
+          # test that vert_red_recv struct and triples_recv point to coincident local points
+          f_out, i_out, j_out = unwrap_rowcol(local_triples_recv[remote_proc_idx][1], k_idx)
+          assert(np.allclose(local_coords[f_idx, i_idx, j_idx, 0],
+                             local_coords[f_out, i_out, j_out, 0]))
+          f_out, i_out, j_out = unwrap_rowcol(local_triples_recv[remote_proc_idx][1], k_idx)
+          assert(np.allclose(local_coords[f_idx, i_idx, j_idx, 1],
+                             local_coords[f_out, i_out, j_out, 1]))
+          # test that local vert_red_recv struct and remote triples_send point to coincident points
+          f_out, i_out, j_out = unwrap_rowcol(remote_triples_send[local_proc_idx][2], k_idx)
+          assert(np.allclose(local_coords[f_idx, i_idx, j_idx, 0],
+                             remote_coords[f_out, i_out, j_out, 0]))
+          f_out, i_out, j_out = unwrap_rowcol(remote_triples_send[local_proc_idx][2], k_idx)
+          assert(np.allclose(local_coords[f_idx, i_idx, j_idx, 1],
+                             remote_coords[f_out, i_out, j_out, 1]))

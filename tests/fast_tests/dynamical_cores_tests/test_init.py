@@ -1,4 +1,7 @@
+import pytest
+
 from pyses.mesh_generation.equiangular_metric import init_quasi_uniform_grid
+from .conftest import cached_baroclinic_state, cached_quasi_uniform_grid
 from pyses.operations_2d.operators import horizontal_gradient
 from pyses.operations_2d.local_assembly import project_scalar
 from ...test_data.mass_coordinate_grids import cam30
@@ -113,40 +116,40 @@ def test_moisture_quadrature():
   assert(jnp.allclose(analytic_answer, numerical_answer))
 
 
-def test_init():
+@pytest.mark.parametrize("mountain", [False, True], ids=["flat", "mountain"])
+def test_init(mountain):
   npt = 4
   nx = 15
-  h_grid, dims = init_quasi_uniform_grid(nx, npt)
+  h_grid, dims = cached_quasi_uniform_grid(nx, npt)
   v_grid = init_vertical_grid(cam30["hybrid_a_i"],
                               cam30["hybrid_b_i"],
                               cam30["p0"],
                               models.homme_hydrostatic)
   lat = h_grid["physical_coords"][:, :, :, 0]
   lon = h_grid["physical_coords"][:, :, :, 1]
-  for mountain in [False, True]:
-    model_config = init_physics_config(models.homme_hydrostatic)
-    test_config = init_baroclinic_wave_config(model_config=model_config)
-    model_state = init_baroclinic_wave_state(h_grid, v_grid, model_config, test_config, dims,
-                                             models.homme_hydrostatic, mountain=mountain)
-    z_surf, ps = eval_surface_state(lat, lon, test_config, mountain=mountain)
-    phi_surf = model_config["gravity"] * z_surf
-    grad_phi_surf = horizontal_gradient(phi_surf, h_grid, a=model_config["radius_earth"])
-    grad_phi_surf_cont = jnp.stack((project_scalar(grad_phi_surf[:, :, :, 0], h_grid, dims),
-                                    project_scalar(grad_phi_surf[:, :, :, 1], h_grid, dims)), axis=-1)
-    p_int = surface_mass_to_interface_mass(ps, v_grid)
-    d_mass = interface_to_delta(p_int)
-    p_top = v_grid["reference_surface_mass"] * v_grid["hybrid_a_i"][0]
+  model_config = init_physics_config(models.homme_hydrostatic)
+  test_config = init_baroclinic_wave_config(model_config=model_config)
+  model_state = cached_baroclinic_state(nx, npt, models.homme_hydrostatic, mountain=mountain)
+  z_surf, ps = eval_surface_state(lat, lon, test_config, mountain=mountain)
+  phi_surf = model_config["gravity"] * z_surf
+  grad_phi_surf = horizontal_gradient(phi_surf, h_grid, a=model_config["radius_earth"])
+  grad_phi_surf_cont = jnp.stack((project_scalar(grad_phi_surf[:, :, :, 0], h_grid, dims),
+                                  project_scalar(grad_phi_surf[:, :, :, 1], h_grid, dims)), axis=-1)
+  p_int = surface_mass_to_interface_mass(ps, v_grid)
+  d_mass = interface_to_delta(p_int)
+  p_top = v_grid["reference_surface_mass"] * v_grid["hybrid_a_i"][0]
 
-    assert allclose_global(d_mass, model_state["dynamics"]["d_mass"], dims)
-    assert allclose_global(phi_surf, model_state["static_forcing"]["phi_surf"], dims)
-    assert allclose_global(grad_phi_surf_cont, model_state["static_forcing"]["grad_phi_surf"], dims)
-    assert allclose_global(jnp.sum(get_global_array(d_mass, dims), axis=-1) + p_top, ps, dims)
+  assert allclose_global(d_mass, model_state["dynamics"]["d_mass"], dims)
+  assert allclose_global(phi_surf, model_state["static_forcing"]["phi_surf"], dims)
+  assert allclose_global(grad_phi_surf_cont, model_state["static_forcing"]["grad_phi_surf"], dims)
+  assert allclose_global(jnp.sum(get_global_array(d_mass, dims), axis=-1) + p_top, ps, dims)
 
 
-def test_init_moist():
+@pytest.mark.parametrize("mountain", [False, True], ids=["flat", "mountain"])
+def test_init_moist(mountain):
   npt = 4
   nx = 4
-  h_grid, dims = init_quasi_uniform_grid(nx, npt)
+  h_grid, dims = cached_quasi_uniform_grid(nx, npt)
   model = models.cam_se
   v_grid = init_vertical_grid(cam30["hybrid_a_i"],
                               cam30["hybrid_b_i"],
@@ -154,24 +157,14 @@ def test_init_moist():
                               model)
   lat = h_grid["physical_coords"][:, :, :, 0]
   lon = h_grid["physical_coords"][:, :, :, 1]
-  for mountain in [False, True]:
-    model_config = init_physics_config(model)
-    test_config = init_baroclinic_wave_config(model_config=model_config)
-    model_state = init_baroclinic_wave_state(h_grid,
-                                             v_grid,
-                                             model_config,
-                                             test_config,
-                                             dims,
-                                             model,
-                                             mountain=mountain,
-                                             moist=True,
-                                             eps=1e-8)
-    z_surf, ps = eval_surface_state(lat, lon, test_config, mountain=mountain)
-    # test dry pressure levels ()
-    # test correct dry surface mass
-    # test correct d mass values
-    # test correct tracer_mass value using a moist coordinate
-    pressure_moisture = model_state["tracers"]["moisture_species"]["water_vapor"] * model_state["dynamics"]["d_mass"]
-    p_top = v_grid["reference_surface_mass"] * v_grid["hybrid_a_i"][0]
-    moist_surface_pressure = jnp.sum(model_state["dynamics"]["d_mass"] + pressure_moisture, axis=-1) + p_top
-    assert jnp.max(jnp.abs(get_global_array(ps, dims) - get_global_array(moist_surface_pressure, dims))) < 1e-3
+  model_config = init_physics_config(model)
+  test_config = init_baroclinic_wave_config(model_config=model_config)
+  model_state = cached_baroclinic_state(nx, npt, model, mountain=mountain,
+                                        moist=True,
+                                        eps=1e-8)
+  z_surf, ps = eval_surface_state(lat, lon, test_config, mountain=mountain)
+  pressure_moisture = (model_state["tracers"]["moisture_species"]["water_vapor"]
+                       * model_state["dynamics"]["d_mass"])
+  p_top = v_grid["reference_surface_mass"] * v_grid["hybrid_a_i"][0]
+  moist_surface_pressure = jnp.sum(model_state["dynamics"]["d_mass"] + pressure_moisture, axis=-1) + p_top
+  assert jnp.max(jnp.abs(get_global_array(ps, dims) - get_global_array(moist_surface_pressure, dims))) < 1e-3

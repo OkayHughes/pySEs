@@ -1,4 +1,5 @@
 from pyses._config import get_backend as _get_backend
+import pytest
 import numpy as np
 from pyses.mesh_generation.cubed_sphere import init_cube_topo
 from pyses.mesh_generation.mesh import init_element_corner_vert_redundancy
@@ -164,170 +165,160 @@ def test_extraction_map():
               assert np.allclose(cont_fn, fn)
 
 
-def test_extraction_map_rand():
+@pytest.mark.parametrize("nx, npt",
+                         [(nx, npt) for nx in [4, 8] for npt in test_npts])
+def test_extraction_map_rand(nx, npt):
   num_devices = 2
-  for npt in test_npts:
-    for nx in [4, 8]:
-      face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
-      vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
-      grid_nowrap, dims_nowrap = init_grid_from_topo(face_connectivity,
-                                                     face_mask,
-                                                     face_position_2d,
-                                                     vert_redundancy,
-                                                     npt, wrapped=False)
-      extraction_struct, _ = init_shard_extraction_map(grid_nowrap["assembly_triple"],
-                                                       num_devices,
-                                                       grid_nowrap["metric_determinant"].shape[0],
-                                                       dims_nowrap, wrapped=False)
-      for _ in range(20):
-        fn_rand = np.random.uniform(size=grid_nowrap["physical_coords"][:, :, :, 1].shape)
-        assert np.allclose(project_scalar_sharded_numpy(fn_rand,
-                                                        grid_nowrap,
-                                                        dims_nowrap,
-                                                        extraction_struct,
-                                                        num_devices),
-                           project_scalar_for(fn_rand, grid_nowrap))
+  face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
+  vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
+  grid_nowrap, dims_nowrap = init_grid_from_topo(face_connectivity,
+                                                 face_mask,
+                                                 face_position_2d,
+                                                 vert_redundancy,
+                                                 npt, wrapped=False)
+  extraction_struct, _ = init_shard_extraction_map(grid_nowrap["assembly_triple"],
+                                                   num_devices,
+                                                   grid_nowrap["metric_determinant"].shape[0],
+                                                   dims_nowrap, wrapped=False)
+  for _ in range(20):
+    fn_rand = np.random.uniform(size=grid_nowrap["physical_coords"][:, :, :, 1].shape)
+    assert np.allclose(project_scalar_sharded_numpy(fn_rand,
+                                                    grid_nowrap,
+                                                    dims_nowrap,
+                                                    extraction_struct,
+                                                    num_devices),
+                       project_scalar_for(fn_rand, grid_nowrap))
 
 
-def test_projection():
-  for npt in test_npts:
-    for nx in [3, 4]:
-      face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
-      vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
-      raw_grid, dims = init_grid_from_topo(face_connectivity,
-                                           face_mask,
-                                           face_position_2d,
-                                           vert_redundancy,
-                                           npt,
-                                           wrapped=use_wrapper)
-      grid = shard_grid(raw_grid, dims)
-      grid_nowrapper, _ = init_grid_from_topo(face_connectivity,
-                                              face_mask,
-                                              face_position_2d,
-                                              vert_redundancy,
-                                              npt,
-                                              wrapped=False)
+@pytest.mark.parametrize("nx, npt", [(nx, npt) for nx in [3, 4] for npt in test_npts])
+def test_projection(nx, npt):
+  face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
+  vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
+  raw_grid, dims = init_grid_from_topo(face_connectivity,
+                                       face_mask,
+                                       face_position_2d,
+                                       vert_redundancy,
+                                       npt,
+                                       wrapped=use_wrapper)
+  grid = shard_grid(raw_grid, dims)
+  grid_nowrapper, _ = init_grid_from_topo(face_connectivity,
+                                          face_mask,
+                                          face_position_2d,
+                                          vert_redundancy,
+                                          npt,
+                                          wrapped=False)
 
-      def add_one_point(field, f, i, j):
-        axis_1 = jnp.eye(field.shape[0])[f, :].squeeze()
-        axis_2 = jnp.eye(field.shape[1])[i, :].squeeze()
-        axis_3 = jnp.eye(field.shape[2])[j, :].squeeze()
-        return (axis_1[:, jnp.newaxis, jnp.newaxis] *
-                axis_2[jnp.newaxis, :, jnp.newaxis] *
-                axis_3[jnp.newaxis, jnp.newaxis, :])
+  def add_one_point(field, f, i, j):
+    axis_1 = jnp.eye(field.shape[0])[f, :].squeeze()
+    axis_2 = jnp.eye(field.shape[1])[i, :].squeeze()
+    axis_3 = jnp.eye(field.shape[2])[j, :].squeeze()
+    return (axis_1[:, jnp.newaxis, jnp.newaxis] *
+            axis_2[jnp.newaxis, :, jnp.newaxis] *
+            axis_3[jnp.newaxis, jnp.newaxis, :])
 
-      vert_redundancy_gll = vert_red_flat_to_hierarchy(grid_nowrapper["vertex_redundancy"])
-      for face_idx in range(grid["physical_coords"].shape[0]):
-        for i_idx in range(npt):
-          for j_idx in range(npt):
-            fn = jnp.zeros_like(grid["physical_coords"][:, :, :, 0])
-            fn += add_one_point(fn, face_idx, i_idx, j_idx)
-            if face_idx in vert_redundancy_gll.keys():
-              if (i_idx, j_idx) in vert_redundancy_gll[face_idx].keys():
-                for remote_face_id, remote_i, remote_j in vert_redundancy_gll[face_idx][(i_idx, j_idx)]:
-                  fn += add_one_point(fn, remote_face_id, remote_i, remote_j)
-            cont_fn = project_scalar(fn, grid, dims)
-            assert np.allclose(get_global_array(cont_fn, dims), get_global_array(fn, dims))
+  vert_redundancy_gll = vert_red_flat_to_hierarchy(grid_nowrapper["vertex_redundancy"])
+  for face_idx in range(grid["physical_coords"].shape[0]):
+    for i_idx in range(npt):
+      for j_idx in range(npt):
+        fn = jnp.zeros_like(grid["physical_coords"][:, :, :, 0])
+        fn += add_one_point(fn, face_idx, i_idx, j_idx)
+        if face_idx in vert_redundancy_gll.keys():
+          if (i_idx, j_idx) in vert_redundancy_gll[face_idx].keys():
+            for remote_face_id, remote_i, remote_j in vert_redundancy_gll[face_idx][(i_idx, j_idx)]:
+              fn += add_one_point(fn, remote_face_id, remote_i, remote_j)
+        cont_fn = project_scalar(fn, grid, dims)
+        assert np.allclose(get_global_array(cont_fn, dims), get_global_array(fn, dims))
+@pytest.mark.parametrize("nx, npt", [(nx, npt) for nx in [3, 4] for npt in test_npts])
+def test_minmax(nx, npt):
+  face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
+  vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
+  raw_grid, dims = init_grid_from_topo(face_connectivity,
+                                       face_mask,
+                                       face_position_2d,
+                                       vert_redundancy,
+                                       npt,
+                                       wrapped=use_wrapper)
+  grid = shard_grid(raw_grid, dims)
+  grid_nowrapper, _ = init_grid_from_topo(face_connectivity,
+                                          face_mask,
+                                          face_position_2d,
+                                          vert_redundancy,
+                                          npt,
+                                          wrapped=False)
 
+  def add_one_point(field, f, i, j):
+    axis_1 = jnp.eye(field.shape[0])[f, :].squeeze()
+    axis_2 = jnp.eye(field.shape[1])[i, :].squeeze()
+    axis_3 = jnp.eye(field.shape[2])[j, :].squeeze()
+    return (axis_1[:, jnp.newaxis, jnp.newaxis] *
+            axis_2[jnp.newaxis, :, jnp.newaxis] *
+            axis_3[jnp.newaxis, jnp.newaxis, :])
 
-def test_minmax():
-  for npt in test_npts:
-    for nx in [3, 4]:
-      face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
-      vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
-      raw_grid, dims = init_grid_from_topo(face_connectivity,
-                                           face_mask,
-                                           face_position_2d,
-                                           vert_redundancy,
-                                           npt,
-                                           wrapped=use_wrapper)
-      grid = shard_grid(raw_grid, dims)
-      grid_nowrapper, _ = init_grid_from_topo(face_connectivity,
-                                              face_mask,
-                                              face_position_2d,
-                                              vert_redundancy,
-                                              npt,
-                                              wrapped=False)
-
-      def add_one_point(field, f, i, j):
-        axis_1 = jnp.eye(field.shape[0])[f, :].squeeze()
-        axis_2 = jnp.eye(field.shape[1])[i, :].squeeze()
-        axis_3 = jnp.eye(field.shape[2])[j, :].squeeze()
-        return (axis_1[:, jnp.newaxis, jnp.newaxis] *
-                axis_2[jnp.newaxis, :, jnp.newaxis] *
-                axis_3[jnp.newaxis, jnp.newaxis, :])
-
-      vert_redundancy_gll = vert_red_flat_to_hierarchy(grid_nowrapper["vertex_redundancy"])
-      for is_max, extremal_op in zip([True, False], [max, min]):
-        for face_idx in range(grid["physical_coords"].shape[0]):
-          for i_idx in range(npt):
-            for j_idx in range(npt):
-              fn = jnp.zeros_like(grid["physical_coords"][:, :, :, 0])
-              extremal_face_idx = face_idx
-              fn += add_one_point(fn, face_idx, i_idx, j_idx) * face_idx
-              if face_idx in vert_redundancy_gll.keys():
-                if (i_idx, j_idx) in vert_redundancy_gll[face_idx].keys():
-                  for remote_face_id, remote_i, remote_j in vert_redundancy_gll[face_idx][(i_idx, j_idx)]:
-                    extremal_face_idx = extremal_op(remote_face_id, extremal_face_idx)
-                    fn += add_one_point(fn, remote_face_id, remote_i, remote_j) * remote_face_id
-              fn_out = jnp.zeros_like(grid["physical_coords"][:, :, :, 0])
-              fn_out += add_one_point(fn, face_idx, i_idx, j_idx) * extremal_face_idx
-              if face_idx in vert_redundancy_gll.keys():
-                if (i_idx, j_idx) in vert_redundancy_gll[face_idx].keys():
-                  for remote_face_id, remote_i, remote_j in vert_redundancy_gll[face_idx][(i_idx, j_idx)]:
-                    fn_out += add_one_point(fn, remote_face_id, remote_i, remote_j) * extremal_face_idx
-              max_fn = minmax_scalar(fn, grid, dims, max=is_max)
-              assert np.allclose(get_global_array(max_fn, dims), get_global_array(fn_out, dims))
-
-
-def test_projection_equiv():
-  for npt in test_npts:
-    for nx in [7, 8]:
-      face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
-      vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
-      raw_grid, dims = init_grid_from_topo(face_connectivity,
-                                           face_mask,
-                                           face_position_2d,
-                                           vert_redundancy,
-                                           npt, wrapped=False)
-      grid_wrapped, dims_wrapped = init_grid_from_topo(face_connectivity,
-                                                       face_mask,
-                                                       face_position_2d,
-                                                       vert_redundancy,
-                                                       npt, wrapped=use_wrapper)
-      grid_wrapped = shard_grid(grid_wrapped, dims_wrapped)
-      fn = device_wrapper(jnp.cos(grid_wrapped["physical_coords"][:, :, :, 1]) *
-                          jnp.cos(grid_wrapped["physical_coords"][:, :, :, 0]))
-      assert (np.allclose(get_global_array(project_scalar(fn, grid_wrapped, dims_wrapped), dims_wrapped),
-                          get_global_array(fn, dims_wrapped)))
-      ones = jnp.ones_like(grid_wrapped["metric_determinant"])
-      ones_out = project_scalar(device_wrapper(ones), grid_wrapped, dims_wrapped)
-      assert (np.allclose(get_global_array(ones_out, dims_wrapped), get_global_array(ones, dims_wrapped)))
-      ones_out_for = project_scalar_for(get_global_array(ones, dims_wrapped), raw_grid)
-      assert (np.allclose(ones_out_for, get_global_array(ones, dims_wrapped)))
-
-
-def test_projection_equiv_rand():
-  for npt in test_npts:
-    for nx in [7, 8]:
-      face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
-      vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
-      raw_grid, dims = init_grid_from_topo(face_connectivity,
-                                           face_mask,
-                                           face_position_2d,
-                                           vert_redundancy,
-                                           npt, wrapped=False)
-      grid_wrapped, dims_wrapped = init_grid_from_topo(face_connectivity,
-                                                       face_mask,
-                                                       face_position_2d,
-                                                       vert_redundancy,
-                                                       npt,
-                                                       wrapped=use_wrapper)
-      grid_wrapped = shard_grid(grid_wrapped, dims_wrapped)
-      for _ in range(20):
-        fn_rand = np.random.uniform(size=grid_wrapped["physical_coords"][:, :, :, 1].shape)
-        assert np.allclose(get_global_array(project_scalar_wrapper(device_wrapper(fn_rand, elem_sharding_axis=0),
-                                                                   grid_wrapped,
-                                                                   dims_wrapped),
-                                            dims_wrapped),
-                           project_scalar_for(fn_rand[:dims["num_elem"], :, :], raw_grid))
+  vert_redundancy_gll = vert_red_flat_to_hierarchy(grid_nowrapper["vertex_redundancy"])
+  for is_max, extremal_op in zip([True, False], [max, min]):
+    for face_idx in range(grid["physical_coords"].shape[0]):
+      for i_idx in range(npt):
+        for j_idx in range(npt):
+          fn = jnp.zeros_like(grid["physical_coords"][:, :, :, 0])
+          extremal_face_idx = face_idx
+          fn += add_one_point(fn, face_idx, i_idx, j_idx) * face_idx
+          if face_idx in vert_redundancy_gll.keys():
+            if (i_idx, j_idx) in vert_redundancy_gll[face_idx].keys():
+              for remote_face_id, remote_i, remote_j in vert_redundancy_gll[face_idx][(i_idx, j_idx)]:
+                extremal_face_idx = extremal_op(remote_face_id, extremal_face_idx)
+                fn += add_one_point(fn, remote_face_id, remote_i, remote_j) * remote_face_id
+          fn_out = jnp.zeros_like(grid["physical_coords"][:, :, :, 0])
+          fn_out += add_one_point(fn, face_idx, i_idx, j_idx) * extremal_face_idx
+          if face_idx in vert_redundancy_gll.keys():
+            if (i_idx, j_idx) in vert_redundancy_gll[face_idx].keys():
+              for remote_face_id, remote_i, remote_j in vert_redundancy_gll[face_idx][(i_idx, j_idx)]:
+                fn_out += add_one_point(fn, remote_face_id, remote_i, remote_j) * extremal_face_idx
+          max_fn = minmax_scalar(fn, grid, dims, max=is_max)
+          assert np.allclose(get_global_array(max_fn, dims), get_global_array(fn_out, dims))
+@pytest.mark.parametrize("nx, npt", [(nx, npt) for nx in [7, 8] for npt in test_npts])
+def test_projection_equiv(nx, npt):
+  face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
+  vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
+  raw_grid, dims = init_grid_from_topo(face_connectivity,
+                                       face_mask,
+                                       face_position_2d,
+                                       vert_redundancy,
+                                       npt, wrapped=False)
+  grid_wrapped, dims_wrapped = init_grid_from_topo(face_connectivity,
+                                                   face_mask,
+                                                   face_position_2d,
+                                                   vert_redundancy,
+                                                   npt, wrapped=use_wrapper)
+  grid_wrapped = shard_grid(grid_wrapped, dims_wrapped)
+  fn = device_wrapper(jnp.cos(grid_wrapped["physical_coords"][:, :, :, 1]) *
+                      jnp.cos(grid_wrapped["physical_coords"][:, :, :, 0]))
+  assert (np.allclose(get_global_array(project_scalar(fn, grid_wrapped, dims_wrapped), dims_wrapped),
+                      get_global_array(fn, dims_wrapped)))
+  ones = jnp.ones_like(grid_wrapped["metric_determinant"])
+  ones_out = project_scalar(device_wrapper(ones), grid_wrapped, dims_wrapped)
+  assert (np.allclose(get_global_array(ones_out, dims_wrapped), get_global_array(ones, dims_wrapped)))
+  ones_out_for = project_scalar_for(get_global_array(ones, dims_wrapped), raw_grid)
+  assert (np.allclose(ones_out_for, get_global_array(ones, dims_wrapped)))
+@pytest.mark.parametrize("nx, npt", [(nx, npt) for nx in [7, 8] for npt in test_npts])
+def test_projection_equiv_rand(nx, npt):
+  face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
+  vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
+  raw_grid, dims = init_grid_from_topo(face_connectivity,
+                                       face_mask,
+                                       face_position_2d,
+                                       vert_redundancy,
+                                       npt, wrapped=False)
+  grid_wrapped, dims_wrapped = init_grid_from_topo(face_connectivity,
+                                                   face_mask,
+                                                   face_position_2d,
+                                                   vert_redundancy,
+                                                   npt,
+                                                   wrapped=use_wrapper)
+  grid_wrapped = shard_grid(grid_wrapped, dims_wrapped)
+  for _ in range(20):
+    fn_rand = np.random.uniform(size=grid_wrapped["physical_coords"][:, :, :, 1].shape)
+    assert np.allclose(get_global_array(project_scalar_wrapper(device_wrapper(fn_rand, elem_sharding_axis=0),
+                                                               grid_wrapped,
+                                                               dims_wrapped),
+                                        dims_wrapped),
+                       project_scalar_for(fn_rand[:dims["num_elem"], :, :], raw_grid))

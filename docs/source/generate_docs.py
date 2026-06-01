@@ -18,7 +18,11 @@ modules = [
     'pyses.mesh_generation',
     'pyses.mpi',
     'pyses.operations_2d',
-    'pyses.shallow_water_models',
+    # ``pyses.shallow_water_models`` is deprecated -- subsumed by
+    # ``models.shallow_water`` in the 3-D dynamical core.  The package
+    # is kept as a thin compat shim during the deprecation window; once
+    # all callers have migrated it (and these auto-generated stubs)
+    # will be removed.
     'pyses.tracer_transport',
 ]
 

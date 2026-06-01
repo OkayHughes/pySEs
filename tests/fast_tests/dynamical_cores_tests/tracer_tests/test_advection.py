@@ -6,7 +6,7 @@ from pyses.analytic_initialization.moist_baroclinic_wave import (init_baroclinic
                                                                init_baroclinic_wave_state)
 from pyses.dynamical_cores.run_dycore import init_simulator
 from pyses.dynamical_cores.hyperviscosity import diffusion_config_for_tracer_consist
-from pyses.mesh_generation.equiangular_metric import init_quasi_uniform_grid
+from ..conftest import cached_quasi_uniform_grid
 from pyses.dynamical_cores.mass_coordinate import init_vertical_grid
 from pyses.dynamical_cores.model_info import models
 from pyses.dynamical_cores.model_config import init_default_config, hypervis_opts
@@ -18,7 +18,7 @@ def test_tracer_consistency():
   model = models.homme_hydrostatic
   npt = 4
   nx = 7
-  h_grid, dims = init_quasi_uniform_grid(nx, npt, calc_smooth_tensor=True)
+  h_grid, dims = cached_quasi_uniform_grid(nx, npt, calc_smooth_tensor=True)
   v_grid = init_vertical_grid(cam30["hybrid_a_i"],
                               cam30["hybrid_b_i"],
                               cam30["p0"],

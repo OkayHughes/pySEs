@@ -1,4 +1,5 @@
 from pyses._config import get_backend as _get_backend
+import pytest
 import numpy as np
 from pyses.mesh_generation.equiangular_metric import init_quasi_uniform_grid
 from pyses.operations_2d.local_assembly import project_scalar
@@ -18,26 +19,23 @@ device_wrapper = _be.array
 device_unwrapper = _be.unwrap
 
 
-def test_vector_identites_sphere():
-  for npt in test_npts:
-    for nx in [30, 31]:
-      grid, dims = init_quasi_uniform_grid(nx, npt)
+@pytest.mark.parametrize("nx, npt", [(nx, npt) for nx in [30, 31] for npt in test_npts])
+def test_vector_identites_sphere(nx, npt):
+  grid, dims = init_quasi_uniform_grid(nx, npt)
 
-      fn = jnp.cos(grid["physical_coords"][:, :, :, 1]) * jnp.cos(grid["physical_coords"][:, :, :, 0])
-      grad = horizontal_gradient(fn, grid)
-      vort = horizontal_vorticity(grad, grid)
-      iprod_vort = inner_product(vort, vort, grid)
-      assert (np.allclose(iprod_vort, 0.0, atol=eps))
-      v = jnp.stack((jnp.cos(grid["physical_coords"][:, :, :, 0]),
-                    jnp.cos(grid["physical_coords"][:, :, :, 0])), axis=-1)
+  fn = jnp.cos(grid["physical_coords"][:, :, :, 1]) * jnp.cos(grid["physical_coords"][:, :, :, 0])
+  grad = horizontal_gradient(fn, grid)
+  vort = horizontal_vorticity(grad, grid)
+  iprod_vort = inner_product(vort, vort, grid)
+  assert (np.allclose(iprod_vort, 0.0, atol=eps))
+  v = jnp.stack((jnp.cos(grid["physical_coords"][:, :, :, 0]),
+                jnp.cos(grid["physical_coords"][:, :, :, 0])), axis=-1)
 
-      grad = horizontal_gradient(fn, grid)
-      discrete_divergence_thm = (inner_product(v[:, :, :, 0], grad[:, :, :, 0], grid) +
-                                 inner_product(v[:, :, :, 1], grad[:, :, :, 1], grid) +
-                                 inner_product(fn, horizontal_divergence(v, grid), grid))
-      assert (jnp.allclose(discrete_divergence_thm, jnp.zeros_like(discrete_divergence_thm), atol=eps))
-
-
+  grad = horizontal_gradient(fn, grid)
+  discrete_divergence_thm = (inner_product(v[:, :, :, 0], grad[:, :, :, 0], grid) +
+                             inner_product(v[:, :, :, 1], grad[:, :, :, 1], grid) +
+                             inner_product(fn, horizontal_divergence(v, grid), grid))
+  assert (jnp.allclose(discrete_divergence_thm, jnp.zeros_like(discrete_divergence_thm), atol=eps))
 def test_vector_identities_plane():
   for npt in test_npts:
     nx, ny = (31, 33)
@@ -58,34 +56,34 @@ def test_vector_identities_plane():
     assert (jnp.allclose(discrete_divergence_thm, jnp.zeros_like(discrete_divergence_thm), atol=eps))
 
 
-def test_vector_identites_rand_sphere():
-  for npt in test_npts:
-    np.random.seed(seed)
-    for nx in [30, 31]:
-      grid, dims = init_quasi_uniform_grid(nx, npt)
-      for _ in range(10):
-        rand = np.random.normal(scale=10, size=grid["physical_coords"][:, :, :, 0].shape)
-        fn = rand * jnp.ones_like(grid["physical_coords"][:, :, :, 0])
-        _ = project_scalar(fn, grid, dims)
-        fn = project_scalar(fn, grid, dims)
+@pytest.mark.parametrize("nx, npt",
+                         [(nx, npt) for nx in [30, 31] for npt in test_npts])
+def test_vector_identites_rand_sphere(nx, npt):
+  np.random.seed(seed)
+  grid, dims = init_quasi_uniform_grid(nx, npt)
+  for _ in range(10):
+    rand = np.random.normal(scale=10, size=grid["physical_coords"][:, :, :, 0].shape)
+    fn = rand * jnp.ones_like(grid["physical_coords"][:, :, :, 0])
+    _ = project_scalar(fn, grid, dims)
+    fn = project_scalar(fn, grid, dims)
 
-        grad = horizontal_gradient(fn, grid)
-        vort = horizontal_vorticity(grad, grid)
-        grad = jnp.stack((project_scalar(grad[:, :, :, 0], grid, dims),
-                          project_scalar(grad[:, :, :, 1], grid, dims)), axis=-1)
-        vort = project_scalar(vort, grid, dims)
-        iprod_vort = inner_product(vort, vort, grid)
-        assert (np.allclose(device_unwrapper(iprod_vort), 0.0, atol=eps))
-        v = np.random.normal(scale=1, size=grid["physical_coords"].shape)
-        v *= jnp.ones_like(grid["physical_coords"])
-        v = jnp.stack((project_scalar(v[:, :, :, 0], grid, dims),
-                      project_scalar(v[:, :, :, 1], grid, dims)), axis=-1)
-        div = horizontal_divergence(v, grid)
-        div = project_scalar(horizontal_divergence(v, grid), grid, dims)
-        discrete_divergence_thm = (inner_product(v[:, :, :, 0], grad[:, :, :, 0], grid) +
-                                   inner_product(v[:, :, :, 1], grad[:, :, :, 1], grid) +
-                                   inner_product(fn, div, grid))
-        assert (jnp.allclose(discrete_divergence_thm, jnp.zeros_like(discrete_divergence_thm), atol=eps))
+    grad = horizontal_gradient(fn, grid)
+    vort = horizontal_vorticity(grad, grid)
+    grad = jnp.stack((project_scalar(grad[:, :, :, 0], grid, dims),
+                      project_scalar(grad[:, :, :, 1], grid, dims)), axis=-1)
+    vort = project_scalar(vort, grid, dims)
+    iprod_vort = inner_product(vort, vort, grid)
+    assert np.allclose(device_unwrapper(iprod_vort), 0.0, atol=eps)
+    v = np.random.normal(scale=1, size=grid["physical_coords"].shape)
+    v *= jnp.ones_like(grid["physical_coords"])
+    v = jnp.stack((project_scalar(v[:, :, :, 0], grid, dims),
+                   project_scalar(v[:, :, :, 1], grid, dims)), axis=-1)
+    div = horizontal_divergence(v, grid)
+    div = project_scalar(horizontal_divergence(v, grid), grid, dims)
+    discrete_divergence_thm = (inner_product(v[:, :, :, 0], grad[:, :, :, 0], grid) +
+                               inner_product(v[:, :, :, 1], grad[:, :, :, 1], grid) +
+                               inner_product(fn, div, grid))
+    assert jnp.allclose(discrete_divergence_thm, jnp.zeros_like(discrete_divergence_thm), atol=eps)
 
 
 def test_vector_identites_rand_plane():

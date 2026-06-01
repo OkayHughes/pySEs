@@ -2,8 +2,9 @@ from ...test_data.mass_coordinate_grids import cam30
 from pyses._config import get_backend as _get_backend
 import numpy as np
 from pyses.dynamical_cores.physics_config import init_physics_config
-from pyses.analytic_initialization.moist_baroclinic_wave import init_baroclinic_wave_config, init_baroclinic_wave_state
-from pyses.mesh_generation.element_local_metric import init_quasi_uniform_grid_elem_local
+from pyses.analytic_initialization.moist_baroclinic_wave import init_baroclinic_wave_config
+from .conftest import (cached_baroclinic_state,
+                       cached_quasi_uniform_grid_elem_local)
 from pyses.dynamical_cores.mass_coordinate import init_vertical_grid
 from pyses.dynamical_cores.utils_3d import physical_dot_product
 from pyses.dynamical_cores.model_info import models
@@ -133,7 +134,7 @@ def test_equivalent_terms_dry_perturbed():
   nlev = 30
   model_se = models.cam_se
   model_homme = models.homme_hydrostatic
-  h_grid, dims = init_quasi_uniform_grid_elem_local(nx, npt)
+  h_grid, dims = cached_quasi_uniform_grid_elem_local(nx, npt)
   v_grid_se = init_vertical_grid(cam30["hybrid_a_i"],
                                  cam30["hybrid_b_i"],
                                  cam30["p0"],
@@ -145,24 +146,16 @@ def test_equivalent_terms_dry_perturbed():
 
   physics_config_se = init_physics_config(model_se)
   test_config = init_baroclinic_wave_config(model_config=physics_config_se)
-  model_state_se = init_baroclinic_wave_state(h_grid,
-                                              v_grid_se,
-                                              physics_config_se,
-                                              test_config,
-                                              dims,
-                                              model_se,
+  model_state_se = cached_baroclinic_state(nx, npt, model_se,
                                               mountain=False,
-                                              moist=False)
+                                              moist=False,
+                                              grid_kind='elem_local')
   physics_config_homme = init_physics_config(model_homme)
   test_config = init_baroclinic_wave_config(model_config=physics_config_homme)
-  model_state_homme = init_baroclinic_wave_state(h_grid,
-                                                 v_grid_homme,
-                                                 physics_config_homme,
-                                                 test_config,
-                                                 dims,
-                                                 model_homme,
-                                                 mountain=False,
-                                                 moist=False)
+  model_state_homme = cached_baroclinic_state(nx, npt, model_homme,
+                                              mountain=False,
+                                              moist=False,
+                                              grid_kind='elem_local')
   scaling = (v_grid_se["hybrid_a_m"] + v_grid_se["hybrid_b_m"])[np.newaxis, np.newaxis, np.newaxis, :]
   d_mass_pert = 1000.0 * jnp.cos(h_grid["physical_coords"][:, :, :, 0])[:, :, :, np.newaxis] * scaling
   pert_u = .1 * (jnp.cos(h_grid["physical_coords"][:, :, :, 0])[:, :, :, np.newaxis, np.newaxis] *

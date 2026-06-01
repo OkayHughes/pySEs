@@ -1,6 +1,6 @@
-from pyses.dynamical_cores.model_info import models, cam_se_models, variable_kappa_models
+from pyses.dynamical_cores.model_info import models, cam_se_models, variable_kappa_models, cam_se_stable_models
 from pyses._config import get_backend as _get_backend
-from pyses.mesh_generation.element_local_metric import init_quasi_uniform_grid_elem_local
+from ..conftest import cached_quasi_uniform_grid_elem_local
 from pyses.dynamical_cores.mass_coordinate import init_vertical_grid
 from pyses.dynamical_cores.physics_config import init_physics_config
 from pyses.dynamical_cores.cam_se.thermodynamics import (eval_Rgas_dry,
@@ -23,13 +23,13 @@ from ....context import allclose_global
 _be = _get_backend()
 jnp = _be.np
 get_global_array = _be.get_global_array
-
+thermal_test_models = list(filter(lambda x: x not in cam_se_stable_models, cam_se_models))
 
 def test_sum_species():
   npt = 4
   nx = 2
-  for model in cam_se_models:
-    h_grid, dims = init_quasi_uniform_grid_elem_local(nx, npt)
+  for model in thermal_test_models:
+    h_grid, dims = cached_quasi_uniform_grid_elem_local(nx, npt)
     v_grid = init_vertical_grid(cam30["hybrid_a_i"],
                                 cam30["hybrid_b_i"],
                                 cam30["p0"],
@@ -55,7 +55,7 @@ def test_dry_Rgas_cp():
   nx = 2
   model_low = models.cam_se
   model_high = models.cam_se_whole_atmosphere
-  h_grid, dims = init_quasi_uniform_grid_elem_local(nx, npt)
+  h_grid, dims = cached_quasi_uniform_grid_elem_local(nx, npt)
   v_grid_low = init_vertical_grid(cam30["hybrid_a_i"],
                                   cam30["hybrid_b_i"],
                                   cam30["p0"],
@@ -96,7 +96,7 @@ def test_moist_cp_virtual_temperature():
   nx = 2
   model_low = models.cam_se
   model_high = models.cam_se_whole_atmosphere
-  h_grid, dims = init_quasi_uniform_grid_elem_local(nx, npt)
+  h_grid, dims = cached_quasi_uniform_grid_elem_local(nx, npt)
   v_grid_low = init_vertical_grid(cam30["hybrid_a_i"],
                                   cam30["hybrid_b_i"],
                                   cam30["p0"],
@@ -156,11 +156,11 @@ def test_moist_cp_virtual_temperature():
 def test_pressure_quantities():
   npt = 4
   nx = 3
-  for model in cam_se_models:
+  for model in thermal_test_models:
     for mountain in [True, False]:
       nlev = 50
       v_tmp = vertical_grid_finite_diff(nlev)
-      h_grid, dims = init_quasi_uniform_grid_elem_local(nx, npt)
+      h_grid, dims = cached_quasi_uniform_grid_elem_local(nx, npt)
       v_grid = init_vertical_grid(v_tmp["hybrid_a_i"],
                                   v_tmp["hybrid_b_i"],
                                   v_tmp["p0"],
@@ -203,10 +203,10 @@ def test_pressure_quantities():
 def test_hydrostatic_geopotential():
   npt = 4
   nx = 2
-  h_grid, dims = init_quasi_uniform_grid_elem_local(nx, npt)
+  h_grid, dims = cached_quasi_uniform_grid_elem_local(nx, npt)
   for moist in [True, False]:
     for mountain in [True, False]:
-      for model in cam_se_models:
+      for model in thermal_test_models:
           print(f"testing hydrostatic geopotential, moist: {moist}, mountain: {mountain}, model: {model}")
           nlev = 60
           v_tmp = vertical_grid_finite_diff(nlev)

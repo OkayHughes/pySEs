@@ -1,6 +1,6 @@
 from pyses._config import get_backend as _get_backend
 import numpy as np
-from pyses.mesh_generation.equiangular_metric import init_quasi_uniform_grid
+from .conftest import cached_quasi_uniform_grid
 from pyses.operations_2d.operators import inner_product
 from pyses.dynamical_cores.operators_3d import (horizontal_divergence_3d,
                                               horizontal_gradient_3d,
@@ -33,7 +33,7 @@ def test_vector_identites():
   npt = 4
   nx = 31
   nlev = 3
-  grid, dims = init_quasi_uniform_grid(nx, npt)
+  grid, dims = cached_quasi_uniform_grid(nx, npt)
   config = {"radius_earth": 1.0}
   fn = jnp.cos(grid["physical_coords"][:, :, :, 1]) * jnp.cos(grid["physical_coords"][:, :, :, 0])
   fn_3d = device_wrapper(threedify(fn, nlev) * jnp.arange(nlev).reshape((1, 1, 1, -1)))
@@ -58,7 +58,7 @@ def test_divergence():
   npt = 4
   nx = 31
   nlev = 3
-  grid, dims = init_quasi_uniform_grid(nx, npt)
+  grid, dims = cached_quasi_uniform_grid(nx, npt)
   config = {"radius_earth": 1.0}
   vec = np.zeros_like(grid["physical_coords"])
   lat = grid["physical_coords"][:, :, :, 0]
@@ -86,7 +86,7 @@ def test_analytic_soln():
   npt = 4
   nx = 31
   nlev = 3
-  grid, dims = init_quasi_uniform_grid(nx, npt)
+  grid, dims = cached_quasi_uniform_grid(nx, npt)
   config = {"radius_earth": 1.0}
 
   fn = jnp.cos(grid["physical_coords"][:, :, :, 1]) * jnp.cos(grid["physical_coords"][:, :, :, 0])
@@ -104,7 +104,7 @@ def test_vector_laplacian():
   npt = 4
   nx = 31
   nlev = 3
-  grid, dims = init_quasi_uniform_grid(nx, npt)
+  grid, dims = cached_quasi_uniform_grid(nx, npt)
   vec = jnp.stack((jnp.cos(grid["physical_coords"][:, :, :, 0]),
                    jnp.cos(grid["physical_coords"][:, :, :, 0])), axis=-1)
   config = {"radius_earth": 1.0}

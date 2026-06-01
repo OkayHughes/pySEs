@@ -12,7 +12,6 @@ Subpackages
    pyses.mesh_generation
    pyses.mpi
    pyses.operations_2d
-   pyses.shallow_water_models
    pyses.tracer_transport
 
 Submodules
@@ -25,7 +24,6 @@ Submodules
    pyses.initialize
    pyses.model_utils
    pyses.set_config
-   pyses.shallow_water
    pyses.simulate
 
 Module contents

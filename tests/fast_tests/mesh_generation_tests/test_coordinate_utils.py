@@ -1,4 +1,5 @@
 from pyses._config import get_backend as _get_backend
+import pytest
 import numpy as np
 from pyses.mesh_generation.bilinear_utils import (eval_bilinear_jacobian, eval_bilinear_mapping)
 from pyses.mesh_generation.spherical_coord_utils import (cart_to_unit_sphere_coords, unit_sphere_to_cart_coords,
@@ -52,46 +53,46 @@ def test_bilinear():
       assert (np.max(np.abs(dres_dbeta - jac_test[:, :, 1])) < 1e-7)
 
 
-def test_bilinear_cs():
-  for npt in test_npts:
-    spectrals = init_spectral(npt)
-    for nx in [7, 8]:
-      face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
-      NFACES = face_position.shape[0]
-      jac_test = np.zeros(shape=(NFACES, 2, 2))
-      diff_minus = np.zeros(shape=(NFACES, 2))
-      diff_plus = np.zeros(shape=(NFACES, 2))
-      for i in range(npt):
-        for j in range(npt):
-          alpha = spectrals["gll_points"][i]
-          beta = spectrals["gll_points"][j]
-          eps = 1e-4
-          diff_plus = eval_bilinear_mapping(face_position_2d[:, 0, :],
-                                            face_position_2d[:, 1, :],
-                                            face_position_2d[:, 2, :],
-                                            face_position_2d[:, 3, :], alpha + eps, beta)
-          diff_minus = eval_bilinear_mapping(face_position_2d[:, 0, :],
-                                             face_position_2d[:, 1, :],
-                                             face_position_2d[:, 2, :],
-                                             face_position_2d[:, 3, :], alpha - eps, beta)
-          dres_dalpha = (diff_plus - diff_minus) / (2 * eps)
-          diff_plus = eval_bilinear_mapping(face_position_2d[:, 0, :],
-                                            face_position_2d[:, 1, :],
-                                            face_position_2d[:, 2, :],
-                                            face_position_2d[:, 3, :], alpha, beta + eps)
-          diff_minus = eval_bilinear_mapping(face_position_2d[:, 0, :],
-                                             face_position_2d[:, 1, :],
-                                             face_position_2d[:, 2, :],
-                                             face_position_2d[:, 3, :], alpha, beta - eps)
-          dphys_dalpha, dphys_dbeta = eval_bilinear_jacobian(face_position_2d[:, 0, :],
-                                                             face_position_2d[:, 1, :],
-                                                             face_position_2d[:, 2, :],
-                                                             face_position_2d[:, 3, :], alpha, beta)
-          jac_test[:, :, 0] = dphys_dalpha
-          jac_test[:, :, 1] = dphys_dbeta
-          dres_dbeta = (diff_plus - diff_minus) / (2 * eps)
-          assert (np.max(np.abs(dres_dalpha - jac_test[:, :, 0])) < 1e-7)
-          assert (np.max(np.abs(dres_dbeta - jac_test[:, :, 1])) < 1e-7)
+@pytest.mark.parametrize("nx, npt",
+                         [(nx, npt) for nx in [7, 8] for npt in test_npts])
+def test_bilinear_cs(nx, npt):
+  spectrals = init_spectral(npt)
+  face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
+  NFACES = face_position.shape[0]
+  jac_test = np.zeros(shape=(NFACES, 2, 2))
+  diff_minus = np.zeros(shape=(NFACES, 2))
+  diff_plus = np.zeros(shape=(NFACES, 2))
+  for i in range(npt):
+    for j in range(npt):
+      alpha = spectrals["gll_points"][i]
+      beta = spectrals["gll_points"][j]
+      eps = 1e-4
+      diff_plus = eval_bilinear_mapping(face_position_2d[:, 0, :],
+                                        face_position_2d[:, 1, :],
+                                        face_position_2d[:, 2, :],
+                                        face_position_2d[:, 3, :], alpha + eps, beta)
+      diff_minus = eval_bilinear_mapping(face_position_2d[:, 0, :],
+                                         face_position_2d[:, 1, :],
+                                         face_position_2d[:, 2, :],
+                                         face_position_2d[:, 3, :], alpha - eps, beta)
+      dres_dalpha = (diff_plus - diff_minus) / (2 * eps)
+      diff_plus = eval_bilinear_mapping(face_position_2d[:, 0, :],
+                                        face_position_2d[:, 1, :],
+                                        face_position_2d[:, 2, :],
+                                        face_position_2d[:, 3, :], alpha, beta + eps)
+      diff_minus = eval_bilinear_mapping(face_position_2d[:, 0, :],
+                                         face_position_2d[:, 1, :],
+                                         face_position_2d[:, 2, :],
+                                         face_position_2d[:, 3, :], alpha, beta - eps)
+      dphys_dalpha, dphys_dbeta = eval_bilinear_jacobian(face_position_2d[:, 0, :],
+                                                         face_position_2d[:, 1, :],
+                                                         face_position_2d[:, 2, :],
+                                                         face_position_2d[:, 3, :], alpha, beta)
+      jac_test[:, :, 0] = dphys_dalpha
+      jac_test[:, :, 1] = dphys_dbeta
+      dres_dbeta = (diff_plus - diff_minus) / (2 * eps)
+      assert np.max(np.abs(dres_dalpha - jac_test[:, :, 0])) < 1e-7
+      assert np.max(np.abs(dres_dbeta - jac_test[:, :, 1])) < 1e-7
 
 
 def test_sphere_coords():
