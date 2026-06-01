@@ -16,10 +16,12 @@ PYSES_DEBUG : str, default "0"
     Set to "1" to enable debug mode.
 PYSES_SHARD_CPU_COUNT : str, default "1"
     Number of virtual CPU devices for JAX CPU sharding.
-PYSES_TORCH_COMPILE : str, default "1"
-    Torch backend only. Set to "0" to run eager instead of torch.compile.
-    On by default so end users get compiled kernels; the test suite (which
-    sweeps many shapes and would pay a Dynamo recompile on each) sets it to "0".
+PYSES_JIT_COMPILE : str, default "1"
+    JAX and torch backends. Set to "0" to disable JIT compilation: the JAX
+    backend skips ``jax.jit`` and the torch backend runs eager instead of
+    ``torch.compile``, so both execute op-by-op (the numpy backend is always
+    eager). On by default so end users get compiled kernels; the test suite
+    (which sweeps many shapes and would pay a recompile on each) sets it to "0".
 
 Usage
 -----
@@ -304,6 +306,8 @@ class JaxBackend:
         self._default_dtype = jnp.float64 if use_double else jnp.float32
         self._jax = jax
         self.np = jnp
+        # jax.jit on by default; PYSES_JIT_COMPILE=0 runs eager for debugging.
+        self._use_jit = _env_bool("PYSES_JIT_COMPILE", default=True)
         self.has_mpi = has_mpi
         self.mpi_comm = mpi_comm
 
@@ -319,11 +323,11 @@ class JaxBackend:
                 self.num_devices = shard_cpu_count
                 # append (don't clobber) so externally-set XLA_FLAGS — e.g. the
                 # scaling harness's thread-pinning flags — survive.
-                existing_xla_flags = os.environ.get("XLA_FLAGS", "")
-                os.environ["XLA_FLAGS"] = (
-                    f"{existing_xla_flags} "
-                    f"--xla_force_host_platform_device_count={shard_cpu_count}"
-                ).strip()
+                #existing_xla_flags = os.environ.get("XLA_FLAGS", "")
+                #os.environ["XLA_FLAGS"] = (
+                #    f"{existing_xla_flags} "
+                #    f"--xla_force_host_platform_device_count={shard_cpu_count}"
+                #).strip()
                 devices = jax.devices(backend="cpu")
             else:
                 maybe_devices = jax.devices(backend="gpu")
@@ -391,6 +395,10 @@ class JaxBackend:
         return arr
 
     def jit(self, func, *args, **kwargs):
+        # Eager unless PYSES_JIT_COMPILE is set (default on); returning the raw
+        # function runs it op-by-op against concrete arrays for debugging.
+        if not self._use_jit:
+            return func
         return self._jax.jit(func, *args, **kwargs)
 
     def shard_map(self, func, *args, **kwargs):
@@ -772,8 +780,8 @@ class TorchBackend:
         self.eps = 1e-11 if use_double else 1e-6
         # torch.compile is on by default (end users get compiled kernels); the
         # test suite — which sweeps many shapes and would pay Dynamo recompiles
-        # on every one — disables it with PYSES_TORCH_COMPILE=0.
-        self._use_compile = _env_bool("PYSES_TORCH_COMPILE", default=True)
+        # on every one — disables it with PYSES_JIT_COMPILE=0.
+        self._use_jit = _env_bool("PYSES_JIT_COMPILE", default=True)
 
         # --- precision (process-wide default so factory functions match) ---
         self._default_dtype = torch.float64 if use_double else torch.float32
@@ -868,9 +876,9 @@ class TorchBackend:
         return arr
 
     def jit(self, func, *_, **__):
-        # Eager unless PYSES_TORCH_COMPILE is set (default on). Eager mixes
+        # Eager unless PYSES_JIT_COMPILE is set (default on). Eager mixes
         # numpy/tensor freely via __array_ufunc__, so no coercion is needed.
-        if not self._use_compile:
+        if not self._use_jit:
             return func
         # torch.compile auto-specializes non-tensor args (the JAX `static_argnames`
         # role) via guards, so those kwargs are ignored. fullgraph is left False

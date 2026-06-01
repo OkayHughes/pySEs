@@ -53,10 +53,10 @@ CONFIGS = {
     # torch.compile is on by default for end users, but the suite sweeps many
     # shapes (a Dynamo recompile each), so disable it here unless --torch-compile.
     "torch":     ("PyTorch (single process)",
-                  {"PYSES_BACKEND": "torch", "PYSES_TORCH_COMPILE": "0"}, "serial"),
+                  {"PYSES_BACKEND": "torch", "PYSES_JIT_COMPILE": "0"}, "serial"),
     "torch-mpi": ("PyTorch + torch.distributed (mpirun -n NP)",
                   {"PYSES_BACKEND": "torch", "PYSES_USE_MPI": "1",
-                   "PYSES_TORCH_COMPILE": "0"}, "mpi"),
+                   "PYSES_JIT_COMPILE": "0"}, "mpi"),
     "jax":       ("JAX (single device)",
                   {"PYSES_BACKEND": "jax"}, "serial"),
     "jax-shard": ("JAX (multi-device sharding)",
@@ -201,7 +201,7 @@ def main():
     print(f"MPI: {mpi_flavor or 'not found'}")
     print(f"Tests: {args.tests}   Configs: {', '.join(selected)}")
 
-    override = {"PYSES_TORCH_COMPILE": "1"} if args.torch_compile else None
+    override = {"PYSES_JIT_COMPILE": "1"} if args.torch_compile else None
     results = []
     for name in selected:
         results.append(run_config(name, pyexe, args.tests, pytest_args,

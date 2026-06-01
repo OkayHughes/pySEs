@@ -54,7 +54,7 @@ THREAD_ENV = {
 CONFIGS = {
     "numpy": ({"PYSES_BACKEND": "numpy", "PYSES_USE_MPI": "1"}, "mpi"),
     "torch": ({"PYSES_BACKEND": "torch", "PYSES_USE_MPI": "1",
-               "PYSES_TORCH_COMPILE": "0"}, "mpi"),
+               "PYSES_JIT_COMPILE": "0"}, "mpi"),
 }
 ORDER = ["numpy", "torch"]
 

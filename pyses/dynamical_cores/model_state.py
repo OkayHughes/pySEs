@@ -1157,6 +1157,66 @@ def apply_mask(field, h_grid):
   return jnp.where(mask.reshape(shape) > 0.5, field, 0.0)
 
 
+def interpolate_to_pressure_level(field,
+                                  d_mass,
+                                  v_grid,
+                                  pressures):
+  """
+  Interpolate a model-level field to fixed pressure levels in ``log(p)``.
+
+  The vertical abscissa is the per-column hydrostatic pseudopressure of the
+  mass coordinate: the surface pressure is recovered from the layer-mass column
+  (``ps = p_top + sum_k d_mass``, see :func:`d_mass_to_surface_mass`) and the
+  mid-level pressures follow from the hybrid coordinate
+  (:func:`surface_mass_to_midlevel_mass`). Each column therefore interpolates
+  on its own pressure profile.
+
+  Interpolation is piecewise-linear in ``log(p)``. Target pressures outside the
+  column's mid-level range are held at the nearest mid-level value (constant
+  extrapolation, matching ``numpy.interp``).
+
+  Parameters
+  ----------
+  field : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]
+      Field on model levels, with the level axis last. Levels are ordered top
+      (index 0) to surface (index ``nlev-1``).
+  d_mass : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]
+      Layer thickness / pseudo-mass (Pa) per model level, same horizontal and
+      vertical layout as ``field``.
+  v_grid : dict[str, Array]
+      Vertical grid from :func:`mass_coordinate.init_vertical_grid`; must
+      contain ``"reference_surface_mass"``, ``"hybrid_a_i"``, ``"hybrid_a_m"``,
+      ``"hybrid_b_m"``.
+  pressures : Sequence[float] | Array
+      Target pressure levels (Pa).
+
+  Returns
+  -------
+  field_on_p : Array[tuple[elem_idx, gll_idx, gll_idx, n_pressures], Float]
+      ``field`` interpolated to ``pressures``, with the level axis replaced by
+      a target-pressure axis of length ``len(pressures)``.
+  """
+  ps = d_mass_to_surface_mass(d_mass, v_grid)            # (E, npt, npt)
+  p_mid = surface_mass_to_midlevel_mass(ps, v_grid)      # (E, npt, npt, nlev)
+  log_p_mid = jnp.log(p_mid)                             # increasing top->surface
+  log_p_target = jnp.log(jnp.asarray(pressures))         # (n_pressures,)
+
+  nlev = log_p_mid.shape[-1]
+  # Per-column upper-bracket index: count mid-levels above each target pressure.
+  upper = jnp.sum(log_p_mid[..., :, jnp.newaxis] < log_p_target, axis=-2)
+  upper = jnp.clip(upper, 1, nlev - 1)                   # (E, npt, npt, n_pressures)
+  lower = upper - 1
+
+  log_p_lower = jnp.take_along_axis(log_p_mid, lower, axis=-1)
+  log_p_upper = jnp.take_along_axis(log_p_mid, upper, axis=-1)
+  weight = (log_p_target - log_p_lower) / (log_p_upper - log_p_lower)
+  weight = jnp.clip(weight, 0.0, 1.0)                    # constant extrapolation at the ends
+
+  field_lower = jnp.take_along_axis(field, lower, axis=-1)
+  field_upper = jnp.take_along_axis(field, upper, axis=-1)
+  return field_lower + weight * (field_upper - field_lower)
+
+
 def check_dynamics_nan(dynamics,
                        h_grid,
                        model):
