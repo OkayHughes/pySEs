@@ -29,7 +29,7 @@ def horizontal_divergence_3d(vector,
       Horizontal divergence (s^-1) at each model level.
   """
   sph_op = partial(horizontal_divergence, grid=h_grid, a=physics_config["radius_earth"])
-  return jnp.stack([sph_op(vector[..., k, :]) for k in range(vector.shape[-2])], axis=-1)
+  return _be.vmap(sph_op, in_axes=-2, out_axes=-1)(vector)
 
 
 @jit
@@ -54,7 +54,7 @@ def horizontal_vorticity_3d(vector,
       Relative vorticity (s^-1) at each model level.
   """
   sph_op = partial(horizontal_vorticity, grid=h_grid, a=physics_config["radius_earth"])
-  return jnp.stack([sph_op(vector[..., k, :]) for k in range(vector.shape[-2])], axis=-1)
+  return _be.vmap(sph_op, in_axes=-2, out_axes=-1)(vector)
 
 
 @jit
@@ -79,7 +79,7 @@ def horizontal_weak_laplacian_3d(scalar,
       Weak-form Laplacian at each model level.
   """
   sph_op = partial(horizontal_weak_laplacian, grid=h_grid, a=physics_config["radius_earth"])
-  return jnp.stack([sph_op(scalar[..., k]) for k in range(scalar.shape[-1])], axis=-1)
+  return _be.vmap(sph_op, in_axes=-1, out_axes=-1)(scalar)
 
 
 @jit
@@ -104,7 +104,7 @@ def horizontal_weak_vector_laplacian_3d(vector,
       Weak-form vector Laplacian at each model level.
   """
   sph_op = partial(horizontal_weak_vector_laplacian, grid=h_grid, a=physics_config["radius_earth"])
-  return jnp.stack([sph_op(vector[..., k, :]) for k in range(vector.shape[-2])], axis=-2)
+  return _be.vmap(sph_op, in_axes=-2, out_axes=-2)(vector)
 
 
 @jit
@@ -129,4 +129,4 @@ def horizontal_gradient_3d(scalar,
       Physical horizontal gradient at each model level.
   """
   sph_op = partial(horizontal_gradient, grid=h_grid, a=physics_config["radius_earth"])
-  return jnp.stack([sph_op(scalar[..., k]) for k in range(scalar.shape[-1])], axis=-2)
+  return _be.vmap(sph_op, in_axes=-1, out_axes=-2)(scalar)

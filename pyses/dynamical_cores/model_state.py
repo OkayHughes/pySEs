@@ -897,7 +897,7 @@ def project_scalar_3d(variable,
                                           two_d=False)[0]
   else:
     op_2d = partial(project_scalar, grid=h_grid, dims=dims)
-    variable_cont = jnp.stack([op_2d(variable[..., k]) for k in range(variable.shape[-1])], axis=-1)
+    variable_cont = _be.vmap(op_2d, in_axes=-1, out_axes=-1)(variable)
   return variable_cont
 
 

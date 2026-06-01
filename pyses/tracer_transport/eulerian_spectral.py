@@ -39,7 +39,7 @@ def minmax_scalar_3d(scalar,
       Field with each node replaced by the DSS-global min or max.
   """
   sph_op = partial(minmax_scalar, grid=h_grid, max=max, dims=dims)
-  return jnp.stack([sph_op(scalar[..., k]) for k in range(scalar.shape[-1])], axis=-1)
+  return _be.vmap(sph_op, in_axes=-1, out_axes=-1)(scalar)
 
 
 @partial(jit, static_argnames=["dims"])
@@ -66,7 +66,7 @@ def project_tracer_3d(scalar,
       Globally continuous (C0) tracer field.
   """
   sph_op = partial(project_scalar, grid=h_grid, dims=dims)
-  return jnp.stack([sph_op(scalar[..., k]) for k in range(scalar.shape[-1])], axis=-1)
+  return _be.vmap(sph_op, in_axes=-1, out_axes=-1)(scalar)
 
 
 @partial(jit, static_argnames=["dims"])

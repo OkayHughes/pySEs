@@ -110,8 +110,12 @@ def advance_coupling_step(state_in,
                                            [1.0, timestep_config["tracer_advection"]["dt"]],
                                            model)
     if physics_dynamics_coupling == coupling_types.dribble_all and physics_forcing is not None:
+      # Dribble the tracer forcing per tracer sub-step using the sub-step dt
+      # (as the dribble-dynamics branch above does), so the increments sum to
+      # one physics_dt over the tracer subcycle rather than
+      # tracer_subcycle * physics_dt.
       tracer_state = sum_tracers_series([tracer_state, physics_forcing["tracers"]],
-                                        [1.0, timestep_config["physics_dt"]],
+                                        [1.0, timestep_config["tracer_advection"]["dt"]],
                                         model)
 
     for n_split in range(timestep_config["dynamics_subcycle"]):

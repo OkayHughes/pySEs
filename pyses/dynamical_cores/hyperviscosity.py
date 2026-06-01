@@ -44,7 +44,7 @@ def scalar_harmonic_3d(scalar,
   def lap_wk_onearg(scalar):
       return horizontal_weak_laplacian(scalar, h_grid, a=physics_config["radius_earth"], apply_tensor=apply_tensor)
 
-  del2 = jnp.stack([lap_wk_onearg(scalar[..., k]) for k in range(scalar.shape[-1])], axis=-1)
+  del2 = _be.vmap(lap_wk_onearg, in_axes=-1, out_axes=-1)(scalar)
   return del2
 
 
@@ -77,7 +77,7 @@ def vector_harmonic_3d(vector,
       return horizontal_weak_vector_laplacian(vector, h_grid, a=physics_config["radius_earth"],
                                               nu_div_fact=nu_div_factor)
 
-  del2 = jnp.stack([vec_lap_wk_onearg(vector[..., k, :]) for k in range(vector.shape[-2])], axis=-2)
+  del2 = _be.vmap(vec_lap_wk_onearg, in_axes=-2, out_axes=-2)(vector)
   return del2
 
 

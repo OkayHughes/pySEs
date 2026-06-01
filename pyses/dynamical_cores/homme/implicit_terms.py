@@ -205,7 +205,7 @@ def take_limited_step(dt_implicit,
                                             denominator, 1.0),
                       1.0)
   alpha_k = jnp.where(alpha_k >= 0.0, alpha_k, 1.0)
-  safe_step_length = jnp.minimum(jnp.min(alpha_k, axis=-1), 1.0) / 2.0
+  safe_step_length = jnp.minimum(jnp.min(alpha_k, axis=-1), jnp.ones(1)) / 2.0
 
   # Recompute dphi with the limited step length.
   step_b = safe_step_length[:, :, :, jnp.newaxis]

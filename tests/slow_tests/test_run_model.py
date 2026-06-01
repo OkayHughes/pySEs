@@ -19,7 +19,7 @@ get_global_array = _be.get_global_array
 
 
 def test_theta_steady_state():
-  for model in [models.cam_se, models.homme_hydrostatic]:
+  for model in [models.homme_hydrostatic, models.cam_se]:
     npt = 4
     nx = 15
     h_grid, dims = init_quasi_uniform_grid(nx, npt, calc_smooth_tensor=True)

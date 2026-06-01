@@ -139,11 +139,14 @@ advance_coupling_step` exactly. Arguments otherwise mirror that function.
       dynamics_state = sum_dynamics_series([dynamics_state, physics_forcing["dynamics"]],
                                            [1.0, timestep_config["tracer_advection"]["dt"]],
                                            model)
-    # (2) physics forcing of moisture variables (dribble_all).
+    # (2) physics forcing of moisture variables (dribble_all). Dribbled per
+    # tracer sub-step using the sub-step dt (matching the dribble-dynamics line
+    # above), so the increments sum to ``physics_dt`` over the tracer subcycle
+    # rather than ``tracer_subcycle * physics_dt``.
     if (physics_dynamics_coupling == coupling_types.dribble_all
         and physics_forcing is not None and enable_physics_moisture_forcing):
       tracer_state = sum_tracers_series([tracer_state, physics_forcing["tracers"]],
-                                        [1.0, timestep_config["physics_dt"]],
+                                        [1.0, timestep_config["tracer_advection"]["dt"]],
                                         model)
 
     tracer_consist_dyn_total = None

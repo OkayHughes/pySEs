@@ -126,6 +126,12 @@ class Backend(Protocol):
     def jit(self, func: Callable) -> Callable:
         ...
 
+    def vmap(self, func: Callable, in_axes=0, out_axes=0) -> Callable:
+        ...
+
+    def scan(self, f: Callable, init, xs, reverse: bool = False, axis: int = 0):
+        ...
+
     def shard_map(self, func: Callable, *args, **kwargs) -> Callable:
         ...
 
@@ -208,6 +214,42 @@ class NumpyBackend:
 
     def jit(self, func, *_, **__):
         return func
+
+    def vmap(self, func, in_axes=0, out_axes=0):
+        # No batching primitive; map in Python and stack, matching jax.vmap's
+        # single-mapped-array contract used across the dynamical core.
+        def wrapped(x):
+            idx = [slice(None)] * x.ndim
+            outs = []
+            for k in range(x.shape[in_axes]):
+                idx[in_axes] = k
+                outs.append(func(x[tuple(idx)]))
+            return np.stack(outs, axis=out_axes)
+        return wrapped
+
+    def scan(self, f, init, xs, reverse=False, axis=0):
+        # Sequential fold matching jax.lax.scan (carry threaded, ``y`` outputs
+        # stacked along ``axis``; ``axis`` lets callers scan a non-leading axis
+        # without transposing). xs is a single array or a tuple of arrays.
+        is_tuple = isinstance(xs, (tuple, list))
+        leaves = list(xs) if is_tuple else [xs]
+        n = leaves[0].shape[axis]
+        order = range(n - 1, -1, -1) if reverse else range(n)
+        carry = init
+        ys = []
+        for i in order:
+            sl = [slice(None)] * leaves[0].ndim
+            sl[axis] = i
+            x = tuple(a[tuple(sl)] for a in leaves) if is_tuple else leaves[0][tuple(sl)]
+            carry, y = f(carry, x)
+            ys.append(y)
+        if reverse:
+            ys = ys[::-1]
+        if isinstance(ys[0], (tuple, list)):
+            stacked = tuple(np.stack([y[j] for y in ys], axis=axis) for j in range(len(ys[0])))
+        else:
+            stacked = np.stack(ys, axis=axis)
+        return carry, stacked
 
     def shard_map(self, func, *_, **__):
         return func
@@ -318,21 +360,23 @@ class JaxBackend:
         # --- sharding / device setup ---
         # TODO: exhaustively analyse nonsensical configuration combinations.
         if not do_mpi_communication:
-            self.do_sharding = True
             if use_cpu:
                 self.num_devices = shard_cpu_count
                 # append (don't clobber) so externally-set XLA_FLAGS — e.g. the
                 # scaling harness's thread-pinning flags — survive.
-                #existing_xla_flags = os.environ.get("XLA_FLAGS", "")
-                #os.environ["XLA_FLAGS"] = (
-                #    f"{existing_xla_flags} "
-                #    f"--xla_force_host_platform_device_count={shard_cpu_count}"
-                #).strip()
+                existing_xla_flags = os.environ.get("XLA_FLAGS", "")
+                os.environ["XLA_FLAGS"] = (
+                    f"{existing_xla_flags} "
+                    f"--xla_force_host_platform_device_count={shard_cpu_count}"
+                ).strip()
                 devices = jax.devices(backend="cpu")
             else:
                 maybe_devices = jax.devices(backend="gpu")
                 devices = maybe_devices if len(maybe_devices) > 0 else jax.devices(backend="cpu")
                 self.num_devices = len(devices)
+            # Only shard (and pay the explicit-mesh tax) when there is more than
+            # one device to shard across.
+            self.do_sharding = self.num_devices > 1
         else:
             self.do_sharding = False
             self.num_devices = 1
@@ -345,26 +389,38 @@ class JaxBackend:
                   f"do_sharding: {self.do_sharding}")
 
         # --- mesh / shardings ---
+        # An ``Explicit`` mesh propagates a sharded type onto every array's
+        # element axis, which makes ordinary gather/scatter (``arr[idx]``,
+        # ``arr.at[idx].add(...)``) illegal without an ``out_sharding=`` and
+        # forces all DSS assembly through the ``shard_map`` path. That is only
+        # worthwhile with real multiple devices, so on a single device we skip
+        # the mesh entirely and run with JAX's default (unsharded) array model —
+        # the same simple ``index_add`` assembly branch numpy and torch use.
         elem_axis_name = "f"
-        device_mesh = jax.make_mesh(
-            (self.num_devices,), (elem_axis_name,),
-            axis_types=(AxisType.Explicit,)
-        )
-        jax.set_mesh(device_mesh)
-        self._device_mesh = device_mesh
-        self._elem_axis_name = elem_axis_name
-        self.usual_scalar_sharding = NamedSharding(
-            device_mesh, PartitionSpec(elem_axis_name, None, None)
-        )
-        self.extraction_sharding = NamedSharding(
-            device_mesh, PartitionSpec(elem_axis_name, None)
-        )
-        self.projection_sharding = NamedSharding(
-            device_mesh, PartitionSpec(elem_axis_name, None, None, None)
-        )
-
         self._NamedSharding = NamedSharding
         self._PartitionSpec = PartitionSpec
+        self._elem_axis_name = elem_axis_name
+        if self.do_sharding:
+            device_mesh = jax.make_mesh(
+                (self.num_devices,), (elem_axis_name,),
+                axis_types=(AxisType.Explicit,)
+            )
+            jax.set_mesh(device_mesh)
+            self._device_mesh = device_mesh
+            self.usual_scalar_sharding = NamedSharding(
+                device_mesh, PartitionSpec(elem_axis_name, None, None)
+            )
+            self.extraction_sharding = NamedSharding(
+                device_mesh, PartitionSpec(elem_axis_name, None)
+            )
+            self.projection_sharding = NamedSharding(
+                device_mesh, PartitionSpec(elem_axis_name, None, None, None)
+            )
+        else:
+            self._device_mesh = None
+            self.usual_scalar_sharding = None
+            self.extraction_sharding = None
+            self.projection_sharding = None
         self.num_jax_devices = self.num_devices
 
     # --- sharding helpers ---
@@ -379,7 +435,9 @@ class JaxBackend:
     def array(self, x, dtype=None, elem_sharding_axis=None):
         jnp = self.np
         x = jnp.array(x, dtype=dtype if dtype is not None else self._default_dtype)
-        if elem_sharding_axis is not None:
+        # Without a sharding mesh (single device) ``elem_sharding_axis`` is a
+        # no-op: the array already lives entirely on the one device.
+        if elem_sharding_axis is not None and self.do_sharding:
             x = self._jax.device_put(x, self._good_sharding(x, elem_sharding_axis))
         return x
 
@@ -400,6 +458,23 @@ class JaxBackend:
         if not self._use_jit:
             return func
         return self._jax.jit(func, *args, **kwargs)
+
+    def vmap(self, func, in_axes=0, out_axes=0):
+        # The whole point: XLA compiles the mapped body once instead of the
+        # caller unrolling a Python loop over (e.g.) the vertical axis.
+        return self._jax.vmap(func, in_axes=in_axes, out_axes=out_axes)
+
+    def scan(self, f, init, xs, reverse=False, axis=0):
+        # lax.scan compiles the loop body once (no Python unroll). lax.scan
+        # only scans axis 0, so move the requested axis to the front of each
+        # xs leaf and move the stacked outputs back afterwards.
+        jax = self._jax
+        if axis != 0:
+            xs = jax.tree_util.tree_map(lambda a: self.np.moveaxis(a, axis, 0), xs)
+        carry, ys = jax.lax.scan(f, init, xs, reverse=reverse)
+        if axis != 0:
+            ys = jax.tree_util.tree_map(lambda a: self.np.moveaxis(a, 0, axis), ys)
+        return carry, ys
 
     def shard_map(self, func, *args, **kwargs):
         return self._jax.shard_map(func, *args, **kwargs)
@@ -903,6 +978,40 @@ class TorchBackend:
             return compiled(*tree_map(_to_tensor, args),
                             **tree_map(_to_tensor, kwargs))
         return _wrapper
+
+    def vmap(self, func, in_axes=0, out_axes=0):
+        # Map in Python and stack (matches jax.vmap's single-array contract);
+        # torch.compile, when enabled, traces the resulting loop body.
+        def wrapped(x):
+            idx = [slice(None)] * x.ndim
+            outs = []
+            for k in range(x.shape[in_axes]):
+                idx[in_axes] = k
+                outs.append(func(x[tuple(idx)]))
+            return self.np.stack(outs, axis=out_axes)
+        return wrapped
+
+    def scan(self, f, init, xs, reverse=False, axis=0):
+        # Sequential fold matching jax.lax.scan (see NumpyBackend.scan).
+        is_tuple = isinstance(xs, (tuple, list))
+        leaves = list(xs) if is_tuple else [xs]
+        n = leaves[0].shape[axis]
+        order = range(n - 1, -1, -1) if reverse else range(n)
+        carry = init
+        ys = []
+        for i in order:
+            sl = [slice(None)] * leaves[0].ndim
+            sl[axis] = i
+            x = tuple(a[tuple(sl)] for a in leaves) if is_tuple else leaves[0][tuple(sl)]
+            carry, y = f(carry, x)
+            ys.append(y)
+        if reverse:
+            ys = ys[::-1]
+        if isinstance(ys[0], (tuple, list)):
+            stacked = tuple(self.np.stack([y[j] for y in ys], axis=axis) for j in range(len(ys[0])))
+        else:
+            stacked = self.np.stack(ys, axis=axis)
+        return carry, stacked
 
     def shard_map(self, func, *_, **__):
         return func

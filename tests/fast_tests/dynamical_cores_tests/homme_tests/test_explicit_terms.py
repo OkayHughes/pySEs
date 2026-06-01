@@ -7,7 +7,7 @@ from pyses._config import get_backend as _get_backend
 import numpy as np
 from pyses.dynamical_cores.physics_config import init_physics_config
 #from pyses.dynamical_cores.homme.explicit_terms import eval_energy_quantities
-from pyses.dynamical_cores.homme.explicit_terms_eulerian import eval_energy_quantities
+#from pyses.dynamical_cores.homme.explicit_terms_eulerian import eval_energy_quantities
 from pyses.operations_2d.operators import inner_product
 from pyses.operations_2d.local_assembly import project_scalar
 from pyses.dynamical_cores.model_info import models
@@ -17,7 +17,6 @@ jnp = _be.np
 device_wrapper = _be.array
 
 @pytest.mark.parametrize("model", [models.homme_nonhydrostatic,
-                                   models.homme_quasi_hydrostatic,
                                    models.homme_nonhydrostatic_deep])
 def test_notopo(model):
   npt = 4

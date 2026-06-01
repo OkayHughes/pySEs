@@ -106,18 +106,26 @@ def test_instrumented_matches_reference_when_all_enabled():
 def test_disabling_substeps_changes_result():
   """Each toggle is wired: turning one off perturbs the output state."""
   case = _build_case()
-  reference = advance_coupling_step_instrumented(**case)
-  ref_wind = np.asarray(_be.unwrap(reference["dynamics"]["horizontal_wind"]))
-  ref_vapor = np.asarray(_be.unwrap(reference["tracers"]["moisture_species"]["water_vapor"]))
 
-  # A dynamics-side ablation must change the winds...
+  # Dynamics-side ablations must change the winds. We probe these with tracer
+  # transport disabled: for the default tensor-hyperviscosity config the tracer
+  # solver's mass-consistency correction is coupled to the hyperviscosity term
+  # (it reads ``d_mass_tracer``), so disabling hyperviscosity alone is not a
+  # standalone ablation. The winds are independent of tracer transport, so
+  # holding it off in both the reference and the probe still isolates each
+  # dynamics flag.
+  dyn_ref = advance_coupling_step_instrumented(**case, enable_tracer_transport=False)
+  dyn_ref_wind = np.asarray(_be.unwrap(dyn_ref["dynamics"]["horizontal_wind"]))
   for flag in ("enable_physics_dynamics_forcing", "enable_adiabatic_dynamics",
                "enable_sponge_layer", "enable_hyperviscosity", "enable_remap_dynamics"):
-    out = advance_coupling_step_instrumented(**case, **{flag: False})
+    out = advance_coupling_step_instrumented(
+        **case, enable_tracer_transport=False, **{flag: False})
     wind = np.asarray(_be.unwrap(out["dynamics"]["horizontal_wind"]))
-    assert not np.array_equal(wind, ref_wind), f"{flag}=False left the winds unchanged"
+    assert not np.array_equal(wind, dyn_ref_wind), f"{flag}=False left the winds unchanged"
 
   # ...and a moisture/tracer-side ablation must change the water vapour.
+  reference = advance_coupling_step_instrumented(**case)
+  ref_vapor = np.asarray(_be.unwrap(reference["tracers"]["moisture_species"]["water_vapor"]))
   for flag in ("enable_physics_moisture_forcing", "enable_tracer_transport",
                "enable_remap_tracers"):
     out = advance_coupling_step_instrumented(**case, **{flag: False})
