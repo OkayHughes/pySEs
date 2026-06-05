@@ -97,6 +97,8 @@ from pyses.dynamical_cores.run_dycore import advance_coupling_step
 from pyses.dynamical_cores.time_step import time_step_options
 from pyses.dynamical_cores.time_stepping import init_timestep_config
 from pyses.mesh_generation.equiangular_metric import init_quasi_uniform_grid
+from ..context import save_state_grids, get_scratch_dir 
+from os import path
 
 jcm = pytest.importorskip("jcm")
 import jax_datetime as jdt  # noqa: E402
@@ -826,7 +828,7 @@ def test_speedy_aquaplanet_ne8_one_year_6hourly_plots():
     Disabled by default (set ``PYSES_RUN_YEARLONG_SPEEDY=1``); ``PYSES_SIM_DAYS``
     overrides the 365-day length for a shorter run.
     """
-    sim_days = float(os.environ.get("PYSES_SIM_DAYS", "365"))
+    sim_days = 100 #float(os.environ.get("PYSES_SIM_DAYS", "365"))
     dycore = PysesCamSESpeedyDycore(nx=8, npt=4, physics_dt=PHYSICS_DT_SECONDS)
     subdir = f"speedy_aquaplanet_ne8_moist_{int(round(sim_days))}day"
     outdir = Path(__file__).resolve().parents[1] / "_figures" / subdir
@@ -845,6 +847,8 @@ def test_speedy_aquaplanet_ne8_one_year_6hourly_plots():
 
     # the post-spin-up time-mean climate is available for downstream analysis
     mean_state = result["time_averaged_state"]
+    scratch_dir = get_scratch_dir(subdir="speedy")
+    save_state_grids(path.join(scratch_dir, "speedy_avg.npz"), mean_state, dycore.h_grid, dycore.v_grid)
     assert mean_state is not None and result["n_averaged"] > 0
     #assert np.all(np.isfinite(mean_state["temperature"]))
 

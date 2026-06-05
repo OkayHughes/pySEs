@@ -14,6 +14,14 @@ def get_figdir(subdir=None):
   return figdir
 
 
+def get_scratch_dir(subdir=None):
+  scratchdir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_output")
+  if scratchdir is not None:
+    scratchdir = os.path.join(scratchdir, subdir)
+  os.makedirs(scratchdir, exist_ok=True)
+  return scratchdir
+
+
 def emit_plots():
   """True when the ``PYSES_TEST_EMIT_PLOTS`` env var is truthy.
 
@@ -109,3 +117,47 @@ def pretty_print_scalar(array, digits=5):
 def get_data_dir():
   figdir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_data")
   return figdir
+
+
+def save_state_grids(path, model_state, h_grid, v_grid):
+  """Serialize a ``(model_state, h_grid, v_grid)`` triple to a single ``.npz``.
+
+  Reuses the recursive (de)serializer from :mod:`tests.state_cache`: every
+  backend array leaf (numpy / jax / torch) is converted to plain numpy and
+  stored under its dotted path, while the structure of the nested dicts is
+  captured in a JSON manifest stashed inside the same archive.  ``path`` is
+  returned (with ``.npz`` appended by ``np.savez`` if it was missing).
+  """
+  import json
+  import numpy as np
+  from .state_cache import _flatten
+  arrays, manifest = _flatten(
+      {"model_state": model_state, "h_grid": h_grid, "v_grid": v_grid})
+  # The sharding heuristic on load compares each array's leading axis against
+  # the element count; the grid's physical coords carry it verbatim.
+  num_elem = int(np.asarray(h_grid["physical_coords"]).shape[0])
+  payload = dict(arrays)
+  payload["__manifest__"] = np.frombuffer(
+      json.dumps(manifest).encode("utf-8"), dtype=np.uint8)
+  payload["__num_elem__"] = np.asarray(num_elem)
+  np.savez(path, **payload)
+  return path
+
+
+def load_state_grids(path):
+  """Inverse of :func:`save_state_grids`; returns ``(model_state, h_grid, v_grid)``.
+
+  Each array leaf is re-wrapped through the *current* backend (restoring
+  element sharding where the leading axis matches the element count), so the
+  loaded triple is ready to feed back into the model regardless of which
+  backend wrote the file.
+  """
+  import json
+  import numpy as np
+  from .state_cache import _rebuild
+  with np.load(path, allow_pickle=False) as data:
+    arrays = {k: data[k] for k in data.files if not k.startswith("__")}
+    manifest = json.loads(data["__manifest__"].tobytes().decode("utf-8"))
+    num_elem = int(data["__num_elem__"])
+  rebuilt = _rebuild(manifest, arrays, num_elem)
+  return rebuilt["model_state"], rebuilt["h_grid"], rebuilt["v_grid"]

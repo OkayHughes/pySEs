@@ -389,7 +389,7 @@ def test_fuzzing_topography():
 # is a cross-core consistency check, not a convergence test.  If a real bug
 # breaks one core, these bounds will catch it long before they fire spuriously.
 CROSS_CORE_PS_RELATIVE_TOL = 1.0e-2     # surface pressure RMS / mean
-CROSS_CORE_WIND_TOL_MS = 10.0           # mid-level |u| RMS  (m/s)
+CROSS_CORE_WIND_TOL_MS = 0.05           # mid-level |u| RMS  (m/s)
 # CAM-SE's variable-resolution hyperviscosity is too weak for this random
 # atmosphere: the column-top pressure goes negative after a few remaps and the
 # PPM monotonicity search fails.  Quasi-uniform hypervis (constant coefficient,
@@ -419,7 +419,7 @@ def test_homme_vs_cam_se_consistency():
   h_grid, dims = init_quasi_uniform_grid_elem_local(NE, NPT, calc_smooth_tensor=True)
   accepted_attempt = None
   end_states = {}
-  for model in (models.homme_hydrostatic, models.cam_se):
+  for model in (models.homme_nonhydrostatic, models.cam_se):
     v_grid = init_vertical_grid(cam30["hybrid_a_i"],
                                 cam30["hybrid_b_i"],
                                 cam30["p0"], model)
@@ -447,7 +447,7 @@ def test_homme_vs_cam_se_consistency():
         break
     end_states[model] = state
 
-  h_dyn = end_states[models.homme_hydrostatic]["dynamics"]
+  h_dyn = end_states[models.homme_nonhydrostatic]["dynamics"]
   c_dyn = end_states[models.cam_se]["dynamics"]
   h_d_mass = np.asarray(unwrap(h_dyn["d_mass"]))
   c_d_mass = np.asarray(unwrap(c_dyn["d_mass"]))
