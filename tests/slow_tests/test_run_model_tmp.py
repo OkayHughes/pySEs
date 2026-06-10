@@ -1,5 +1,5 @@
 from ..test_data.mass_coordinate_grids import cam30
-from ..context import get_figdir, plot_grid
+from ..context import get_figdir, plot_grid, emit_plots
 from pyses._config import get_backend as _get_backend
 from pyses.analytic_initialization.hydrostatic_solid_body import (init_solid_body_config, init_solid_body_state)
 from pyses.dynamical_cores.run_dycore import init_simulator
@@ -45,22 +45,16 @@ def test_theta_steady_state():
                                dims,
                                model)
 
+    savedir = get_figdir(subdir="acid_test") if emit_plots() else None
     t = 0.0
-    import matplotlib.pyplot as plt
-    from os.path import join
-    from os import makedirs
-    figdir = get_figdir()
-    subdir = "acid_test"
-    figdir = join(figdir, subdir)
-    makedirs(figdir, exist_ok=True)
-
     ct = 0
     for t, state in simulator(model_state):
       print(t)
       if t > total_time:
         break
 
-      if ct%6 == 0:
+      if savedir is not None and ct % 6 == 0:
+        import matplotlib.pyplot as plt
         end_state = state["dynamics"]
         ps = v_grid["hybrid_a_i"][0] * v_grid["reference_surface_mass"] + jnp.sum(end_state["d_mass"], axis=-1)
         ps_begin = v_grid["hybrid_a_i"][0] * v_grid["reference_surface_mass"] + jnp.sum(model_state["dynamics"]["d_mass"], axis=-1)
@@ -72,7 +66,8 @@ def test_theta_steady_state():
                         get_global_array(ps, dims).flatten(), levels=levels)
         plt.colorbar()
         #plot_grid(h_grid, plt.gca())
-        plt.savefig(f"{figdir}/ps_{model}_tstep={ct}.pdf")
+        plt.savefig(f"{savedir}/ps_{model}_tstep={ct}.pdf")
+        plt.close()
         plt.figure()
         plt.tricontourf(get_global_array(h_grid["physical_coords"][:, :, :, 1], dims).flatten(),
                         get_global_array(h_grid["physical_coords"][:, :, :, 0], dims).flatten(),
@@ -94,7 +89,8 @@ def test_theta_steady_state():
                         get_global_array(jnp.mean(end_state["horizontal_wind"][:, :, :, :, 0], axis=-1), dims).flatten(), levels=levels)
         plt.colorbar()
         #plot_grid(h_grid, plt.gca())
-        plt.savefig(f"{figdir}/u_end_{model}_tstep={str(ct).zfill(4)}.pdf")
+        plt.savefig(f"{savedir}/u_end_{model}_tstep={str(ct).zfill(4)}.pdf")
+        plt.close()
         # plt.figure()
         # plt.tricontourf(get_global_array(h_grid["physical_coords"][:, :, :, 1], dims).flatten(),
         #                 get_global_array(h_grid["physical_coords"][:, :, :, 0], dims).flatten(),

@@ -64,7 +64,7 @@ unwrap = _be.unwrap
 # --- resolution / model choices -------------------------------------------
 NE = 15                       # ne15 cubed-sphere
 NPT = 4                       # GLL points per element edge
-MODEL = models.homme_nonhydrostatic
+MODEL = models.homme_hydrostatic
 
 # --- atmosphere parameters ------------------------------------------------
 T_E = 300.0                   # equatorial surface temperature (K)

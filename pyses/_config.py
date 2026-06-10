@@ -8,7 +8,7 @@ PYSES_BACKEND : str, default "numpy"
 PYSES_USE_MPI : str, default "0"
     Set to "1" to enable MPI communication. Not supported with the JAX backend
     (which uses device sharding); supported by numpy and torch.
-PYSES_USE_CPU : str, default "1"
+PYSES_USE_CPU : str, default "0"
     Set to "0" to allow GPU use (JAX and torch backends).
 PYSES_USE_DOUBLE : str, default "1"
     Set to "0" to use single precision.
@@ -19,9 +19,7 @@ PYSES_SHARD_CPU_COUNT : str, default "1"
 PYSES_JIT_COMPILE : str, default "1"
     JAX and torch backends. Set to "0" to disable JIT compilation: the JAX
     backend skips ``jax.jit`` and the torch backend runs eager instead of
-    ``torch.compile``, so both execute op-by-op (the numpy backend is always
-    eager). On by default so end users get compiled kernels; the test suite
-    (which sweeps many shapes and would pay a recompile on each) sets it to "0".
+    ``torch.compile``, so both execute eagerly. 
 
 Usage
 -----
@@ -371,7 +369,10 @@ class JaxBackend:
                 ).strip()
                 devices = jax.devices(backend="cpu")
             else:
-                maybe_devices = jax.devices(backend="gpu")
+                try:
+                    maybe_devices = jax.devices(backend="gpu")
+                except:
+                    maybe_devices = []
                 devices = maybe_devices if len(maybe_devices) > 0 else jax.devices(backend="cpu")
                 self.num_devices = len(devices)
             # Only shard (and pay the explicit-mesh tax) when there is more than
@@ -808,6 +809,19 @@ class _TorchNamespace:
         return self._torch.where(self._coerce_num(condition),
                                  self._coerce_num(x), self._coerce_num(y))
 
+    def maximum(self, x, y):
+        # numpy/jax accept python scalars on either side; torch needs both
+        # operands to be tensors (e.g. jnp.maximum(arr, 1e-30)).
+        return self._torch.maximum(self._coerce_num(x), self._coerce_num(y))
+
+    def minimum(self, x, y):
+        return self._torch.minimum(self._coerce_num(x), self._coerce_num(y))
+
+    def broadcast_to(self, x, shape):
+        # The value being broadcast may be a python scalar (e.g. phi_to_g
+        # returns g for shallow-atmosphere models); torch needs a tensor.
+        return self._torch.broadcast_to(self._coerce_num(x), shape)
+
     def array(self, x, dtype=None):
         return self._torch.as_tensor(x, dtype=dtype, device=self._device)
 
@@ -935,6 +949,10 @@ class TorchBackend:
 
     def array(self, x, dtype=None, elem_sharding_axis=None):
         dt = dtype if dtype is not None else self._default_dtype
+        if not isinstance(dt, self._torch.dtype):
+            # Accept numpy dtypes/strings (e.g. a restored array's arr.dtype);
+            # torch.as_tensor only takes torch.dtype.
+            dt = self._torch.as_tensor(np.empty(0, dtype=dt)).dtype
         return self._torch.as_tensor(x, dtype=dt, device=self._device)
 
     def unwrap(self, x):
@@ -950,45 +968,98 @@ class TorchBackend:
             return arr[tuple(slices)]
         return arr
 
-    def jit(self, func, *_, **__):
+    def jit(self, func, *_, static_argnames=(), **__):
         # Eager unless PYSES_JIT_COMPILE is set (default on). Eager mixes
         # numpy/tensor freely via __array_ufunc__, so no coercion is needed.
         if not self._use_jit:
             return func
-        # torch.compile auto-specializes non-tensor args (the JAX `static_argnames`
-        # role) via guards, so those kwargs are ignored. fullgraph is left False
-        # so any residual data-dependent region falls back to eager rather than
-        # erroring. numpy array inputs are coerced to device tensors at the
-        # boundary (Dynamo cannot trace numpy in the graph; JAX's jit converts
-        # them implicitly, so this matches that behaviour). frozendict statics
-        # pass through as pytree leaves and Dynamo guards on them.
+        # This mirrors three jax.jit behaviours that plain torch.compile does
+        # not provide and whose absence drove the Dynamo recompile/guard
+        # problems:
+        #   1. static_argnames select a separately-compiled graph per value.
+        #      Dynamo's automatic guards do not reliably re-specialize on
+        #      enum/struct values, so a graph traced for one ``model`` was
+        #      reused for another -- silently dropping model-dependent dict
+        #      keys. We key an explicit per-(static value) cache instead.
+        #   2. Nested jit is transparent: a jitted call already inside an
+        #      enclosing compile runs inline (traced into the outer graph)
+        #      rather than forming its own guarded, separately-recompiling
+        #      boundary.
+        #   3. Each compiled entry gets a distinct code object. Dynamo caches by
+        #      code object, so without this every jitted function (and every
+        #      static-arg specialization) collapses into one polymorphic frame
+        #      that recompiles per call signature until it hits recompile_limit.
+        # numpy array inputs are coerced to device tensors at the boundary
+        # (Dynamo cannot trace numpy; jax.jit converts them implicitly).
+        import inspect
         from torch.utils._pytree import tree_map
         torch_mod = self._torch
         device = self._device
+        if isinstance(static_argnames, str):
+            static_argnames = (static_argnames,)
+        static_argnames = tuple(static_argnames)
+        try:
+            params = inspect.signature(func).parameters
+        except (TypeError, ValueError):
+            params = {}
+        param_names = list(params)
+        fname = getattr(func, "__name__", "fn")
 
         def _to_tensor(x):
             if isinstance(x, np.ndarray):
                 return torch_mod.as_tensor(x, device=device)
             return x
 
-        compiled = torch_mod.compile(func)
+        def _static_key(args, kwargs):
+            key = []
+            for name in static_argnames:
+                if name in kwargs:
+                    key.append(kwargs[name])
+                elif name in param_names and param_names.index(name) < len(args):
+                    key.append(args[param_names.index(name)])
+                elif name in params and params[name].default is not inspect.Parameter.empty:
+                    key.append(params[name].default)
+                else:
+                    key.append(None)
+            return tuple(key)
+
+        cache = {}
 
         @functools.wraps(func)
         def _wrapper(*args, **kwargs):
+            if torch_mod.compiler.is_compiling():
+                return func(*args, **kwargs)
+            try:
+                key = _static_key(args, kwargs)
+                compiled = cache.get(key)
+            except TypeError:           # unhashable static value -> skip caching
+                key, compiled = None, None
+            if compiled is None:
+                # Fresh closure per (static combo); the code-object replace gives
+                # it a unique identity so Dynamo compiles it independently.
+                def _entry(*a, **k):
+                    return func(*a, **k)
+                _entry.__code__ = _entry.__code__.replace(co_name=f"_jit_{fname}")
+                compiled = torch_mod.compile(_entry)
+                if key is not None:
+                    cache[key] = compiled
             return compiled(*tree_map(_to_tensor, args),
                             **tree_map(_to_tensor, kwargs))
         return _wrapper
 
     def vmap(self, func, in_axes=0, out_axes=0):
-        # Map in Python and stack (matches jax.vmap's single-array contract);
-        # torch.compile, when enabled, traces the resulting loop body.
+        # Single-array contract matching jax.vmap, implemented with the real
+        # batching transform torch.func.vmap: the mapped axis never enters the
+        # traced graph, so torch.compile time is independent of its length. A
+        # Python loop + stack would instead unroll that axis into the graph and
+        # make compile time scale with it (e.g. the level count), which was the
+        # dominant cost before this was switched over.
+        torch = self._torch
+
         def wrapped(x):
-            idx = [slice(None)] * x.ndim
-            outs = []
-            for k in range(x.shape[in_axes]):
-                idx[in_axes] = k
-                outs.append(func(x[tuple(idx)]))
-            return self.np.stack(outs, axis=out_axes)
+            x = self.np._coerce(x)
+            in_dims = in_axes % x.ndim
+            return torch.func.vmap(func, in_dims=in_dims, out_dims=out_axes)(x)
         return wrapped
 
     def scan(self, f, init, xs, reverse=False, axis=0):
@@ -1140,7 +1211,7 @@ def _build_backend() -> Backend:
     use_double = _env_bool("PYSES_USE_DOUBLE", default=True)
     debug = _env_bool("PYSES_DEBUG", default=False)
     use_mpi = _env_bool("PYSES_USE_MPI", default=False)
-    use_cpu = _env_bool("PYSES_USE_CPU", default=True)
+    use_cpu = _env_bool("PYSES_USE_CPU", default=False)
     shard_count = _env_int("PYSES_SHARD_CPU_COUNT", default=1)
 
     # MPI state

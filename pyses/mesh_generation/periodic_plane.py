@@ -253,4 +253,20 @@ def init_uniform_grid(nx,
                                     npt,
                                     calc_smooth_tensor=calc_smooth_tensor,
                                     wrapped=wrapped)
+  # The horizontal operators were derived for the cubed sphere, where physical
+  # (lat, lon) vectors are stored in the opposite order to the reference
+  # (alpha, beta) axes; the operators reconcile this with a component ``flip``
+  # (jnp.flip(..., -1)).  On an axis-aligned Cartesian grid the physical and
+  # reference axes already coincide, so that flip would rotate the contravariant
+  # components onto the wrong differentiation axis (collapsing the divergence to
+  # zero).  Rather than branch in the shared operators (which sends the planar
+  # grid down a different, much slower-to-compile XLA path), we *pre-swap* the
+  # physical-axis index of the metric tensors the flipped operators consume:
+  # ``physical_to_contra`` on its last (physical) axis and ``contra_to_physical``
+  # on its physical axis.  The subsequent ``flip`` then undoes the swap, so the
+  # unchanged operators produce correct planar gradients/divergences while
+  # staying on the same code path (and compile cost) as the sphere.  A unit
+  # length scale is also required: set ``physics_config["radius_earth"] = 1.0``.
+  grid["physical_to_contra"] = _be.np.flip(grid["physical_to_contra"], axis=-1)
+  grid["contra_to_physical"] = _be.np.flip(grid["contra_to_physical"], axis=-2)
   return grid, dims

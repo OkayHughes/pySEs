@@ -1,4 +1,6 @@
 from enum import Enum
+from .._config import get_backend as _get_backend
+be = _get_backend()
 
 models = Enum('dynamical_core',
               [("cam_se", 1),
@@ -13,13 +15,13 @@ models = Enum('dynamical_core',
                ("homme_nonhydrostatic_f_plane", 8),
                ("shallow_water", 9),
                ("shallow_water_f_plane", 10)])
-
-import jax
-jax.tree_util.register_pytree_node(
-    models,
-    lambda c: ((), c),      # no array children; member is aux_data
-    lambda c, _: c,         # reconstruct from aux_data
-)
+if be.wrapper_type == "jax":
+    import jax
+    jax.tree_util.register_pytree_node(
+        models,
+        lambda c: ((), c),      # no array children; member is aux_data
+        lambda c, _: c,         # reconstruct from aux_data
+    )
 
 tracer_schemes = Enum('tracer_schemes',
                       [('eulerian_spectral', 1)])

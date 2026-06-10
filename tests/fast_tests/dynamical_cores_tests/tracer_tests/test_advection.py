@@ -1,6 +1,6 @@
 from pyses._config import get_backend as _get_backend
 from ....test_data.mass_coordinate_grids import cam30
-from ....context import get_figdir
+from ....context import get_figdir, emit_plots
 from pyses.analytic_initialization.moist_baroclinic_wave import (init_baroclinic_wave_config,
                                                                perturbation_opts,
                                                                init_baroclinic_wave_state)
@@ -54,18 +54,21 @@ def test_tracer_consistency():
                                dims,
                                model)
 
+    savedir = get_figdir(subdir="tracer_consistency") if emit_plots() else None
     t = 0.0
-    import matplotlib.pyplot as plt
     for t, state in simulator(model_state):
       print(t)
       print(jnp.max(state["tracers"]["tracers"]["constant"]))
       print(jnp.min(state["tracers"]["tracers"]["constant"]))
-      plt.figure()
-      plt.tricontourf(h_grid["physical_coords"][:, :, :, 1].flatten(),
-                      h_grid["physical_coords"][:, :, :, 0].flatten(),
-                      jnp.sum(state["tracers"]["tracers"]["coscos"] *
-                              state["dynamics"]["d_mass"], axis=-1).flatten())
-      plt.colorbar()
-      plt.savefig(f"{get_figdir()}/cos_cos_{t}_sum.pdf")
+      if savedir is not None:
+        import matplotlib.pyplot as plt
+        plt.figure()
+        plt.tricontourf(h_grid["physical_coords"][:, :, :, 1].flatten(),
+                        h_grid["physical_coords"][:, :, :, 0].flatten(),
+                        jnp.sum(state["tracers"]["tracers"]["coscos"] *
+                                state["dynamics"]["d_mass"], axis=-1).flatten())
+        plt.colorbar()
+        plt.savefig(f"{savedir}/coscos_sum_{diffusion.name}_t{t:.0f}.pdf")
+        plt.close()
       if t > total_time:
         break

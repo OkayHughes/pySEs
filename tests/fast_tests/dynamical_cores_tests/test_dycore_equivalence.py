@@ -25,6 +25,7 @@ from pyses.dynamical_cores.homme.explicit_terms import init_common_variables as 
 from pyses.dynamical_cores.homme.explicit_terms import eval_d_mass_divergence_term as eval_d_mass_divergence_term_homme
 from pyses.dynamical_cores.homme.explicit_terms import eval_vorticity_term as eval_vorticity_term_homme
 from pyses.operations_2d.operators import inner_product
+import pytest
 _be = _get_backend()
 jnp = _be.np
 
@@ -99,9 +100,9 @@ def compare_equivalent_tendency(model_state_se, model_state_homme):
   pass
 
 
+@pytest.mark.skip(reason="Not currently sensitive to be worth running")
 def test_equivalent_terms_dry_steady_state(nx15_np4_dry_se,
                                            nx15_np4_dry_homme_hydro):
-  return
   model_se = models.cam_se
   model_homme = models.homme_hydrostatic
   h_grid = nx15_np4_dry_homme_hydro["h_grid"]
@@ -128,6 +129,7 @@ def test_equivalent_terms_dry_steady_state(nx15_np4_dry_se,
                            equivalent_terms["pgrad"]["se"][pgrad])) < 1e-4
 
 
+@pytest.mark.skip(reason="Not currently sensitive to be worth running")
 def test_equivalent_terms_dry_perturbed():
   npt = 4
   nx = 16

@@ -129,9 +129,7 @@ def advance_coupling_step(state_in,
       # explicit terms use the skew-symmetric / Exner-form formulation; the
       # T-based interface is restored after the advance, so hyperviscosity,
       # sponge, tracer transport, and the dynamics_next/dynamics_state swap
-      # below all continue to see ``model`` unchanged.  Skip the conversion
-      # when ``model`` is already a _stable variant (otherwise we'd try to read
-      # the T key that doesn't exist on those states).
+      # below all continue to see ``model`` unchanged.
       if model in cam_se_models and model not in cam_se_stable_models:
         dynamics_state, step_model = se_T_to_theta_d_d_mass(
             dynamics_state, v_grid, physics_config, model)
@@ -163,8 +161,7 @@ def advance_coupling_step(state_in,
         raise ValueError("Unknown dynamics timestep type")
       # Restore the external T-prognostic interface for the rest of the
       # iteration; also restore dynamics_state so the swap on the bottom of
-      # the loop preserves a T-form allocation for the next iteration.  Only
-      # convert back if we converted in (i.e., model was a non-stable variant).
+      # the loop preserves a T-form allocation for the next iteration.
       if model in cam_se_models and model not in cam_se_stable_models:
         dynamics_next, _ = se_theta_d_d_mass_to_T(
             dynamics_next, v_grid, physics_config, step_model)
@@ -231,14 +228,10 @@ def advance_coupling_step(state_in,
                                    v_grid,
                                    len(v_grid["hybrid_b_m"]),
                                    model)
-    # PPM remap (and any horizontal tracer transport) is conservative on
-    # tracer mass but not bit-exact on mixing ratio, so the sum of dry-air
-    # species drifts from 1 by tiny element-scale residuals each cycle.
-    # Those residuals corrupt R_dry / cp_dry and the splitform PGF chain,
-    # seeding a top-layer d_mass oscillation that compounds across cycles.
-    # Renormalise to enforce sum(dry_air_species) == 1 pointwise; for
-    # non-cam_se models this is a no-op.  Placed here at the coupling-step
-    # boundary so any future tracer-transport scheme inherits the fix.
+    # Vertical remap (and any horizontal tracer transport) may not conserve total sum
+    # of dry air species to be one, so we renormalize.
+    # Error is relegated to N2 species if necessary.
+    # This matches behavior in CAM-SE (to my understanding).
     tracer_state = renormalize_dry_air_species(tracer_state, model)
   return wrap_model_state(dynamics_state,
                           static_forcing,

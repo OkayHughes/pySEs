@@ -981,10 +981,6 @@ def remap_dynamics(dynamics_in,
   d_mass_ref = surface_mass_to_d_mass(pi_surf,
                                       v_grid)
 
-  # CAM-SE in T-prognostic form -> swap to the matching _stable variant so the
-  # remap operates on theta_d * d_mass.  This is a static-trace-time branch
-  # (model is a static JIT argname).  d_mass is unchanged by the conversion;
-  # only the thermo key swaps.
   if model in cam_se_models and model not in cam_se_stable_models:
     dynamics_in, model_remap = se_T_to_theta_d_d_mass(
         dynamics_in, v_grid, physics_config, model)
@@ -1017,7 +1013,7 @@ def remap_dynamics(dynamics_in,
   Qdp_out = zerroukat_remap(Qdp, dynamics_in["d_mass"], d_mass_ref, num_lev, filter=True)
   u_remap = jnp.stack((Qdp_out[:, :, :, :, 0] / d_mass_ref,
                        Qdp_out[:, :, :, :, 1] / d_mass_ref), axis=-1)
-  # thermo stays mass-weighted on the reference grid (theta * d_mass_ref) --
+  # thermo stays mass-weighted on the reference grid (theta * d_mass_ref)
   # the same convention the rest of the model expects under model_remap.
   thermo_remap = Qdp_out[:, :, :, :, 2]
 

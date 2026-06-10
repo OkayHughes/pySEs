@@ -526,12 +526,6 @@ def advance_implicit(dt_implicit,
                       dynamics_series=None):
   if model not in hydrostatic_models:
     if dynamics_series is not None:
-      # advance_buoyancy_explicit folds the per-stage ``alpha dt * S(u_nt)``
-      # contributions into a running ``(w_n0, phi_n0)`` accumulator that
-      # starts from the current state -- matching Fortran's
-      # ``w_n0 = w_i(np1); phi_n0 = phi_i(np1)`` initialisation before the
-      # ``alphadt_n0`` / ``alphadt_nm1`` blocks in
-      # ``compute_stage_value_dirk``.
       nh_vars_before_implicit = advance_buoyancy_explicit(
           alpha_dts,
           dynamics_series,
@@ -612,8 +606,7 @@ def advance_dynamics_ullrich_5stage(dynamics_in,
   # contributions are handled in ``advance_implicit`` via
   # ``advance_buoyancy_explicit``; the explicit RK3 stages must omit
   # them or the per-stage state would double-count gravity-buoyancy
-  # coupling.  ``timestep_config`` is static under JIT, so this is a
-  # trace-time decision.
+  # coupling.
   apply_buoyant = not horiz_exp_vert_imp
 
   dt = timestep_config["dynamics"]["dt"]
@@ -735,16 +728,6 @@ def advance_dynamics_ullrich_5stage(dynamics_in,
                                                       dry_air_species=dry_air_species,
                                                       apply_buoyant=apply_buoyant)
 
-  # Final stage of the Ullrich (2010) 5-stage RK3:
-  #
-  #   u^{n+1} = (1/4) u^n + (3/4) * [u^{(4)} + (dt/3) F(u^{(4)})]
-  #
-  # ``dynamics_last`` holds the bracketed expression; ``final_state`` is
-  # the convex combination of ``dynamics_in`` and ``dynamics_last`` --
-  # which collapses to ``u^n`` exactly when ``F == 0``, so a state at
-  # rest stays at rest.  The previous form was algebraically
-  # ``(-1/4) u^n + (1/2) u^{(4)} + (3 dt/4) F``, which shrinks any
-  # steady state by 4x every step.
   dynamics_last = sum_dynamics_series([dynamics_keep,
                                        dynamics_tend],
                                        [1.0,
@@ -763,10 +746,6 @@ def advance_dynamics_ullrich_5stage(dynamics_in,
                                      3.0 / 4.0],
                                      model)
   if horiz_exp_vert_imp:
-    # ``alpha_dts`` and ``dynamics_series`` are paired ``(alpha dt, u_nt)``
-    # contributions folded into the implicit RHS by
-    # ``advance_buoyancy_explicit``; the kwarg name must match the
-    # signature in ``implicit_terms``.
     final_state = advance_implicit(8.0 * dt / 18.0,
                                   final_state,
                                   static_forcing,

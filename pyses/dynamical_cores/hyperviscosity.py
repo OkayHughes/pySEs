@@ -209,7 +209,7 @@ def advance_sponge_layer(dynamics,
   """
   nu_top = diffusion_config["nu_top"]
   nu_ramp = nu_top * diffusion_config["nu_ramp"]
-  n_sponge = int(np.prod(nu_ramp.shape))  # `.size` is an int on numpy/jax but a method on torch
+  n_sponge = int(np.prod(nu_ramp.shape))
   if model not in hydrostatic_models:
     hyperdiff_phi_i = nu_ramp * scalar_harmonic_3d(dynamics["phi_i"][:, :, :, :n_sponge],
                                                    h_grid, physics_config)

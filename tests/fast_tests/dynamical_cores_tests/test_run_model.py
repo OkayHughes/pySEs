@@ -8,7 +8,6 @@ from .conftest import cached_quasi_uniform_grid_elem_local
 from pyses.dynamical_cores.mass_coordinate import init_vertical_grid
 from pyses.dynamical_cores.model_info import models
 from pyses.dynamical_cores.model_config import init_default_config, hypervis_opts
-from ...context import get_figdir
 _be = _get_backend()
 jnp = _be.np
 
@@ -16,7 +15,7 @@ jnp = _be.np
 def test_theta_steady_state():
   for model in [models.homme_hydrostatic, models.cam_se]:
     npt = 4
-    nx = 15
+    nx = 7
     h_grid, dims = cached_quasi_uniform_grid_elem_local(nx, npt, calc_smooth_tensor=True)
     v_grid = init_vertical_grid(cam30["hybrid_a_i"],
                                 cam30["hybrid_b_i"],
@@ -46,19 +45,6 @@ def test_theta_steady_state():
 
       for t, state in simulator(model_state):
         print(t)
-        import matplotlib.pyplot as plt
-        plt.figure()
-        plt.tricontourf(h_grid["physical_coords"][:, :, :, 1].flatten(),
-                        h_grid["physical_coords"][:, :, :, 0].flatten(),
-                        jnp.max(state["dynamics"]["horizontal_wind"][:, :, :, :, 0], axis=-1).flatten())
-        plt.colorbar()
-        plt.savefig(f"{get_figdir()}/u_{t}.pdf")
-        plt.figure()
-        plt.tricontourf(h_grid["physical_coords"][:, :, :, 1].flatten(),
-                        h_grid["physical_coords"][:, :, :, 0].flatten(),
-                        jnp.max(state["dynamics"]["horizontal_wind"][:, :, :, :, 1], axis=-1).flatten())
-        plt.colorbar()
-        plt.savefig(f"{get_figdir()}/v_{t}.pdf")
         if t > total_time:
           break
 

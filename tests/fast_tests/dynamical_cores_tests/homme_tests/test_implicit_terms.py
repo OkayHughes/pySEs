@@ -93,6 +93,7 @@ def test_calc_perceived_phi_tend_shape_and_boundaries(synthetic_state):
                                s["physics_config"], s["v_grid"],
                                models.homme_nonhydrostatic)
   assert gw.shape == (s["NE"], s["NPT"], s["NPT"], s["NLEVP"])
+  gw = np.asarray(unwrap(gw))
   assert np.all(np.isfinite(gw))
   # The top + surface interfaces are explicitly zeroed by the helper.
   assert np.all(gw[..., 0] == 0.0)
@@ -168,12 +169,14 @@ def test_solve_tridiag_reconstructs_rhs(synthetic_state):
   jacL, jacD, jacU = calc_dirk_jacobian(100.0, s["d_mass"], s["d_phi"],
                                          s["pnh"], s["physics_config"])
   rhs = rng.normal(0.0, 1.0, jacD.shape)
-  x = solve_strict_diag_dominant_tridiag(jacL, jacD.copy(), jacU, rhs.copy())
+  x = solve_strict_diag_dominant_tridiag(jacL, jacD, jacU, rhs)
   assert x.shape == rhs.shape
   # Reconstruct y = J x and compare to the original rhs.
   y = jacD * x
-  y[..., 1:] += jacL * x[..., :-1]
-  y[..., :-1] += jacU * x[..., 1:]
+
+  y += _be.np.concatenate((_be.np.zeros_like(x[..., 0:1]), jacL * x[..., :-1]), axis=-1)
+  y += _be.np.concatenate((jacU * x[..., 1:], _be.np.zeros_like(x[..., 0:1])), axis=-1)
+  y = np.asarray(unwrap(y))
   relerr = np.max(np.abs(y - rhs) / (np.max(np.abs(rhs)) + 1e-30))
   assert relerr < 1e-10, f"tridiag solver residual = {relerr:.3e}"
 
@@ -203,6 +206,7 @@ def test_init_search_dir_pins_surface_to_zero(synthetic_state):
   xdir = init_search_dir(100.0, s["w_guess"], s["d_phi"], s["d_mass"],
                          s["pnh"], s["physics_config"], residual)
   assert xdir.shape == s["w_guess"].shape
+  xdir = np.asarray(unwrap(xdir))
   assert np.all(np.isfinite(xdir))
   assert np.all(xdir[..., -1] == 0.0)
 
@@ -224,8 +228,8 @@ def test_take_limited_step_preserves_layer_positivity(synthetic_state):
                                        models.homme_nonhydrostatic)
   assert dphi_out.shape == (s["NE"], s["NPT"], s["NPT"], s["NLEV"])
   assert w_out.shape == s["w_guess"].shape
-  assert np.all(np.isfinite(dphi_out))
-  assert np.all(np.isfinite(w_out))
+  assert np.all(np.isfinite(np.asarray(unwrap(dphi_out))))
+  assert np.all(np.isfinite(np.asarray(unwrap(w_out))))
   # Under HOMME's convention ``dphi = phi[k+1] - phi[k] < 0``; the limiter
   # may pin entries right at zero in pathological columns but must not let
   # them go positive.

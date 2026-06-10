@@ -11,7 +11,7 @@ from .conftest import cached_quasi_uniform_grid_elem_local
 from pyses.dynamical_cores.mass_coordinate import init_vertical_grid, d_mass_to_surface_mass
 from pyses.dynamical_cores.model_info import models
 from pyses.dynamical_cores.model_config import init_default_config, hypervis_opts
-from ...context import get_figdir
+from ...context import get_figdir, emit_plots
 _be = _get_backend()
 jnp = _be.np
 unwrap = _be.unwrap
@@ -45,31 +45,36 @@ def test_theta_baro_wave_topo():
                               dims,
                               model)
 
+  savedir = get_figdir(subdir="shallow_water_baro_wave_topo") if emit_plots() else None
   t = 0.0
   for t, state in simulator(model_state):
     print(t)
-    import matplotlib.pyplot as plt
-    surf_mass = d_mass_to_surface_mass(state["dynamics"]["d_mass"], v_grid)
-    plt.figure()
-    plt.tricontourf(h_grid["physical_coords"][:, :, :, 1].flatten(),
-                    h_grid["physical_coords"][:, :, :, 0].flatten(),
-                    surf_mass.flatten())
-    plt.colorbar()
-    #plt.savefig(f"{get_figdir()}/h_{t}.pdf")
-    plt.figure()
-    plt.tricontourf(h_grid["physical_coords"][:, :, :, 1].flatten(),
-                    h_grid["physical_coords"][:, :, :, 0].flatten(),
-                    state["dynamics"]["horizontal_wind"][:, :, :, 0, 0].flatten())
-    plt.colorbar()
-    #plt.savefig(f"{get_figdir()}/u_{t}.pdf")
-    for lev in range(model_state["dynamics"]["horizontal_wind"].shape[3]):
+    if savedir is not None:
+      import matplotlib.pyplot as plt
+      surf_mass = d_mass_to_surface_mass(state["dynamics"]["d_mass"], v_grid)
       plt.figure()
       plt.tricontourf(h_grid["physical_coords"][:, :, :, 1].flatten(),
                       h_grid["physical_coords"][:, :, :, 0].flatten(),
-                      (state["dynamics"]["horizontal_wind"][:, :, :, lev, 1].flatten() -
-                      model_state["dynamics"]["horizontal_wind"][:, :, :, lev, 1].flatten()))
+                      surf_mass.flatten())
       plt.colorbar()
-      plt.savefig(f"{get_figdir()}/v_{t}_lev_{lev}.pdf")
+      plt.savefig(f"{savedir}/h_{t}.pdf")
+      plt.close()
+      plt.figure()
+      plt.tricontourf(h_grid["physical_coords"][:, :, :, 1].flatten(),
+                      h_grid["physical_coords"][:, :, :, 0].flatten(),
+                      state["dynamics"]["horizontal_wind"][:, :, :, 0, 0].flatten())
+      plt.colorbar()
+      plt.savefig(f"{savedir}/u_{t}.pdf")
+      plt.close()
+      for lev in range(model_state["dynamics"]["horizontal_wind"].shape[3]):
+        plt.figure()
+        plt.tricontourf(h_grid["physical_coords"][:, :, :, 1].flatten(),
+                        h_grid["physical_coords"][:, :, :, 0].flatten(),
+                        (state["dynamics"]["horizontal_wind"][:, :, :, lev, 1].flatten() -
+                        model_state["dynamics"]["horizontal_wind"][:, :, :, lev, 1].flatten()))
+        plt.colorbar()
+        plt.savefig(f"{savedir}/v_{t}_lev_{lev}.pdf")
+        plt.close()
     if t > total_time:
       break
 

@@ -2,7 +2,7 @@ import numpy as np
 from pyses.mpi.processor_decomposition import (init_decomp,
                                              sphere_coord_to_face_idx_pos,
                                              init_mapping)
-from ...context import get_figdir
+from ...context import get_figdir, emit_plots
 
 
 def test_get_decomp():
@@ -52,8 +52,9 @@ def test_mapping():
       max_dist_y = max(y_dist, max_dist_y)
   assert(max_dist_x < 0.1)
   assert(max_dist_y < 0.1)
-  if False:
+  if emit_plots():
     import matplotlib.pyplot as plt
+    savedir = get_figdir(subdir="processor_decomp_mapping")
     for face in range(6):
       plt.figure()
       for elem_idx, face_idx in enumerate(face_idxs[:-1]):
@@ -63,22 +64,27 @@ def test_mapping():
           lons_tmp = [x[elem_idx],
                       x[elem_idx + 1]]
           plt.plot(lons_tmp, lats_tmp, c="k")
-      plt.savefig(f"{get_figdir()}/pairs_{face}.pdf")
+      plt.savefig(f"{savedir}/pairs_{face}.pdf")
+      plt.close()
     print(max_dist_x)
     print(max_dist_y)
     plt.figure()
     plt.scatter(lons, lats, c=dists_x)
     plt.colorbar()
-    plt.savefig(f"{get_figdir()}/dist_x.pdf")
+    plt.savefig(f"{savedir}/dist_x.pdf")
+    plt.close()
     plt.figure()
     plt.scatter(lons, lats, c=dists_y)
     plt.colorbar()
-    plt.savefig(f"{get_figdir()}/dist_y.pdf")
+    plt.savefig(f"{savedir}/dist_y.pdf")
+    plt.close()
     plt.figure()
     plt.scatter(lons, lats, c=face_num)
     plt.colorbar()
-    plt.savefig(f"{get_figdir()}/face_num.pdf")
+    plt.savefig(f"{savedir}/face_num.pdf")
+    plt.close()
     plt.figure()
     plt.scatter(lons, lats, c=np.arange(len(lons)))
     plt.colorbar()
-    plt.savefig(f"{get_figdir()}/idxs.pdf")
+    plt.savefig(f"{savedir}/idxs.pdf")
+    plt.close()

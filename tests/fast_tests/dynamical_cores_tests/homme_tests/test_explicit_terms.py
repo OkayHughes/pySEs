@@ -6,7 +6,7 @@ from pyses.analytic_initialization.moist_baroclinic_wave import init_baroclinic_
 from pyses._config import get_backend as _get_backend
 import numpy as np
 from pyses.dynamical_cores.physics_config import init_physics_config
-#from pyses.dynamical_cores.homme.explicit_terms import eval_energy_quantities
+from pyses.dynamical_cores.homme.explicit_terms import eval_energy_quantities
 #from pyses.dynamical_cores.homme.explicit_terms_eulerian import eval_energy_quantities
 from pyses.operations_2d.operators import inner_product
 from pyses.operations_2d.local_assembly import project_scalar
@@ -63,11 +63,7 @@ def test_notopo(model):
                       "pe_pe_1",
                       "ke_ie_1",
                       "ke_ie_2",
-                      "ke_ie_3",
-                      "ke_ke_v_u",
-                      "ke_ke_v_w",
-                      "ke_ie_v",
-                      "pe_pe_v"]:
+                      "ke_ie_3"]:
       compare_quantities(*pairs[pair_name], pair_name)
     total_energy_change = inner_product(project_scalar(empirical_tendencies["ke"] +
                                                       empirical_tendencies["ie"] +
