@@ -20,15 +20,24 @@ Given the constraints of these design decisions, it is unlikely that the resulti
 modern environment manager for Python that we use for development and testing.
 
 ## MPI-dependent steps
+pySEs gates MPI behind two install *extras*: `mpi-local` bundles an MPICH from
+PyPI (no system MPI needed), and `mpi-system` installs only `mpi4py`, built
+against your system MPI.
+
 If you don't have MPI installed, run:
-* Run `uv sync --group mpich --group dev --group jax --group torch`
-* If you don't plan to use either jax or torch, you can omit one or both of those groups.
+* `uv sync --extra mpi-local --group dev`
 
 If you have a system MPI installed (e.g. on HPC systems), run:
-* Run `which mpicc`
+* `which mpicc`
 * Create a `.env` file containing `export MPICC=${MPICC_LOCATION}`
-* Run `uv sync --env-file .env --group dev --group jax --group torch`
-* If you don't plan to use either jax or torch, you can omit one or both of those groups.
+* `uv sync --env-file .env --extra mpi-system --group dev`
+* Note: modern `mpi4py` wheels bundle their own MPICH, so to actually link the
+  system MPI force a source build, e.g.
+  `UV_NO_BINARY_PACKAGE=mpi4py uv sync --env-file .env --extra mpi-system --group dev`.
+
+(Installing from PyPI rather than this checkout uses the same extras:
+`pip install "pyses[mpi-local]"`, or
+`MPICC=$(which mpicc) pip install --no-binary mpi4py "pyses[mpi-system]"`.)
 
 ## Run tests
 * Navigate to the `tests` directory and run `bash run_test.sh`. These should catch if there are problems
@@ -79,7 +88,8 @@ to copy the data in `x`.
 
 # PyTorch support
 PyTorch can also provide automatic differentiation capabilities and GPU parallelism. The recent switch to `torch.compile` allows 
-JAX-style code to be 
+JAX-style code to be JIT-compiled with PyTorch, once you write a shim library that reconstructs a `numpy`-like interface from the
+tensor operations that `torch` provides. 
 
 # Policy on intellectual property
 
