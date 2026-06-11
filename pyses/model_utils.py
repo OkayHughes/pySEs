@@ -6,6 +6,8 @@ from .dynamical_cores import model_config as _model_config
 from .dynamical_cores import time_stepping as _time_stepping
 from .dynamical_cores import physics_config as _physics_config
 from .dynamical_cores import hyperviscosity as _hyperviscosity
+from .dynamical_cores import time_step as _time_step
+from .dynamical_cores import physics_dynamics_coupling as _physics_dynamics_coupling
 from .dynamical_cores import model_info
 _be = _get_backend()
 
@@ -45,6 +47,9 @@ class model_config:
   init_physics_config = staticmethod(_physics_config.init_physics_config)
   init_timestep_config = staticmethod(_time_stepping.init_timestep_config)
   init_diffusion_config = staticmethod(_hyperviscosity.init_hypervis_config_tensor)
+  # enums passed to ``init_timestep_config``
+  time_step_options = _time_step.time_step_options
+  coupling_types = _physics_dynamics_coupling.coupling_types
 
 
 class parallel_utils:

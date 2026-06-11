@@ -90,10 +90,10 @@ device_wrapper = _be.array
 unwrap = _be.unwrap
 
 # --- feature toggles (enable/disable individual parts of the setup) --------
-ENABLE_WIND_FORCING = False         # near-surface wind damping
+ENABLE_WIND_FORCING = True         # near-surface wind damping
 ENABLE_SURFACE_TEMP_FORCING = True  # land diurnal surface-temperature relaxation
 ENABLE_KESSLER = True             # Kessler warm-rain microphysics tendencies
-ENABLE_TOPOGRAPHY = True          # rough + plateau surface topography (else flat)
+ENABLE_TOPOGRAPHY = True         # rough + plateau surface topography (else flat)
 
 # --- resolution / model choices -------------------------------------------
 NX = NY = 20                      # elements per side
@@ -105,9 +105,10 @@ MODEL = models.homme_nonhydrostatic_f_plane   # f-plane: init_static_forcing
                                               # meaningless on a Cartesian grid)
 
 # --- topography parameters ------------------------------------------------
-TOPO_MAX = 800.0                 # max rough-terrain height (m), below 1 km
+TOPO_MAX = 80.0                 # max rough-terrain height (m), below 1 km
 PLATEAU_RADIUS = 12.0e3          # f(r) drops to 0.1 here (m)
 TOPO_SEED = 20240601
+TRUNCATION_FACTOR = 10.0
 
 # --- temperature profile (piecewise-linear lapse) -------------------------
 T_SEA_LEVEL = 285.0              # surface temperature at z = 0 (K)
@@ -115,7 +116,7 @@ LAPSE_TROP = 7.0e-3              # 0 -> 10 km   (K/m)
 LAPSE_TROPP = 0.1e-3             # 10 -> 20 km  (K/m)
 LAPSE_STRAT = -2.0e-3             # > 20 km      (K/m, inversion)
 Z_TROP = 10.0e3
-Z_STRAT = 5.0e3
+Z_STRAT = 15.0e3
 SLP_PA = 1.0e5                   # sea-level pressure (Pa)
 
 # --- zonal wind (Gaussian in height) --------------------------------------
@@ -156,7 +157,7 @@ SPONGE_NU_TOP = 250.0
 
 # --- time stepping --------------------------------------------------------
 PHYSICS_DT = 12.0                # physics-coupling interval (s)
-RUN_STEPS = 4000                   # number of coupling steps (20 min)
+RUN_STEPS = 1000                   # number of coupling steps (20 min)
 
 
 # ---------------------------------------------------------------------------
@@ -190,7 +191,7 @@ def _rough_topography(coords, dx_min, rng):
   x = coords[..., 0]
   y = coords[..., 1]
   # keep modes with wavelength >= 2*dx_min  <=>  |k_cycles/m| <= 1/(2*dx_min)
-  k_cutoff = 1.0 / (4.0 * dx_min)
+  k_cutoff = 1.0 / (TRUNCATION_FACTOR * dx_min)
   kmax_x = int(np.floor(LENGTH * k_cutoff))
   kmax_y = int(np.floor(LENGTH * k_cutoff))
   field = np.zeros_like(x)
@@ -255,8 +256,8 @@ def _plateau_radius_field(coords):
 def _plateau_mask(coords):
   """``f(r) = exp(-r**6 / lam)`` with ``lam`` set so ``f(PLATEAU_RADIUS)=0.1``."""
   r = _plateau_radius_field(coords)
-  lam = PLATEAU_RADIUS ** 6 / np.log(10.0)
-  return np.exp(-(r ** 6) / lam)
+  lam = PLATEAU_RADIUS ** 12 / np.log(10.0)
+  return np.exp(-(r ** 12) / lam)
 
 
 # ---------------------------------------------------------------------------

@@ -1,8 +1,16 @@
 # Overview
-The purpose of this project is to create a highly readable, well documented, well tested atmospheric dynamical core with support for variable resolution meshes, as well as automatic differentiation for machine learning and data assimilation.
+The purpose of this project is to create a highly readable, well documented, well tested atmospheric dynamical core with support for variable resolution meshes, automatic differentiation, and GPU support. It is designed to be highly backward-compatible with NCAR CAM-SE and HOMME numerics.
 This project prioritizes code readability and maintainability, in the sense that code that runs 10% slower but is much easier for a second-year graduate student to understand and modify is better than its inaccessible optimized counterpart.
 We want to minimize external dependencies and, insofar as it is possible, create a codebase that is entirely written in python.
 Given the constraints of these design decisions, it is unlikely that the resulting dynamical core will scale to hundreds or thousands of nodes on an HPC computing system. This aligns with our stated goal of making atmospheric modeling accessible.
+
+
+# Top-level list of features that make pySEs stand out
+* GPU support and automatic differentiation via JAX or PyTorch.
+* Battle-tested high-order numerical discretization with discrete conservation properties (mathematically identical to NCAR CAM)
+    * Dry-mass coordinate allows easy coupling
+* Numerical stabilization mechanisms are near-identical to dynamical cores in CAM/EAM
+* Highly validated non-hydrostatic dynamics that are near-identical to the Simple Cloud Resolving E3SM Atmosphere Model (SCREAM)
 
 # Quickstart with `uv`
 
@@ -27,6 +35,27 @@ If you have a system MPI installed (e.g. on HPC systems), run:
 with CPU configurations of `pyses`, and test whether there are issues with your MPI environment.
 
 
+## How to enable the correct backend/device
+
+Since pySEs can switch on-the-fly between CPU and GPU, and switch whether array operations are provided by Numpy, JAX, or PyTorch. 
+
+When running from the command line, change what backend is used by exporting the environment variable `PYSES_BACKEND=[jax/torch/numpy]`. 
+To use GPU, export `PYSES_USE_CPU=0`. 
+pySEs defaultly uses CPU, as users must be careful to install and isolate the correct GPU-enabled JAX/PyTorch python environment that works with their system.
+pySEs has only been numerically verified with 64 bit floating point arithmetic. 
+
+If you are using an interactive environment, then run, e.g.,
+```
+from pyses._config import _reset_backend, get_backend
+import os
+os.environ["PYSES_BACKEND"] = "jax"
+_reset_backend()
+_be = get_backend()
+bnp = _be.np # use this instead of importing numpy directly to defaultly work with device arrays.
+```
+
+
+
 # Accelerator support
 Most scientific code can be easily written in a (nearly) [purely functional](https://en.wikipedia.org/wiki/Pure_function) programming style. Consequently, this means that the codebase can be written to satisfy the requirements of the [Jax](https://github.com/jax-ml/jax) library's just-in-time compilation and automatic differentiation, while retaining the ability to run with array/tensor operations provided by [PyTorch](https://pytorch.org/) or [Numpy](https://numpy.org/). Due to Google's history of abruptly discontinuing widely used software products, we have chosen to future proof this code base by ensuring that GPU parallelism (and ideally automatic differentiation) can be sourced from any library that provides an array implementation that resembles `Numpy.ndarray`, along with a list of array operations that is enumerated in the documentation.
 
@@ -49,10 +78,8 @@ which appears almost deliberately tailored to force Numpy/Torch view semantics
 to copy the data in `x`. 
 
 # PyTorch support
-PyTorch can also provide automatic differentiation capabilities and GPU parallelism. 
-This is used as a fallback, as the dominance of PyTorch at so-called "AI" companies makes
-it more likely to be supported in the future. Therefore, we are trying to ensure that code runs
-with PyTorch as a backend, but we don't typically optimize for PyTorch performance.
+PyTorch can also provide automatic differentiation capabilities and GPU parallelism. The recent switch to `torch.compile` allows 
+JAX-style code to be 
 
 # Policy on intellectual property
 
@@ -61,7 +88,10 @@ used to train LLMs was obtained without the consent of the people who made it,
 LLMs trained on this data are structurally incapable
 of determining when they are commiting plagiarism or theft. Contributing 
 LLM generated code should be treated with the utmost care and consideration
-for other people.
+for other people. 
+
+LLMs cannot take responsibility for code, and the companies that train these models will not take responsibility for breaking the build.
+
 
 <!-- Imagine that a guest at your dinner party shows up with a bottle of wine
 that they stole from their brother-in-law's house. You won't know
