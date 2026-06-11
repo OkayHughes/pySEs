@@ -4,9 +4,7 @@ core on a doubly-periodic Cartesian plane with idealized surface physics.
 
 This is the planar analogue of ``test_random_atmosphere.py`` (which fuzzes the
 HOMME *hydrostatic* core on the cubed sphere).  The geometry here is a
-50 km x 50 km doubly-periodic plane (``init_uniform_grid``); the prognostic core
-is ``models.homme_nonhydrostatic`` integrated with the HEVI (horizontally-
-explicit / vertically-implicit) Runge-Kutta scheme.
+50 km x 50 km doubly-periodic plane (``init_uniform_grid``).
 
 Initial state
 -------------
@@ -91,6 +89,12 @@ jnp = _be.np
 device_wrapper = _be.array
 unwrap = _be.unwrap
 
+# --- feature toggles (enable/disable individual parts of the setup) --------
+ENABLE_WIND_FORCING = False         # near-surface wind damping
+ENABLE_SURFACE_TEMP_FORCING = True  # land diurnal surface-temperature relaxation
+ENABLE_KESSLER = True             # Kessler warm-rain microphysics tendencies
+ENABLE_TOPOGRAPHY = True          # rough + plateau surface topography (else flat)
+
 # --- resolution / model choices -------------------------------------------
 NX = NY = 20                      # elements per side
 NPT = 4                          # GLL points per element edge
@@ -136,8 +140,22 @@ AR_THRESH = 1.0e-3               # autoconversion cloud threshold a_r (kg/kg)
 K2_ACCR = 2.2                    # accretion coefficient k2, Eq. A8
 V_RAIN_COEF = 36.34              # rain terminal-velocity coefficient, Eq. A11
 
+# --- hyperviscosity / top sponge ------------------------------------------
+# The default top-sponge coefficient (init_hypervis_config_tensor's nu_top=2.5e5)
+# is calibrated for the *cubed sphere*.  The sponge applies an explicit 2nd-order
+# diffusion ``nu_top * nabla^2`` whose weak Laplacian is evaluated at
+# ``a = radius_earth``, so on the sphere it carries a 1/radius_earth**2 factor.
+# On this plane ``radius_earth = 1`` (the grid is already in metres), so that
+# factor is absent and the same nu_top is an explicit diffusivity that violates
+# the 2nd-order stability limit ``D*dt/dx**2 < O(1)`` by ~4 orders of magnitude
+# at this grid spacing -- it blows the model up in a handful of steps regardless
+# of how small PHYSICS_DT is (the instability grows in physical, not step, time).
+# Rescale it to a plane-appropriate value (verified stable with large margin at
+# this resolution while still providing a mild top sponge).
+SPONGE_NU_TOP = 250.0
+
 # --- time stepping --------------------------------------------------------
-PHYSICS_DT = 0.1                # physics-coupling interval (s)
+PHYSICS_DT = 12.0                # physics-coupling interval (s)
 RUN_STEPS = 4000                   # number of coupling steps (20 min)
 
 
@@ -209,7 +227,12 @@ def _area_mean(values, h_grid):
 
 
 def _topography(coords, h_grid, rng):
-  """Two-step surface height: rough brown noise blended with a central plateau."""
+  """Two-step surface height: rough brown noise blended with a central plateau.
+
+  Returns a flat surface (zeros) when ``ENABLE_TOPOGRAPHY`` is off.
+  """
+  if not ENABLE_TOPOGRAPHY:
+    return np.zeros(coords.shape[:3])
   dx_min = _min_gll_spacing(coords)
   z_rough = _rough_topography(coords, dx_min, rng)
   zbar = _area_mean(z_rough, h_grid)
@@ -469,38 +492,48 @@ class _SurfacePhysics:
     f = self.f_mask[..., jnp.newaxis]                     # (E, i, j, 1)
 
     # --- wind damping -----------------------------------------------------
-    u = dynamics["horizontal_wind"]
-    w_m = self.w_surf_m[..., jnp.newaxis]                 # (...,lev,1) for (u,v)
-    target_u = (1.0 - w_m) * self.u_init                  # 0 near surface, u_init aloft
-    du = -(u - target_u) / TAU_WIND
-    dw_i = -(self.w_surf_i * dynamics["w_i"]) / TAU_WIND  # vertical wind -> 0 near surface
+    if ENABLE_WIND_FORCING:
+      u = dynamics["horizontal_wind"]
+      w_m = self.w_surf_m[..., jnp.newaxis]               # (...,lev,1) for (u,v)
+      target_u = (1.0 - w_m) * self.u_init                # 0 near surface, u_init aloft
+      du = -(u - target_u) / TAU_WIND
+      dw_i = -(self.w_surf_i * dynamics["w_i"]) / TAU_WIND  # vertical wind -> 0 near surface
+    else:
+      du = jnp.zeros_like(dynamics["horizontal_wind"])
+      dw_i = self.zeros_phi
 
     T, exner, p = _diagnose_state(dynamics, self.v_grid, self.physics_config)
     m_vs = _saturation_mixing_ratio(T, p)
 
     # --- land: diurnal temperature relaxation in the lowest N layers ------
-    cos_t = float(np.cos(2.0 * np.pi * t / self.sidereal_day))
-    t_land = self.t_surf_init + T_DIURNAL_AMP * cos_t      # (E, i, j)
-    dT_land = ((1.0 - f) * self.layer_mask
-               * -(T - t_land[..., jnp.newaxis]) / TAU_TEMP)
+    if ENABLE_SURFACE_TEMP_FORCING:
+      cos_t = float(np.cos(2.0 * np.pi * t / self.sidereal_day))
+      t_land = self.t_surf_init + T_DIURNAL_AMP * cos_t    # (E, i, j)
+      dT_land = ((1.0 - f) * self.layer_mask
+                 * -(T - t_land[..., jnp.newaxis]) / TAU_TEMP)
+    else:
+      dT_land = 0.0
 
     # --- lake: relax vapour toward saturation, draw the latent heat -------
     dm_v_lake = f * self.layer_mask * (m_vs - m_v) / TAU_LAKE
     dT_lake = -(LATENT_HEAT / self.cp) * dm_v_lake
-    
-    kessler_flag = 0.0
-    # --- Kessler warm-rain microphysics at every level --------------------
-    dm_v_k, dm_c, dm_r, dT_k = _kessler_tendencies(
-        m_v, m_c, m_r, T, p, d_mass, self.consts, PHYSICS_DT)
 
-    dm_v = dm_v_lake + kessler_flag * dm_v_k
-    dT = dT_land + dT_lake + kessler_flag * dT_k
+    # --- Kessler warm-rain microphysics at every level --------------------
+    if ENABLE_KESSLER:
+      dm_v_k, dm_c, dm_r, dT_k = _kessler_tendencies(
+          m_v, m_c, m_r, T, p, d_mass, self.consts, PHYSICS_DT)
+    else:
+      z = self.zeros_dmass
+      dm_v_k, dm_c, dm_r, dT_k = z, z, z, 0.0
+
+    dm_v = dm_v_lake + dm_v_k
+    dT = dT_land + dT_lake + dT_k
     dtheta = (d_mass / exner) * dT                         # T tend -> theta tend
 
     dyn_forcing = wrap_dynamics(du, dtheta, self.zeros_dmass, MODEL,
                                 phi_i=self.zeros_phi, w_i=dw_i)
     trac_forcing = wrap_tracers({"water_vapor": dm_v},
-                                {"cloud_water": kessler_flag * dm_c, "rain_water": kessler_flag * dm_r}, MODEL)
+                                {"cloud_water": dm_c, "rain_water": dm_r}, MODEL)
     return {"dynamics": dyn_forcing, "tracers": trac_forcing}
 
 
@@ -526,7 +559,8 @@ def _build_configs(h_grid, v_grid, dims):
   """
   physics_config = init_physics_config(MODEL, radius_earth=1.0)
   diffusion_config = init_hypervis_config_tensor(h_grid, v_grid, dims,
-                                                 physics_config, n_sponge=5)
+                                                 physics_config, n_sponge=5,
+                                                 nu_top=SPONGE_NU_TOP)
   timestep_config = init_timestep_config(
       PHYSICS_DT, h_grid, physics_config, diffusion_config, dims, MODEL,
       dynamics_tstep_type=time_step_options.RK3_5STAGE_HEVI,
