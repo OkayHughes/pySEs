@@ -12,7 +12,7 @@ from .time_step import time_step_options, stability_info
 from functools import partial
 from frozendict import frozendict
 from .physics_dynamics_coupling import coupling_types
-from .model_info import cam_se_models, cam_se_stable_models, homme_models, shallow_water_models, hydrostatic_models
+from .model_info import cam_se_models, cam_se_stable_models, homme_models, shallow_water_models, hydrostatic_models, spherical_models
 _be = _get_backend()
 jit = _be.jit
 jnp = _be.np
@@ -139,7 +139,6 @@ def enforce_conservation(dynamics,
     dynamics_conserve = dynamics
   else:
     dynamics_conserve = correct_state(dynamics, static_forcing, dt, physics_config, model)
-  dynamics_conserve = dynamics
   return dynamics_conserve
 
 
@@ -176,7 +175,7 @@ def eval_cfl_3d(h_grid,
       ``"dt_gravity_wave"``, ``"dt_hypervis_scalar"``, ``"dt_hypervis_vort"``,
       ``"dt_hypervis_div"``, and ``"dt_sponge_layer"``.
   """
-  cfl_info, grid_info = eval_cfl(h_grid, physics_config["radius_earth"], diffusion_config, dims, model)
+  cfl_info, grid_info = eval_cfl(h_grid, physics_config["radius_earth"], diffusion_config, dims, sphere=model in spherical_models)
   max_norm_jac_inv = grid_info["max_norm_jac_inv"]
 
   if "sponge_layer" in diffusion_config.keys():
@@ -442,10 +441,11 @@ def advance_hypervis_euler(dynamics,
       Accumulated tracer-consistency struct scaled by the joint
       dynamics–hypervis subcycle fraction.
   """
-  state_out = dynamics
   tracer_consist_frac = 1.0 / (timestep_config["dynamics_subcycle"] * timestep_config["hypervis_subcycle"])
-  for subcycle_idx in range(timestep_config["hypervis_subcycle"]):
-    hypervis_rhs, tracer_consist = eval_hypervis_terms(state_out,
+  hypervis_dt = timestep_config["hyperviscosity"]["dt"]
+
+  def _one_subcycle(state_in):
+    hypervis_rhs, tracer_consist = eval_hypervis_terms(state_in,
                                                        static_forcing,
                                                        h_grid,
                                                        v_grid,
@@ -453,17 +453,32 @@ def advance_hypervis_euler(dynamics,
                                                        physics_config,
                                                        diffusion_config,
                                                        model)
-    if subcycle_idx > 0:
+    state_next = sum_dynamics_series([state_in, hypervis_rhs], [1.0, hypervis_dt], model)
+    return state_next, tracer_consist
+
+  # First sub-cycle seeds the consistency accumulator (net effect: the running
+  # total is tracer_consist_frac times the sum of every sub-cycle's struct); the
+  # remaining sub-cycles run through ``scan`` so the body compiles once instead
+  # of unrolling ``hypervis_subcycle`` copies.  hypervis_subcycle is a static
+  # config value, so the ``> 1`` guard (avoiding an empty scan) is resolved at
+  # trace time.
+  state_out, tracer_consist = _one_subcycle(dynamics)
+  tracer_consist_total = sum_consistency_struct(tracer_consist, tracer_consist,
+                                                tracer_consist_frac, 0.0)
+
+  if timestep_config["hypervis_subcycle"] > 1:
+    def _hv_step(carry, _):
+      state_out, tracer_consist_total = carry
+      state_out, tracer_consist = _one_subcycle(state_out)
       tracer_consist_total = sum_consistency_struct(tracer_consist_total,
                                                     tracer_consist,
                                                     1.0,
                                                     tracer_consist_frac)
-    else:
-      tracer_consist_total = sum_consistency_struct(tracer_consist,
-                                                    tracer_consist,
-                                                    tracer_consist_frac,
-                                                    0.0)
-    state_out = sum_dynamics_series([state_out, hypervis_rhs], [1.0, timestep_config["hyperviscosity"]["dt"]], model)
+      return (state_out, tracer_consist_total), None
+
+    (state_out, tracer_consist_total), _ = _be.scan(
+        _hv_step, (state_out, tracer_consist_total),
+        jnp.arange(timestep_config["hypervis_subcycle"] - 1))
   # Todo: figure out lower boundary correction.
   return state_out, tracer_consist_total
 
@@ -504,15 +519,23 @@ def advance_sponge_euler(dynamics,
   dynamics_out : dict[str, Array]
       Dynamics state after all sponge-layer sub-steps.
   """
-  dynamics_out = dynamics
-  for _ in range(timestep_config["sponge_subcycle"]):
-    dynamics_out = advance_sponge_layer(dynamics_out,
-                                        timestep_config["sponge"]["dt"],
-                                        h_grid,
-                                        physics_config,
-                                        diffusion_config,
-                                        dims,
-                                        model)
+  # sponge_subcycle is a static config value; the empty-loop guard is resolved
+  # at trace time, and the sub-cycles otherwise run through ``scan`` so the body
+  # compiles once instead of unrolling ``sponge_subcycle`` copies.
+  if timestep_config["sponge_subcycle"] == 0:
+    return dynamics
+
+  def _sponge_step(dynamics_out, _):
+    return advance_sponge_layer(dynamics_out,
+                                timestep_config["sponge"]["dt"],
+                                h_grid,
+                                physics_config,
+                                diffusion_config,
+                                dims,
+                                model), None
+
+  dynamics_out, _ = _be.scan(_sponge_step, dynamics,
+                             jnp.arange(timestep_config["sponge_subcycle"]))
   return dynamics_out
 
 

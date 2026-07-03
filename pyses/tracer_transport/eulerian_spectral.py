@@ -92,18 +92,24 @@ def calc_minmax(tracers, grid, dims):
   """
   minvals = jnp.min(tracers, axis=(2, 3))
   maxvals = jnp.max(tracers, axis=(2, 3))
-  tracer_elem_lev_mins = []
-  tracer_elem_lev_maxs = []
-  for tracer_idx in range(tracers.shape[0]):
-    minvals_global = minmax_scalar_3d(minvals[tracer_idx, :, np.newaxis, np.newaxis, :] *
-                                      jnp.ones_like(tracers[0, :, :, :, :]),
-                                      grid, dims, max=False)
-    tracer_elem_lev_mins.append(jnp.min(minvals_global, axis=(1, 2)))
-    maxvals_global = minmax_scalar_3d(maxvals[tracer_idx, :, np.newaxis, np.newaxis] *
-                                      jnp.ones_like(tracers[0, :, :, :, :]),
-                                      grid, dims, max=True)
-    tracer_elem_lev_maxs.append(jnp.max(maxvals_global, axis=(1, 2)))
-  return jnp.stack(tracer_elem_lev_mins, axis=0), jnp.stack(tracer_elem_lev_maxs, axis=0)
+  # vmap over the leading tracer axis instead of a Python loop: one batched DSS
+  # min/max exchange rather than n_tracers skinny ones (the DSS indices are
+  # unbatched, only the payload is batched).  node_shape broadcasts the
+  # per-(elem, lev) extremum back over the (npt, npt) block minmax_scalar_3d
+  # expects.
+  node_shape = tracers.shape[1:]
+
+  def per_tracer_min(minv):
+    field = jnp.broadcast_to(minv[:, np.newaxis, np.newaxis, :], node_shape)
+    return jnp.min(minmax_scalar_3d(field, grid, dims, max=False), axis=(1, 2))
+
+  def per_tracer_max(maxv):
+    field = jnp.broadcast_to(maxv[:, np.newaxis, np.newaxis, :], node_shape)
+    return jnp.max(minmax_scalar_3d(field, grid, dims, max=True), axis=(1, 2))
+
+  tracer_elem_lev_mins = _be.vmap(per_tracer_min)(minvals)
+  tracer_elem_lev_maxs = _be.vmap(per_tracer_max)(maxvals)
+  return tracer_elem_lev_mins, tracer_elem_lev_maxs
 
 
 @partial(jit, static_argnames=["dims"])
@@ -146,21 +152,21 @@ def tracer_euler_step(tracer_mass_stacked,
       Updated stacked tracer-mass fields after one Euler substep.
   """
   interim_velocity = u_d_mass_avg / interim_d_mass[:, :, :, :, np.newaxis]
-  tracer_mass_out = []
   tracer_mins, tracer_maxs = calc_minmax(tracer_mass_stacked / interim_d_mass, grid, dims)
-  for tracer_idx in range(tracer_mass_stacked.shape[0]):
-    tracer_tend = -horizontal_divergence_3d(tracer_mass_stacked[tracer_idx, :, :, :, :, np.newaxis] * interim_velocity,
+
+  # vmap the per-tracer advect/limit/project over the leading tracer axis
+  # (tracer_mass, hypervis tendency, and the two limiter bounds are all batched
+  # at axis 0; the wind, grid and limiter thickness are shared).
+  def per_tracer(tracer_mass, hypervis_tend, tracer_min, tracer_max):
+    tracer_tend = -horizontal_divergence_3d(tracer_mass[:, :, :, :, np.newaxis] * interim_velocity,
                                             grid,
                                             physics_config)
-    tracer_out = (tracer_mass_stacked[tracer_idx, :, :, :, :] +
-                  dt * tracer_tend + hypervis_tracer_tend[tracer_idx, :, :, :, :])
+    tracer_out = tracer_mass + dt * tracer_tend + hypervis_tend
     tracer_out = clip_and_sum_limiter(tracer_out, grid["mass_matrix"],
-                                      tracer_mins[tracer_idx, :, :],
-                                      tracer_maxs[tracer_idx, :, :],
-                                      d_mass_for_limiter)
-    tracer_mass_out.append(project_tracer_3d(tracer_out, grid, dims))
-    # Note: this is not communication efficient.
-  return jnp.stack(tracer_mass_out, axis=0)
+                                      tracer_min, tracer_max, d_mass_for_limiter)
+    return project_tracer_3d(tracer_out, grid, dims)
+
+  return _be.vmap(per_tracer)(tracer_mass_stacked, hypervis_tracer_tend, tracer_mins, tracer_maxs)
 
 
 @partial(jit, static_argnames=["dims"])
@@ -190,17 +196,20 @@ def calc_hypervis_tend_tracer(tracer_mass, d_mass_scale, grid, dims, dt, physics
   tracer_mass_tend : Array[tuple[n_tracers, elem_idx, gll_idx, gll_idx, lev_idx], Float]
       Hyperviscosity tendency for each tracer-mass field.
   """
-  tracer_mass_tend = []
-  for tracer_idx in range(tracer_mass.shape[0]):
-    harmonic = scalar_harmonic_3d(d_mass_scale * tracer_mass[tracer_idx, :, :, :, :], grid, physics_config)
+  apply_tensor = "tensor_hypervis" in diffusion_config.keys()
+
+  # vmap the biharmonic over the leading tracer axis (d_mass_scale, grid and
+  # coefficients are shared) instead of a Python loop over tracers.
+  def per_tracer(tracer_mass_single):
+    harmonic = scalar_harmonic_3d(d_mass_scale * tracer_mass_single, grid, physics_config)
     harmonic = project_tracer_3d(harmonic, grid, dims)
-    apply_tensor = "tensor_hypervis" in diffusion_config.keys()
     biharmonic = scalar_harmonic_3d(harmonic,
                                     grid,
                                     physics_config,
                                     apply_tensor=apply_tensor)
-    tracer_mass_tend.append(-diffusion_config["nu_tracer"] * dt * biharmonic)
-  return jnp.stack(tracer_mass_tend, axis=0)
+    return -diffusion_config["nu_tracer"] * dt * biharmonic
+
+  return _be.vmap(per_tracer)(tracer_mass)
 
 
 @jit

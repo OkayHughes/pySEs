@@ -210,28 +210,19 @@ def horizontal_weak_gradient_covariant(s,
   deriv = grid["derivative_matrix"]
   met_inv = grid["metric_inverse"]
   met_det = grid["metric_determinant"]
-  ds_contra_term_1 = - jnp.einsum("j,n,fmn,fmn,fjn,jm->fmn",
-                                  gll_weights,
-                                  gll_weights,
-                                  met_inv[:, :, :, 0, 0],
-                                  met_det, s, deriv)
-  ds_contra_term_2 = - jnp.einsum("m,j,fmn,fmn,fmj,jn->fmn",
-                                  gll_weights,
-                                  gll_weights,
-                                  met_inv[:, :, :, 1, 0],
-                                  met_det, s, deriv)
-  ds_contra_term_3 = - jnp.einsum("j,n,fmn,fmn,fjn,jm->fmn",
-                                  gll_weights,
-                                  gll_weights,
-                                  met_inv[:, :, :, 0, 1],
-                                  met_det, s, deriv)
-  ds_contra_term_4 = - jnp.einsum("m,j,fmn,fmn,fmj,jn->fmn",
-                                  gll_weights,
-                                  gll_weights,
-                                  met_inv[:, :, :, 1, 1],
-                                  met_det, s, deriv)
-  ds_contra = jnp.stack((ds_contra_term_1 + ds_contra_term_2,
-                         ds_contra_term_3 + ds_contra_term_4), axis=-1)
+  # The four original 6-operand einsums reduce to two derivative contractions:
+  # terms (1, 3) share D^T s ("j,fjn,jm->fmn") and terms (2, 4) share s D
+  # ("j,fmj,jn->fmn").  The remaining per-node factors (the second GLL weight
+  # and the metric) are j-independent, so apply them as elementwise multiplies
+  # -- halving the FLOPs of the weak gradient, the inner kernel of all
+  # hyperviscosity.
+  dt_s = jnp.einsum("j,fjn,jm->fmn", gll_weights, s, deriv)
+  s_d = jnp.einsum("j,fmj,jn->fmn", gll_weights, s, deriv)
+  term_a = gll_weights[jnp.newaxis, jnp.newaxis, :] * dt_s
+  term_b = gll_weights[jnp.newaxis, :, jnp.newaxis] * s_d
+  ds_contra_0 = -met_det * (met_inv[:, :, :, 0, 0] * term_a + met_inv[:, :, :, 1, 0] * term_b)
+  ds_contra_1 = -met_det * (met_inv[:, :, :, 0, 1] * term_a + met_inv[:, :, :, 1, 1] * term_b)
+  ds_contra = jnp.stack((ds_contra_0, ds_contra_1), axis=-1)
   return 1.0 / a * contravariant_to_physical(ds_contra, grid)
 
 

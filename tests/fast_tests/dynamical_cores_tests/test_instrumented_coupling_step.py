@@ -80,7 +80,15 @@ def _build_case():
 
 
 def _assert_states_equal(reference, candidate, path="state"):
-  """Recursively assert two model-state pytrees are bit-identical."""
+  """Recursively assert two model-state pytrees agree.
+
+  Production ``advance_coupling_step`` runs its dynamics sub-cycle through
+  ``lax.scan`` while this instrumented reference keeps an unrolled Python loop
+  (so its ablation flags stay independent).  On the NumPy backend both execute
+  as the same sequential fold and remain bit-identical; on JAX, XLA does not
+  guarantee bit-identical results between a scanned and an unrolled loop, so we
+  accept a tight roundoff tolerance there.
+  """
   if isinstance(reference, dict):
     assert isinstance(candidate, dict), f"{path}: type mismatch"
     assert reference.keys() == candidate.keys(), (
@@ -91,8 +99,11 @@ def _assert_states_equal(reference, candidate, path="state"):
   ref = np.asarray(_be.unwrap(reference))
   cand = np.asarray(_be.unwrap(candidate))
   assert ref.shape == cand.shape, f"{path}: shape {ref.shape} vs {cand.shape}"
-  assert np.array_equal(ref, cand), (
-      f"{path}: arrays differ (max |diff| = {np.max(np.abs(ref - cand))})")
+  if np.array_equal(ref, cand):
+    return
+  assert np.allclose(ref, cand, rtol=1e-8, atol=1e-10), (
+      f"{path}: arrays differ beyond scan/unroll roundoff "
+      f"(max |diff| = {np.max(np.abs(ref - cand))})")
 
 
 def test_instrumented_matches_reference_when_all_enabled():

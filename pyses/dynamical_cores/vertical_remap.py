@@ -66,9 +66,20 @@ def zerroukat_remap(tracer_mass,
   idxs = jnp.zeros_like(pi_int_reference[:, :, :, 1:-1])
   frac = 0.5
   axis_size = 1.0 * num_lev
-  for _ in range(8):
-    levels_model = jnp.take_along_axis(pi_int_model, jnp.floor(idxs).astype(jnp.int64), -1)
-    levels_model_below = jnp.take_along_axis(pi_int_model, jnp.floor(idxs).astype(jnp.int64) + 1, -1)
+  # The bisection jump halves from 0.5 * num_lev each step, so it takes
+  # ceil(log2(num_lev)) + 1 steps to resolve a single model cell for any
+  # num_lev.  The old hard-coded 8 could not converge for num_lev > 256 (and
+  # was marginal below that).  num_lev is a static JIT argument, so this stays
+  # a trace-time Python range.
+  n_iter = int(np.ceil(np.log2(num_lev))) + 1
+  for _ in range(n_iter):
+    # Clip only the gather index into pi_int_model (not the continuous search
+    # variable idxs, whose trajectory must be preserved): idxs - jump can
+    # transiently go negative, and floor(idxs) + 1 must stay a valid interface
+    # index in [0, num_lev].
+    floor_idx = jnp.clip(jnp.floor(idxs).astype(jnp.int64), 0, num_lev - 1)
+    levels_model = jnp.take_along_axis(pi_int_model, floor_idx, -1)
+    levels_model_below = jnp.take_along_axis(pi_int_model, floor_idx + 1, -1)
     low_enough = pi_int_reference[:, :, :, 1:-1] > levels_model
     too_low = pi_int_reference[:, :, :, 1:-1] > levels_model_below
     converged = jnp.logical_and(low_enough,
@@ -307,21 +318,17 @@ def zerroukat_remap(tracer_mass,
     za2 = 3.0 * rhs[:, :, :, :-1, :] + 3.0 * rhs[:, :, :, 1:, :] - 6 * zarg
 
   zhdp_mapped = jnp.take_along_axis(zhdp, idxs[:, :, :, 1:], -1)[:, :, :, :, np.newaxis]
-  zv1 = jnp.zeros_like(tracer_mass[:, :, :, 0, :])
   zv_mapped = jnp.take_along_axis(values_model[:, :, :, :-1, :], idxs[:, :, :, 1:, np.newaxis], -2)
   za0_mapped = jnp.take_along_axis(za0[:, :, :, :, :], idxs[:, :, :, 1:, np.newaxis], -2)
   za1_mapped = jnp.take_along_axis(za1[:, :, :, :, :], idxs[:, :, :, 1:, np.newaxis], -2)
   za2_mapped = jnp.take_along_axis(za2[:, :, :, :, :], idxs[:, :, :, 1:, np.newaxis], -2)
 
-  tracer_mass_out = []
-  for k_idx in range(num_lev):
-    zv2 = zv_mapped[:, :, :, k_idx, :] + (za0_mapped[:, :, :, k_idx, :] *
-                                          zgam[:, :, :, k_idx + 1, np.newaxis] +
-                                          za1_mapped[:, :, :, k_idx, :] / 2.0 *
-                                          zgam[:, :, :, k_idx + 1, np.newaxis]**2 +
-                                          za2_mapped[:, :, :, k_idx, :] / 3.0 *
-                                          zgam[:, :, :, k_idx + 1, np.newaxis]**3
-                                          ) * zhdp_mapped[:, :, :, k_idx, :]
-    tracer_mass_out.append(zv2 - zv1)
-    zv1 = zv2
-  return jnp.stack(tracer_mass_out, axis=-2)
+  # Each level's antiderivative zv2[k] depends only on that level's mapped
+  # arrays, so build the whole column at once and take the running difference
+  # with jnp.diff (prepend 0 == the zv1 = 0 seed) instead of unrolling num_lev
+  # level copies into the graph.
+  zgam_mid = zgam[:, :, :, 1:, np.newaxis]
+  zv2 = zv_mapped + (za0_mapped * zgam_mid +
+                     za1_mapped / 2.0 * zgam_mid**2 +
+                     za2_mapped / 3.0 * zgam_mid**3) * zhdp_mapped
+  return jnp.diff(zv2, axis=-2, prepend=0.0)

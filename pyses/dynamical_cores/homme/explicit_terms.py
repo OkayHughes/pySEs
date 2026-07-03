@@ -89,6 +89,10 @@ def init_common_variables(dynamics,
 
   grad_exner = horizontal_gradient_3d(exner, h_grid, physics_config) / r_hat_m[:, :, :, :, jnp.newaxis]
   theta_v = theta_v_d_mass / d_mass
+  # Shared by eval_pgrad_pressure_term and eval_theta_v_divergence_term; hoist
+  # so the theta_v gradient is computed once per tendency rather than twice
+  # (CSE is not guaranteed across their separately-vmapped operator calls).
+  grad_theta_v = horizontal_gradient_3d(theta_v, h_grid, physics_config) / r_hat_m[:, :, :, :, jnp.newaxis]
   grad_phi_i = horizontal_gradient_3d(phi_i, h_grid, physics_config)
   v_over_r_hat_i = midlevel_to_interface_vel(u / r_hat_m[:, :, :, :, np.newaxis],
                                              d_mass,
@@ -111,6 +115,7 @@ def init_common_variables(dynamics,
                       "coriolis_param": static_forcing["coriolis_param"],
                       "grad_exner": grad_exner,
                       "theta_v": theta_v,
+                      "grad_theta_v": grad_theta_v,
                       "grad_phi_i": grad_phi_i,
                       "v_over_r_hat_i": v_over_r_hat_i,
                       "div_d_mass": div_dp,
@@ -329,7 +334,7 @@ def eval_pgrad_pressure_term(common_variables,
   r_hat_m = common_variables["r_hat_m"]
   grad_p_term_1 = config["cp"] * theta_v[:, :, :, :, np.newaxis] * common_variables["grad_exner"]
   grad_theta_v_exner = horizontal_gradient_3d(theta_v * exner, h_grid, config) / r_hat_m[:, :, :, :, jnp.newaxis]
-  grad_theta_v = horizontal_gradient_3d(theta_v, h_grid, config) / r_hat_m[:, :, :, :, jnp.newaxis]
+  grad_theta_v = common_variables["grad_theta_v"]
   grad_p_term_2 = config["cp"] * (grad_theta_v_exner - exner[:, :, :, :, np.newaxis] * grad_theta_v)
   return -(grad_p_term_1 + grad_p_term_2) / 2.0
 
@@ -544,8 +549,7 @@ def eval_theta_v_divergence_term(common_variables,
   v_theta_v = common_variables["horizontal_wind"] * common_variables["theta_v_d_mass"][:, :, :, :, np.newaxis]
   v_theta_v /= r_hat_m[:, :, :, :, jnp.newaxis]
   div_v_theta_v = horizontal_divergence_3d(v_theta_v, h_grid, config) / 2.0
-  grad_theta_v = horizontal_gradient_3d(theta_v, h_grid, config)
-  grad_theta_v /= r_hat_m[:, :, :, :, jnp.newaxis]
+  grad_theta_v = common_variables["grad_theta_v"]
 
   div_v_theta_v += (theta_v * div_d_mass + (d_mass * (u[:, :, :, :, 0] * grad_theta_v[:, :, :, :, 0] +
                                                       u[:, :, :, :, 1] * grad_theta_v[:, :, :, :, 1]))) / 2.0

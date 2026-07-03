@@ -107,23 +107,43 @@ def solve_strict_diag_dominant_tridiag(jacL, jacD, jacU, rhs):
   """Thomas-algorithm tridiagonal solver for a strictly diagonally
   dominant system.  Matches HOMME's
   ``solve_strict_diag_dominant_tridiag``."""
-  updated_diag = [jacD[:, :, :, 0]]
-  rhs_levs = [rhs[:, :, :, 0]]
-  for lev_idx in range(jacD.shape[-1] - 1):
-    lower_rat = jacL[:, :, :, lev_idx] / updated_diag[-1]
-    updated_diag.append(jacD[:, :, :, lev_idx + 1]
-                        - lower_rat * jacU[:, :, :, lev_idx])
-    rhs_levs.append(rhs[:, :, :, lev_idx + 1]
-                    - lower_rat * rhs_levs[-1])
-  rhs_levs[-1] = rhs_levs[-1] / updated_diag[-1]
-  rhs_out = [rhs_levs[-1]]
-  ct = 0
-  for lev_idx in reversed(range(jacD.shape[-1] - 1)):
-    rhs_out.append((rhs_levs[lev_idx]
-                    - jacU[:, :, :, lev_idx] * rhs_out[ct])
-                   / updated_diag[lev_idx])
-    ct += 1
-  return jnp.flip(jnp.stack(rhs_out, axis=-1), -1)
+  # Forward elimination and back-substitution are sequential folds over the
+  # vertical levels, expressed through the backend ``scan`` so the loop body
+  # compiles once (``lax.scan`` on JAX) instead of unrolling ``nlev`` times.
+  # jacD has length nlev; jacL/jacU are the length-(nlev-1) off-diagonals.
+  nlev = jacD.shape[-1]
+
+  def _forward(carry, level):
+    jacL_k, jacU_k, jacD_next, rhs_next = level
+    diag_prev, rhs_prev = carry
+    lower_rat = jacL_k / diag_prev
+    diag_k = jacD_next - lower_rat * jacU_k
+    rhs_k = rhs_next - lower_rat * rhs_prev
+    return (diag_k, rhs_k), (diag_k, rhs_k)
+
+  diag0 = jacD[:, :, :, 0]
+  rhs0 = rhs[:, :, :, 0]
+  _, (diag_rest, rhs_rest) = _be.scan(
+      _forward, (diag0, rhs0),
+      (jacL[:, :, :, 0:nlev - 1], jacU[:, :, :, 0:nlev - 1],
+       jacD[:, :, :, 1:nlev], rhs[:, :, :, 1:nlev]),
+      axis=-1)
+  updated_diag = jnp.concatenate((diag0[:, :, :, jnp.newaxis], diag_rest), axis=-1)
+  rhs_levs = jnp.concatenate((rhs0[:, :, :, jnp.newaxis], rhs_rest), axis=-1)
+
+  sol_last = rhs_levs[:, :, :, nlev - 1] / updated_diag[:, :, :, nlev - 1]
+
+  def _backward(sol_next, level):
+    rhs_lev_k, jacU_k, diag_k = level
+    sol_k = (rhs_lev_k - jacU_k * sol_next) / diag_k
+    return sol_k, sol_k
+
+  _, sol_rest = _be.scan(
+      _backward, sol_last,
+      (rhs_levs[:, :, :, 0:nlev - 1], jacU[:, :, :, 0:nlev - 1],
+       updated_diag[:, :, :, 0:nlev - 1]),
+      reverse=True, axis=-1)
+  return jnp.concatenate((sol_rest, sol_last[:, :, :, jnp.newaxis]), axis=-1)
 
 
 @jit
@@ -297,7 +317,12 @@ def calc_implicit_update(dt_implicit,
   w_phi_compatibility_residual = jnp.concatenate(
       (fn[:, :, :, :-1], jnp.zeros_like(fn[:, :, :, -1:])), axis=-1)
 
-  for _ in range(max_itercount):
+  # Fixed-budget Newton sweep expressed as a scan so the body compiles once
+  # instead of unrolling ``max_itercount`` copies into the jaxpr.  The carry is
+  # exactly the loop-variant state; everything else (dt, phi_n0, g_n0, the
+  # static forcing / config / grid) is a step-invariant closure.
+  def _newton_step(carry, _):
+    w_guess, dphi_guess, nh_pressure, w_phi_compatibility_residual = carry
     w_search_dir = init_search_dir(dt_implicit, w_guess, dphi_guess,
                                    dynamics_before_implicit["d_mass"],
                                    nh_pressure, physics_config,
@@ -311,6 +336,12 @@ def calc_implicit_update(dt_implicit,
     fn = w_guess - (w_n0 + dt_implicit * g_n0 * (mu - 1.0))
     w_phi_compatibility_residual = jnp.concatenate(
         (fn[:, :, :, :-1], jnp.zeros_like(fn[:, :, :, -1:])), axis=-1)
+    return (w_guess, dphi_guess, nh_pressure, w_phi_compatibility_residual), None
+
+  (w_guess, dphi_guess, nh_pressure, w_phi_compatibility_residual), _ = _be.scan(
+      _newton_step,
+      (w_guess, dphi_guess, nh_pressure, w_phi_compatibility_residual),
+      jnp.arange(max_itercount))
 
   # Final phi update: phi_np1 = phi_n0 + dt * g(phi_n0) * w_np1.
   phi_next = phi_n0 + dt_implicit * g_n0 * w_guess
