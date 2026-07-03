@@ -554,8 +554,15 @@ def eval_hypervis_terms(dynamics,
                                 phi_i=phi_i,
                                 w_i=w_i)
   # slightly silly way of handling tracer consistency
-  hypervisc_tend_for_tracer = jnp.where(diffusion_config["nu_d_mass"] > 0.0,
-                                        hypervis_state["d_mass"] / diffusion_config["nu_d_mass"],
+  # Sanitize the denominator *before* dividing (not just guard the result with
+  # `where`): the standard tracer-consistency config sets nu_d_mass == 0, and a
+  # bare d_mass / 0 in the untaken branch produces inf/NaN whose cotangent
+  # poisons reverse-mode AD through eval_hypervis_terms even though the forward
+  # value is masked to zero.
+  nu_d_mass = diffusion_config["nu_d_mass"]
+  safe_nu_d_mass = jnp.where(nu_d_mass > 0.0, nu_d_mass, 1.0)
+  hypervisc_tend_for_tracer = jnp.where(nu_d_mass > 0.0,
+                                        hypervis_state["d_mass"] / safe_nu_d_mass,
                                         jnp.zeros_like(hypervis_state["d_mass"]))
   tracer_consistency = wrap_tracer_consist_hypervis(1.0 * dynamics["d_mass"],
                                                     hypervisc_tend_for_tracer)
@@ -607,7 +614,13 @@ def eval_ref_state(phi_surf,
   exner = (p_mid / dummy_thermo["p0"])**(dummy_thermo["Rgas"] / dummy_thermo["cp"])
   T1 = reference_params["T_ref_lapse"] * reference_params["T_ref"] * dummy_thermo["cp"] / physics_config["gravity"]
   T0 = reference_params["T_ref"] - T1
-  theta_ref = T0 + T0 * (1 - exner) + T1
+  # HOMME's theta-l reference is exactly T0 / exner + T1; the previous
+  # T0 + T0*(1 - exner) + T1 is only its first-order Taylor expansion about
+  # exner == 1 and drifts tens of K in the lower stratosphere (e.g. ~43 K near
+  # 100 hPa), so biharmonic damping acted on a spurious smooth perturbation
+  # there.  The CAM-SE branch below (theta_ref * exner) then correctly reduces
+  # to the linear T_ref = T0 + T1 * exner.
+  theta_ref = T0 / exner + T1
   if model in cam_se_models:
     thermo_var_name = "T"
     thermo_profile = theta_ref * exner

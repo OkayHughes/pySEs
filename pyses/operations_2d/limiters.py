@@ -69,8 +69,14 @@ def clip_and_sum_limiter(tracer_mass_tend, mass_matrix, tracer_min, tracer_max, 
                                 jnp.zeros_like(tracer))
   denominator = jnp.sum(tracer_adjustment * scaled_mass, axis=(1, 2))
   do_mass_adjustment = jnp.logical_and(modified, denominator > 0.0)
+  # Sanitize the denominator before dividing (not just guard the result with
+  # `where`): a fully-saturated element-level has denominator == 0, and the
+  # bare add_mass_per_lev / denominator in the untaken branch produces inf/NaN
+  # that both warns at runtime and poisons reverse-mode AD (the forward value
+  # is masked, but the cotangent is not).
+  safe_denominator = jnp.where(denominator > 0.0, denominator, 1.0)
   tracer = jnp.where(do_mass_adjustment[:, jnp.newaxis, jnp.newaxis, :],
-                     tracer + (add_mass_per_lev / denominator)[:, jnp.newaxis, jnp.newaxis, :] * tracer_adjustment,
+                     tracer + (add_mass_per_lev / safe_denominator)[:, jnp.newaxis, jnp.newaxis, :] * tracer_adjustment,
                      tracer)
   tracer_mass_tend_out = tracer * d_mass
   return tracer_mass_tend_out
@@ -146,16 +152,21 @@ def full_limiter(tracer_mass_tend, mass_matrix, tracer_min, tracer_max, d_mass, 
                                    jnp.zeros_like(tracer)),
                          axis=(1, 2))
 
+    # Sanitize before dividing: weight_sum == 0 for element-levels with no
+    # unsaturated DOF to receive the redistributed mass; a bare divide leaves
+    # inf/NaN in the masked-out entries that poisons reverse-mode AD.
+    safe_weight_sum = jnp.where(weight_sum > 0.0, weight_sum, 1.0)
     tracer = jnp.where(jnp.logical_and(add_mask, not_overshoot_mask),
-                       tracer + (add_mass_per_lev / weight_sum)[:, jnp.newaxis, jnp.newaxis, :],
+                       tracer + (add_mass_per_lev / safe_weight_sum)[:, jnp.newaxis, jnp.newaxis, :],
                        tracer)
     not_add_mask = jnp.logical_not(add_mask)
     weight_sum = jnp.sum(jnp.where(jnp.logical_and(not_add_mask, not_undershoot_mask),
                                    scaled_mass,
                                    jnp.zeros_like(tracer)),
                          axis=(1, 2))
+    safe_weight_sum = jnp.where(weight_sum > 0.0, weight_sum, 1.0)
     tracer = jnp.where(jnp.logical_and(not_add_mask, not_undershoot_mask),
-                       tracer + (add_mass_per_lev / weight_sum)[:, jnp.newaxis, jnp.newaxis, :],
+                       tracer + (add_mass_per_lev / safe_weight_sum)[:, jnp.newaxis, jnp.newaxis, :],
                        tracer)
   tracer_mass_tend_out = tracer * d_mass
   return tracer_mass_tend_out

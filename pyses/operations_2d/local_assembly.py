@@ -228,7 +228,13 @@ def minmax_scalar(f,
                                   extraction_struct["extract_from"]["elem_idx"],
                                   extraction_struct["extract_from"]["i_idx"],
                                   extraction_struct["extract_from"]["j_idx"]].get(out_sharding=extraction_sharding)
-    relevant_data *= extraction_struct["mask"]
+    # Padded extraction slots carry mask == 0 and default (zero) sum_into
+    # indices; a multiplicative mask would leave payload 0 which then scatters
+    # into DOF (0, 0, 0) of every shard via `.max`, corrupting the min/max
+    # there (e.g. collapsing a strictly-positive tracer lower bound to 0).
+    # -inf is the identity for the max reduction (used directly for `max` and
+    # on the negated field for `min`), so padded slots become inert.
+    relevant_data = jnp.where(extraction_struct["mask"] > 0, relevant_data, -jnp.inf)
     scaled_f = do_max_manual_sharding(scaled_f,
                                       extraction_struct["sum_into"]["elem_idx"],
                                       extraction_struct["sum_into"]["i_idx"],

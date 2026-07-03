@@ -254,6 +254,14 @@ def test_minmax(nx, npt):
             axis_2[jnp.newaxis, :, jnp.newaxis] *
             axis_3[jnp.newaxis, jnp.newaxis, :])
 
+  # Use a *sign-indefinite* payload (face_idx - shift, monotone in face_idx so
+  # the argmin/argmax face is unchanged) rather than the non-negative face_idx.
+  # On the sharded path, padded extraction slots scatter into DOF (0, 0, 0) of
+  # every shard via `.max`; a naive multiplicative mask leaves payload 0 there,
+  # which corrupts max (max(f, 0) < 0 when f < 0) and, after negation, min
+  # (min(f, 0) > 0 when f > 0).  Non-negative face_idx values hide the first
+  # case entirely, so this shift is what makes the test able to catch it.
+  shift = 3.0
   vert_redundancy_gll = vert_red_flat_to_hierarchy(grid_nowrapper["vertex_redundancy"])
   for is_max, extremal_op in zip([True, False], [max, min]):
     for face_idx in range(grid["physical_coords"].shape[0]):
@@ -261,18 +269,18 @@ def test_minmax(nx, npt):
         for j_idx in range(npt):
           fn = jnp.zeros_like(grid["physical_coords"][:, :, :, 0])
           extremal_face_idx = face_idx
-          fn += add_one_point(fn, face_idx, i_idx, j_idx) * face_idx
+          fn += add_one_point(fn, face_idx, i_idx, j_idx) * (face_idx - shift)
           if face_idx in vert_redundancy_gll.keys():
             if (i_idx, j_idx) in vert_redundancy_gll[face_idx].keys():
               for remote_face_id, remote_i, remote_j in vert_redundancy_gll[face_idx][(i_idx, j_idx)]:
                 extremal_face_idx = extremal_op(remote_face_id, extremal_face_idx)
-                fn += add_one_point(fn, remote_face_id, remote_i, remote_j) * remote_face_id
+                fn += add_one_point(fn, remote_face_id, remote_i, remote_j) * (remote_face_id - shift)
           fn_out = jnp.zeros_like(grid["physical_coords"][:, :, :, 0])
-          fn_out += add_one_point(fn, face_idx, i_idx, j_idx) * extremal_face_idx
+          fn_out += add_one_point(fn, face_idx, i_idx, j_idx) * (extremal_face_idx - shift)
           if face_idx in vert_redundancy_gll.keys():
             if (i_idx, j_idx) in vert_redundancy_gll[face_idx].keys():
               for remote_face_id, remote_i, remote_j in vert_redundancy_gll[face_idx][(i_idx, j_idx)]:
-                fn_out += add_one_point(fn, remote_face_id, remote_i, remote_j) * extremal_face_idx
+                fn_out += add_one_point(fn, remote_face_id, remote_i, remote_j) * (extremal_face_idx - shift)
           max_fn = minmax_scalar(fn, grid, dims, max=is_max)
           assert np.allclose(get_global_array(max_fn, dims), get_global_array(fn_out, dims))
 @pytest.mark.parametrize("nx, npt", [(nx, npt) for nx in [7, 8] for npt in test_npts])

@@ -1027,8 +1027,14 @@ def remap_dynamics(dynamics_in,
     w_i_surf = ((u_remap[:, :, :, -1, 0] * static_forcing["grad_phi_surf"][:, :, :, 0] +
                  u_remap[:, :, :, -1, 1] * static_forcing["grad_phi_surf"][:, :, :, 1]) /
                 phi_to_g(static_forcing["phi_surf"], physics_config, model_remap))
-    w_i_upper = jnp.flip(jnp.cumsum(-jnp.flip(Qdp[:, :, :, :, 4], -1), axis=-1), -1) + dynamics_in["w_i"][:, :, :, -1:]
-    w_i_remap = jnp.concatenate((w_i_upper, w_i_surf[:, :, :, np.newaxis]), axis=-1)
+    # Reconstruct w on the reference levels from the *remapped* interface
+    # increments Qdp_out[..., 4] (not the pre-remap Qdp[..., 4]), anchored at
+    # the kinematically consistent post-remap surface value w_i_surf.  Using
+    # the pre-remap surface value dynamics_in["w_i"][..., -1] as the anchor
+    # would leave an O(dw_surf) discontinuity at the lowest interior interface
+    # once the surface wind changes under the remap.  cumulative_sum integrates
+    # from the top down and appends w_i_surf as the bottom interface.
+    w_i_remap = cumulative_sum(-Qdp_out[:, :, :, :, 4], w_i_surf)
   else:
     phi_i_remap = None
     w_i_remap = None
@@ -1237,23 +1243,21 @@ def check_dynamics_nan(dynamics,
   has_nan : bool
       ``True`` if any NaN is found in any dynamics field on any MPI rank.
   """
-  is_nan = False
   fields = ["horizontal_wind", "d_mass"]
   if model not in shallow_water_models:
     fields += [thermodynamic_variable_names[model]]
   if model not in hydrostatic_models:
     fields += ["w_i", "phi_i"]
-  for field in fields:
-    field_is_nan =  jnp.any(jnp.isnan(apply_mask(dynamics[field], h_grid)))
-    if DEBUG:
+  # Reduce every field to a single on-device flag and materialize it once.
+  # The previous `is_nan = is_nan or field_is_nan` loop called bool() on a
+  # device scalar per field (via Python `or`), forcing one device->host sync
+  # per field and destroying async dispatch overlap on GPU.
+  field_nans = [jnp.any(jnp.isnan(apply_mask(dynamics[field], h_grid))) for field in fields]
+  if DEBUG:
+    for field, field_is_nan in zip(fields, field_nans):
       if field_is_nan:
         print(f"{field} contains NaN values.")
-      else:
-        pass
-        #print(f"{field}: min {jnp.min(apply_mask(dynamics[field], h_grid))}, max {jnp.max(apply_mask(dynamics[field], h_grid))}")
-    
-    is_nan = is_nan or field_is_nan
-  is_nan = int(is_nan)
+  is_nan = int(jnp.any(jnp.stack(field_nans)))
   return global_sum(is_nan) > 0
 
 
@@ -1282,22 +1286,21 @@ def check_tracers_nan(tracers,
   has_nan : bool
       ``True`` if any NaN is found in any tracer field on any MPI rank.
   """
-  is_nan = False
-  for field_name in tracers["moisture_species"].keys():
-    field_is_nan = jnp.any(jnp.isnan(apply_mask(tracers["moisture_species"][field_name], h_grid)))
-    is_nan = is_nan or field_is_nan
-    if DEBUG and field_is_nan:
-      print(f"{field_name} contains NaN values.")
-  for field_name in tracers["tracers"].keys():
-    field_is_nan = jnp.any(jnp.isnan(apply_mask(tracers["tracers"][field_name], h_grid))) 
-    is_nan = is_nan or field_is_nan
-    if DEBUG and field_is_nan:
-      print(f"{field_name} contains NaN values.")
+  # Collect one on-device NaN flag per tracer field, then reduce and
+  # materialize once -- see check_dynamics_nan: the old per-field Python `or`
+  # forced a device->host sync per tracer, which is costly at EAMxx tracer
+  # counts.
+  named_fields = []
+  named_fields += [(name, tracers["moisture_species"][name]) for name in tracers["moisture_species"].keys()]
+  named_fields += [(name, tracers["tracers"][name]) for name in tracers["tracers"].keys()]
   if model in cam_se_models:
-    for field_name in tracers["dry_air_species"].keys():
-      field_is_nan = jnp.any(jnp.isnan(apply_mask(tracers["dry_air_species"][field_name], h_grid)))
-      is_nan = is_nan or field_is_nan
-      if DEBUG and field_is_nan:
-        print(f"{field_name} contains NaN values.")
-  is_nan = int(is_nan)
+    named_fields += [(name, tracers["dry_air_species"][name]) for name in tracers["dry_air_species"].keys()]
+  field_nans = [jnp.any(jnp.isnan(apply_mask(field, h_grid))) for _, field in named_fields]
+  if DEBUG:
+    for (name, _), field_is_nan in zip(named_fields, field_nans):
+      if field_is_nan:
+        print(f"{name} contains NaN values.")
+  if len(field_nans) == 0:
+    return global_sum(0) > 0
+  is_nan = int(jnp.any(jnp.stack(field_nans)))
   return global_sum(is_nan) > 0

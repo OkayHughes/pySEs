@@ -214,14 +214,28 @@ class NumpyBackend:
         return func
 
     def vmap(self, func, in_axes=0, out_axes=0):
-        # No batching primitive; map in Python and stack, matching jax.vmap's
-        # single-mapped-array contract used across the dynamical core.
-        def wrapped(x):
-            idx = [slice(None)] * x.ndim
+        # No batching primitive; map in Python and stack, matching jax.vmap.
+        # Supports several positional args with a shared int ``in_axes`` or a
+        # per-arg tuple (``None`` marks an unmapped/broadcast arg), and
+        # tuple-valued outputs.  A single mapped array with int ``in_axes`` --
+        # the long-standing contract used across the dynamical core -- behaves
+        # exactly as before.
+        def wrapped(*args):
+            axes = in_axes if isinstance(in_axes, (tuple, list)) else (in_axes,) * len(args)
+            batch = next(a.shape[ax] for a, ax in zip(args, axes) if ax is not None)
             outs = []
-            for k in range(x.shape[in_axes]):
-                idx[in_axes] = k
-                outs.append(func(x[tuple(idx)]))
+            for k in range(batch):
+                call_args = []
+                for a, ax in zip(args, axes):
+                    if ax is None:
+                        call_args.append(a)
+                    else:
+                        idx = [slice(None)] * a.ndim
+                        idx[ax] = k
+                        call_args.append(a[tuple(idx)])
+                outs.append(func(*call_args))
+            if isinstance(outs[0], (tuple, list)):
+                return tuple(np.stack([o[j] for o in outs], axis=out_axes) for j in range(len(outs[0])))
             return np.stack(outs, axis=out_axes)
         return wrapped
 
@@ -368,10 +382,23 @@ class JaxBackend:
                     f"--xla_force_host_platform_device_count={shard_cpu_count}"
                 ).strip()
                 devices = jax.devices(backend="cpu")
+                # --xla_force_host_platform_device_count only takes effect if
+                # nothing has initialized the XLA CPU backend yet.  If something
+                # touched jax.devices()/jnp before this Backend was built (e.g. a
+                # notebook or an interactive _reset_backend), the flag is a silent
+                # no-op and we quietly get 1 device instead of shard_cpu_count.
+                assert len(devices) == shard_cpu_count, (
+                    f"Requested {shard_cpu_count} host CPU devices but JAX "
+                    f"initialized {len(devices)}. The XLA CPU backend was likely "
+                    f"already initialized before this Backend was constructed, "
+                    f"making XLA_FLAGS a no-op. Build the backend before touching "
+                    f"JAX, or set --xla_force_host_platform_device_count in the "
+                    f"environment before import."
+                )
             else:
                 try:
                     maybe_devices = jax.devices(backend="gpu")
-                except:
+                except RuntimeError:
                     maybe_devices = []
                 devices = maybe_devices if len(maybe_devices) > 0 else jax.devices(backend="cpu")
                 self.num_devices = len(devices)
@@ -450,7 +477,7 @@ class JaxBackend:
         if dims is not None:
             slices = [slice(None)] * x.ndim
             slices[elem_sharding_axis] = slice(0, dims["num_elem"])
-            return arr[*slices]
+            return arr[tuple(slices)]
         return arr
 
     def jit(self, func, *args, **kwargs):
@@ -1295,6 +1322,12 @@ def runtime_assert(condition, message: str = "Assertion failed") -> None:
     """
     be = get_backend()
     if be.wrapper_type == "jax":
+        # jax.debug.callback inserts a device->host round-trip into the XLA
+        # program, serializing the async dispatch pipeline (and it runs on every
+        # invocation -- e.g. once per tracer sub-cycle from the remap).  Gate it
+        # on PYSES_DEBUG so it compiles out of production runs.
+        if not be.debug:
+            return
         import jax
 
         def _check(ok):

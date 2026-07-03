@@ -252,6 +252,7 @@ def eval_cfl(h_grid,
              radius_earth,
              diffusion_config,
              dims,
+             *,
              sphere=True):
   """
   Estimate CFL-based stability limits for dynamics, tracer advection,
