@@ -31,7 +31,7 @@ from pyses.dynamical_cores.homme.implicit_terms import (
 from pyses.dynamical_cores.mass_coordinate import init_vertical_grid
 from pyses.dynamical_cores.model_info import models
 from pyses.dynamical_cores.physics_config import init_physics_config
-from pyses.mesh_generation.equiangular_metric import init_quasi_uniform_grid
+from pyses.mesh_generation.element_local_metric import init_quasi_uniform_grid_elem_local
 from ....test_data.mass_coordinate_grids import cam30
 
 _be = _get_backend()
@@ -275,7 +275,7 @@ def _build_acoustic_initial_state():
   acoustic + gravity-wave modes for testing the implicit solver.
   """
   model = models.homme_nonhydrostatic
-  h_grid, dims = init_quasi_uniform_grid(NE_ACOUSTIC, NPT_ACOUSTIC,
+  h_grid, dims = init_quasi_uniform_grid_elem_local(NE_ACOUSTIC, NPT_ACOUSTIC,
                                           calc_smooth_tensor=True)
   v_grid = init_vertical_grid(cam30["hybrid_a_i"],
                               cam30["hybrid_b_i"],

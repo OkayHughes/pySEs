@@ -7,7 +7,7 @@ from .mesh_generation import periodic_plane as _periodic_plane
 class init:
   init_spectral_element_grid = staticmethod(_horizontal_grid.init_spectral_element_grid)
   init_quasi_uniform_grid = staticmethod(_element_local_metric.init_quasi_uniform_grid_elem_local)
-  init_equiangular_grid = staticmethod(_equiangular_metric.init_quasi_uniform_grid)
+  #init_equiangular_grid = staticmethod(_equiangular_metric.init_quasi_uniform_grid)
   init_stretched_grid = staticmethod(_element_local_metric.init_stretched_grid_elem_local)
   init_unstructured_grid = staticmethod(_element_local_metric.init_unstructured_grid)
   init_periodic_plane_grid = staticmethod(_periodic_plane.init_periodic_plane)

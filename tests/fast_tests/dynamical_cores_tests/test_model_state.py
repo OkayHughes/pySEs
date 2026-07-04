@@ -11,7 +11,7 @@ from pyses.dynamical_cores.model_info import (models,
 from pyses.dynamical_cores.physics_config import init_physics_config
 from pyses.analytic_initialization.moist_baroclinic_wave import init_baroclinic_wave_config
 from pyses.dynamical_cores.mass_coordinate import init_vertical_grid
-from .conftest import cached_baroclinic_state, cached_quasi_uniform_grid
+from .conftest import cached_baroclinic_state, cached_quasi_uniform_grid_elem_local
 from pyses.dynamical_cores.model_state import (sum_tracers,
                                              sum_tracers_series,
                                              wrap_dynamics,
@@ -43,7 +43,7 @@ def test_copy_state():
                               cam30["hybrid_b_i"],
                               cam30["p0"],
                               model)
-  h_grid, dims = cached_quasi_uniform_grid(nx, npt)
+  h_grid, dims = cached_quasi_uniform_grid_elem_local(nx, npt)
   test_config = init_baroclinic_wave_config(model_config=model_config)
   model_state = cached_baroclinic_state(nx, npt, model,
                                              mountain=False,
@@ -81,7 +81,7 @@ def test_copy_state():
 def test_tracer_sums(model):
   npt = 4
   nx = 4
-  h_grid, dims = cached_quasi_uniform_grid(nx, npt)
+  h_grid, dims = cached_quasi_uniform_grid_elem_local(nx, npt)
   v_grid = init_vertical_grid(cam30["hybrid_a_i"],
                               cam30["hybrid_b_i"],
                               cam30["p0"],
@@ -142,7 +142,7 @@ def test_tracer_sums(model):
 def test_wrappers(model):
   npt = 4
   nx = 4
-  h_grid, dims = cached_quasi_uniform_grid(nx, npt)
+  h_grid, dims = cached_quasi_uniform_grid_elem_local(nx, npt)
   v_grid = init_vertical_grid(cam30["hybrid_a_i"],
                               cam30["hybrid_b_i"],
                               cam30["p0"],
@@ -226,7 +226,7 @@ def test_wrappers(model):
 def test_project_dynamics_state(model):
   npt = 4
   nx = 4
-  h_grid, dims = cached_quasi_uniform_grid(nx, npt)
+  h_grid, dims = cached_quasi_uniform_grid_elem_local(nx, npt)
   v_grid = init_vertical_grid(cam30["hybrid_a_i"],
                               cam30["hybrid_b_i"],
                               cam30["p0"],
@@ -257,7 +257,7 @@ def test_project_dynamics_state(model):
 def test_advance_dynamics(model):
   npt = 4
   nx = 4
-  h_grid, dims = cached_quasi_uniform_grid(nx, npt)
+  h_grid, dims = cached_quasi_uniform_grid_elem_local(nx, npt)
   v_grid = init_vertical_grid(cam30["hybrid_a_i"],
                               cam30["hybrid_b_i"],
                               cam30["p0"],
@@ -295,7 +295,7 @@ def test_advance_dynamics(model):
 def test_check_nan(model):
   npt = 4
   nx = 4
-  h_grid, dims = cached_quasi_uniform_grid(nx, npt)
+  h_grid, dims = cached_quasi_uniform_grid_elem_local(nx, npt)
   v_grid = init_vertical_grid(cam30["hybrid_a_i"],
                               cam30["hybrid_b_i"],
                               cam30["p0"],

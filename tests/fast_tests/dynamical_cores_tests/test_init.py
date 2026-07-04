@@ -1,7 +1,6 @@
 import pytest
 
-from pyses.mesh_generation.equiangular_metric import init_quasi_uniform_grid
-from .conftest import cached_baroclinic_state, cached_quasi_uniform_grid
+from .conftest import cached_baroclinic_state, cached_quasi_uniform_grid_elem_local
 from pyses.operations_2d.operators import horizontal_gradient
 from pyses.operations_2d.local_assembly import project_scalar
 from ...test_data.mass_coordinate_grids import cam30
@@ -120,7 +119,7 @@ def test_moisture_quadrature():
 def test_init(mountain):
   npt = 4
   nx = 15
-  h_grid, dims = cached_quasi_uniform_grid(nx, npt)
+  h_grid, dims = cached_quasi_uniform_grid_elem_local(nx, npt)
   v_grid = init_vertical_grid(cam30["hybrid_a_i"],
                               cam30["hybrid_b_i"],
                               cam30["p0"],
@@ -149,7 +148,7 @@ def test_init(mountain):
 def test_init_moist(mountain):
   npt = 4
   nx = 4
-  h_grid, dims = cached_quasi_uniform_grid(nx, npt)
+  h_grid, dims = cached_quasi_uniform_grid_elem_local(nx, npt)
   model = models.cam_se
   v_grid = init_vertical_grid(cam30["hybrid_a_i"],
                               cam30["hybrid_b_i"],

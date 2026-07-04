@@ -4,7 +4,7 @@ import numpy as np
 from pyses.mesh_generation.cubed_sphere import init_cube_topo
 from pyses.mesh_generation.mesh import init_element_corner_vert_redundancy
 from pyses.operations_2d.horizontal_grid import shard_grid
-from pyses.mesh_generation.equiangular_metric import init_grid_from_topo
+from pyses.mesh_generation.element_local_metric import init_grid_from_topo_elem_local
 from pyses.mesh_generation.mesh import vert_red_flat_to_hierarchy
 from pyses.operations_2d.local_assembly import (project_scalar_wrapper,
                                               project_scalar,
@@ -127,7 +127,7 @@ def test_extraction_map():
       for nx in [1, 4]:
         face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
         vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
-        grid_nowrap, dims_nowrap = init_grid_from_topo(face_connectivity,
+        grid_nowrap, dims_nowrap = init_grid_from_topo_elem_local(face_connectivity,
                                                        face_mask,
                                                        face_position_2d,
                                                        vert_redundancy,
@@ -171,7 +171,7 @@ def test_extraction_map_rand(nx, npt):
   num_devices = 2
   face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
   vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
-  grid_nowrap, dims_nowrap = init_grid_from_topo(face_connectivity,
+  grid_nowrap, dims_nowrap = init_grid_from_topo_elem_local(face_connectivity,
                                                  face_mask,
                                                  face_position_2d,
                                                  vert_redundancy,
@@ -194,14 +194,14 @@ def test_extraction_map_rand(nx, npt):
 def test_projection(nx, npt):
   face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
   vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
-  raw_grid, dims = init_grid_from_topo(face_connectivity,
+  raw_grid, dims = init_grid_from_topo_elem_local(face_connectivity,
                                        face_mask,
                                        face_position_2d,
                                        vert_redundancy,
                                        npt,
                                        wrapped=use_wrapper)
   grid = shard_grid(raw_grid, dims)
-  grid_nowrapper, _ = init_grid_from_topo(face_connectivity,
+  grid_nowrapper, _ = init_grid_from_topo_elem_local(face_connectivity,
                                           face_mask,
                                           face_position_2d,
                                           vert_redundancy,
@@ -232,14 +232,14 @@ def test_projection(nx, npt):
 def test_minmax(nx, npt):
   face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
   vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
-  raw_grid, dims = init_grid_from_topo(face_connectivity,
+  raw_grid, dims = init_grid_from_topo_elem_local(face_connectivity,
                                        face_mask,
                                        face_position_2d,
                                        vert_redundancy,
                                        npt,
                                        wrapped=use_wrapper)
   grid = shard_grid(raw_grid, dims)
-  grid_nowrapper, _ = init_grid_from_topo(face_connectivity,
+  grid_nowrapper, _ = init_grid_from_topo_elem_local(face_connectivity,
                                           face_mask,
                                           face_position_2d,
                                           vert_redundancy,
@@ -287,12 +287,12 @@ def test_minmax(nx, npt):
 def test_projection_equiv(nx, npt):
   face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
   vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
-  raw_grid, dims = init_grid_from_topo(face_connectivity,
+  raw_grid, dims = init_grid_from_topo_elem_local(face_connectivity,
                                        face_mask,
                                        face_position_2d,
                                        vert_redundancy,
                                        npt, wrapped=False)
-  grid_wrapped, dims_wrapped = init_grid_from_topo(face_connectivity,
+  grid_wrapped, dims_wrapped = init_grid_from_topo_elem_local(face_connectivity,
                                                    face_mask,
                                                    face_position_2d,
                                                    vert_redundancy,
@@ -311,12 +311,12 @@ def test_projection_equiv(nx, npt):
 def test_projection_equiv_rand(nx, npt):
   face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
   vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
-  raw_grid, dims = init_grid_from_topo(face_connectivity,
+  raw_grid, dims = init_grid_from_topo_elem_local(face_connectivity,
                                        face_mask,
                                        face_position_2d,
                                        vert_redundancy,
                                        npt, wrapped=False)
-  grid_wrapped, dims_wrapped = init_grid_from_topo(face_connectivity,
+  grid_wrapped, dims_wrapped = init_grid_from_topo_elem_local(face_connectivity,
                                                    face_mask,
                                                    face_position_2d,
                                                    vert_redundancy,

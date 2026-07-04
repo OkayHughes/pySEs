@@ -1,4 +1,4 @@
-from pyses.mesh_generation.equiangular_metric import init_quasi_uniform_grid
+from pyses.mesh_generation.element_local_metric import init_quasi_uniform_grid_elem_local
 from ....test_data.mass_coordinate_grids import cam30
 from pyses.dynamical_cores.model_state import project_dynamics
 from pyses.dynamical_cores.mass_coordinate import init_vertical_grid
@@ -21,7 +21,7 @@ device_wrapper = _be.array
 def test_notopo(model):
   npt = 4
   nx = 5
-  h_grid, dims = init_quasi_uniform_grid(nx, npt)
+  h_grid, dims = init_quasi_uniform_grid_elem_local(nx, npt)
   
   v_grid = init_vertical_grid(cam30["hybrid_a_i"],
                               cam30["hybrid_b_i"],

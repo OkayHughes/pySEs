@@ -1,6 +1,6 @@
 from pyses._config import get_backend as _get_backend
 import numpy as np
-from pyses.mesh_generation.equiangular_metric import init_quasi_uniform_grid
+from pyses.mesh_generation.element_local_metric import init_quasi_uniform_grid_elem_local
 from pyses.operations_2d.local_assembly import project_scalar
 from pyses.operations_2d.horizontal_grid import extract_subset_parallel_dim, make_grid_mpi_ready
 from pyses.operations_2d.operators import (horizontal_gradient,
@@ -25,7 +25,7 @@ def test_vector_identites_sphere():
 
   for npt in test_npts:
     for nx in [30, 31]:
-      grid, dims = init_quasi_uniform_grid(nx, npt)
+      grid, dims = init_quasi_uniform_grid_elem_local(nx, npt)
       grid, dims = make_grid_mpi_ready(grid, dims, mpi_rank)
       fn = jnp.cos(grid["physical_coords"][:, :, :, 1]) * jnp.cos(grid["physical_coords"][:, :, :, 0])
       grad = horizontal_gradient(fn, grid)
@@ -72,7 +72,7 @@ def test_vector_identites_rand_sphere():
   for npt in test_npts:
     np.random.seed(seed)
     for nx in [30, 31]:
-      grid, dims = init_quasi_uniform_grid(nx, npt)
+      grid, dims = init_quasi_uniform_grid_elem_local(nx, npt)
       grid, dims = make_grid_mpi_ready(grid, dims, mpi_rank)
       for _ in range(10):
         fn = device_wrapper(np.random.normal(scale=10, size=grid["physical_coords"][:, :, :, 0].shape))
@@ -123,7 +123,7 @@ def test_equivalence_rand_sphere():
   for npt in test_npts:
     np.random.seed(seed)
     for nx in [6, 9]:
-      grid_total, dims_total = init_quasi_uniform_grid(nx, npt)
+      grid_total, dims_total = init_quasi_uniform_grid_elem_local(nx, npt)
       grid, dims = make_grid_mpi_ready(grid_total, dims_total, mpi_rank)
       decomp = init_decomp(dims_total["num_elem"], mpi_size)
       for _ in range(10):

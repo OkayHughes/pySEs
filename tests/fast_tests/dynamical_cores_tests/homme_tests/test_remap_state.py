@@ -1,6 +1,6 @@
 from pyses.analytic_initialization.moist_baroclinic_wave import init_baroclinic_wave_config, init_baroclinic_wave_state
 from pyses.dynamical_cores.physics_config import init_physics_config
-from ..conftest import cached_quasi_uniform_grid
+from ..conftest import cached_quasi_uniform_grid_elem_local
 from pyses._config import get_backend as _get_backend
 import numpy as np
 from ....test_data.mass_coordinate_grids import cam30
@@ -17,7 +17,7 @@ unwrap = _be.unwrap
 def test_remap_state():
   npt = 4
   nx = 5
-  h_grid, dims = cached_quasi_uniform_grid(nx, npt)
+  h_grid, dims = cached_quasi_uniform_grid_elem_local(nx, npt)
   model = models.homme_nonhydrostatic
   v_grid = init_vertical_grid(cam30["hybrid_a_i"],
                               cam30["hybrid_b_i"],
@@ -69,7 +69,7 @@ def test_remap_w_surface_anchor():
   """
   npt = 4
   nx = 5
-  h_grid, dims = cached_quasi_uniform_grid(nx, npt)
+  h_grid, dims = cached_quasi_uniform_grid_elem_local(nx, npt)
   model = models.homme_nonhydrostatic
   v_grid = init_vertical_grid(cam30["hybrid_a_i"],
                               cam30["hybrid_b_i"],

@@ -2,7 +2,7 @@ from pyses._config import get_backend as _get_backend
 import numpy as np
 from pyses.mesh_generation.cubed_sphere import init_cube_topo
 from pyses.mesh_generation.mesh import init_element_corner_vert_redundancy
-from pyses.mesh_generation.equiangular_metric import init_grid_from_topo
+from pyses.mesh_generation.element_local_metric import init_grid_from_topo_elem_local
 from pyses.dynamical_cores.model_state import project_scalar_3d
 from pyses.mesh_generation.mesh import vert_red_flat_to_hierarchy
 from ..operations_2d_tests.test_local_assembly import project_scalar_for
@@ -39,13 +39,13 @@ def test_project_3d():
   nlev = 3
   face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
   vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
-  grid, dims = init_grid_from_topo(face_connectivity,
+  grid, dims = init_grid_from_topo_elem_local(face_connectivity,
                                    face_mask,
                                    face_position_2d,
                                    vert_redundancy,
                                    npt,
                                    wrapped=use_wrapper)
-  grid_nowrapper, _ = init_grid_from_topo(face_connectivity,
+  grid_nowrapper, _ = init_grid_from_topo_elem_local(face_connectivity,
                                           face_mask,
                                           face_position_2d,
                                           vert_redundancy,
@@ -73,13 +73,13 @@ def test_project_equiv_3d_rand():
   nlev = 5
   face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
   vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
-  grid, dims = init_grid_from_topo(face_connectivity,
+  grid, dims = init_grid_from_topo_elem_local(face_connectivity,
                                    face_mask,
                                    face_position_2d,
                                    vert_redundancy,
                                    npt,
                                    wrapped=False)
-  grid_wrapped, dims_wrapped = init_grid_from_topo(face_connectivity,
+  grid_wrapped, dims_wrapped = init_grid_from_topo_elem_local(face_connectivity,
                                                    face_mask,
                                                    face_position_2d,
                                                    vert_redundancy,
@@ -99,7 +99,7 @@ def test_project_c0():
   nlev = 5
   face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
   vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
-  grid, dims = init_grid_from_topo(face_connectivity,
+  grid, dims = init_grid_from_topo_elem_local(face_connectivity,
                                    face_mask,
                                    face_position_2d,
                                    vert_redundancy,

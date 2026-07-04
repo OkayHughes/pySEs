@@ -150,14 +150,12 @@ def test_equivalent_terms_dry_perturbed():
   test_config = init_baroclinic_wave_config(model_config=physics_config_se)
   model_state_se = cached_baroclinic_state(nx, npt, model_se,
                                               mountain=False,
-                                              moist=False,
-                                              grid_kind='elem_local')
+                                              moist=False)
   physics_config_homme = init_physics_config(model_homme)
   test_config = init_baroclinic_wave_config(model_config=physics_config_homme)
   model_state_homme = cached_baroclinic_state(nx, npt, model_homme,
                                               mountain=False,
-                                              moist=False,
-                                              grid_kind='elem_local')
+                                              moist=False)
   scaling = (v_grid_se["hybrid_a_m"] + v_grid_se["hybrid_b_m"])[np.newaxis, np.newaxis, np.newaxis, :]
   d_mass_pert = 1000.0 * jnp.cos(h_grid["physical_coords"][:, :, :, 0])[:, :, :, np.newaxis] * scaling
   pert_u = .1 * (jnp.cos(h_grid["physical_coords"][:, :, :, 0])[:, :, :, np.newaxis, np.newaxis] *

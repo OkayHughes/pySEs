@@ -1,4 +1,4 @@
-from pyses.mesh_generation.equiangular_metric import init_quasi_uniform_grid
+from pyses.mesh_generation.element_local_metric import init_quasi_uniform_grid_elem_local
 from ...reference_implementations.reference_global_assembly import (project_scalar_for_stub,
                                                                     assemble_scalar_for_pack,
                                                                     assemble_scalar_for_unpack,
@@ -30,7 +30,7 @@ def test_unordered_assembly_for_stub():
     for nx in range(1, 3):
       for nproc in range(1, 6):
         print(f"dividing nx {nx} grid among {nproc} processors")
-        grid_total, dim_total = init_quasi_uniform_grid(nx, npt, wrapped=False)
+        grid_total, dim_total = init_quasi_uniform_grid_elem_local(nx, npt, wrapped=False)
         vert_redundancy = vert_red_flat_to_hierarchy(grid_total["vertex_redundancy"])
         decomp = init_decomp(dim_total["num_elem"], nproc)
         grids = []
@@ -100,7 +100,7 @@ def test_unordered_assembly_triple_stub():
     for nx in range(1, 3):
       for nproc in range(1, 6):
         print(f"dividing nx {nx} grid among {nproc} processors")
-        grid_total, dim_total = init_quasi_uniform_grid(nx, npt, wrapped=False)
+        grid_total, dim_total = init_quasi_uniform_grid_elem_local(nx, npt, wrapped=False)
         decomp = init_decomp(dim_total["num_elem"], nproc)
         grids = []
         dims = []
@@ -245,9 +245,9 @@ def test_extract_fields_triples():
     np.random.seed(global_seed)
     for nx in range(1, 3):
       global_grids_nowrapper = [init_uniform_grid(nx, nx + 1, npt, wrapped=False),
-                                init_quasi_uniform_grid(nx, npt, wrapped=False)]
+                                init_quasi_uniform_grid_elem_local(nx, npt, wrapped=False)]
       global_grids = [init_uniform_grid(nx, nx + 1, npt, wrapped=use_wrapper),
-                      init_quasi_uniform_grid(nx, npt, wrapped=use_wrapper)]
+                      init_quasi_uniform_grid_elem_local(nx, npt, wrapped=use_wrapper)]
       for ((grid_total, dim_total),
            (grid_total_nowrapper, dim_total_nowrapper)) in zip(global_grids, global_grids_nowrapper):
         for random, num_iters in zip([False, True], [1, 10]):
@@ -337,7 +337,7 @@ def test_mpi_exchange_for():
       nproc = mpi_size
       local_proc_idx = mpi_rank
       print(f"dividing nx {nx} grid among {nproc} processors")
-      grid_total, dim_total = init_quasi_uniform_grid(nx, npt, wrapped=False)
+      grid_total, dim_total = init_quasi_uniform_grid_elem_local(nx, npt, wrapped=False)
       decomp = init_decomp(dim_total["num_elem"], nproc)
       grids = []
       dims = []
@@ -427,8 +427,8 @@ def test_mpi_exchange_triple():
       nproc = mpi_size
       local_proc_idx = mpi_rank
       print(f"dividing nx {nx} grid among {nproc} processors")
-      grid_total_nowrapper, dim_total_nowrapper = init_quasi_uniform_grid(nx, npt, wrapped=False)
-      grid_total, dim_total = init_quasi_uniform_grid(nx, npt, wrapped=use_wrapper)
+      grid_total_nowrapper, dim_total_nowrapper = init_quasi_uniform_grid_elem_local(nx, npt, wrapped=False)
+      grid_total, dim_total = init_quasi_uniform_grid_elem_local(nx, npt, wrapped=use_wrapper)
       decomp = init_decomp(dim_total["num_elem"], nproc)
       grids = []
       dims = []

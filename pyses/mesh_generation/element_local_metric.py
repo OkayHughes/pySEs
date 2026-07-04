@@ -13,7 +13,7 @@ _be = _get_backend()
 use_wrapper = _be.use_wrapper
 
 
-def eval_metric_terms_elem_local(latlon_corners,
+def eval_metric_terms_elem_local_pole_problem(latlon_corners,
                                  npt,
                                  rotate=False):
   """
@@ -75,14 +75,152 @@ def eval_metric_terms_elem_local(latlon_corners,
   # mask = np.logical_or(too_close_to_top,
   #                      too_close_to_bottom)
   # gll_latlon[:, :, :, 1] = np.where(mask, 0.0, gll_latlon[:, :, :, 1])
+  cart_to_sphere_jacobian[:, :, :, 1, :] *= np.cos(gll_latlon[:, :, :, 0])[:, :, :, np.newaxis]
+
   return gll_latlon, gll_to_cart_jacobian, cart_to_sphere_jacobian
+
+
+def eval_metric_terms_elem_local(latlon_corners,
+                                            npt):
+  """
+  Compute metric terms for a general unstructured spherical element mesh
+  using a bilinear mapping from element corners.
+
+  Projects Cartesian element corners onto the unit sphere, bilinearly maps
+  them to GLL nodes, then chains the reference-to-Cartesian and
+  Cartesian-to-sphere Jacobians to produce the GLL grid positions and metric.
+
+  Parameters
+  ----------
+  latlon_corners : Array[tuple[elem_idx, vert_idx, 2], Float]
+      Spherical coordinates ``(lat, lon)`` (radians) of the four element
+      corners in pyses vertex ordering.
+  npt : int
+      Number of GLL points per element edge.
+
+  Returns
+  -------
+  gll_latlon : Array[tuple[elem_idx, gll_idx, gll_idx, 2], Float]
+      Spherical coordinates ``(lat, lon)`` of each GLL node.
+  gll_to_cart_jacobian : Array[tuple[elem_idx, gll_idx, gll_idx, 3, 2], Float]
+      Jacobian of the bilinear reference-to-Cartesian mapping.
+  cart_to_sphere_jacobian : Array[tuple[elem_idx, gll_idx, gll_idx, 2, 3], Float]
+      Jacobian of the Cartesian-to-sphere coordinate change.
+  """
+  cart_corners = unit_sphere_to_cart_coords(latlon_corners)
+
+  cart_points_3d, gll_to_cart_jacobian = mesh_to_cart_bilinear(cart_corners, npt)
+  norm_cart = np.linalg.norm(cart_points_3d, axis=-1)
+  gll_xyz = cart_points_3d / norm_cart[:, :, :, np.newaxis]
+  gll_latlon = cart_to_unit_sphere_coords(gll_xyz)
+  lat = gll_latlon[:, :, :, 0]
+  lon = gll_latlon[:, :, :, 1]
+  sin_lat = np.sin(lat)
+  sin_lon = np.sin(lon)
+  cos_lat = np.cos(lat)
+  cos_lon = np.cos(lon)
+  
+  plane_to_sphere_jacobian_canceled = np.zeros((*gll_latlon.shape[:-1], 3, 3))
+  plane_to_sphere_jacobian_canceled[:, :, :, 0, 0] = sin_lon**2 * cos_lat**2 + sin_lat**2
+  plane_to_sphere_jacobian_canceled[:, :, :, 0, 1] = -sin_lon * cos_lon * cos_lat**2
+  plane_to_sphere_jacobian_canceled[:, :, :, 0, 2] = -cos_lon * sin_lat * cos_lat
+  plane_to_sphere_jacobian_canceled[:, :, :, 1, 0] = -sin_lon * cos_lon * cos_lat**2
+  plane_to_sphere_jacobian_canceled[:, :, :, 1, 1] = cos_lon**2 * cos_lat**2 + sin_lat**2
+  plane_to_sphere_jacobian_canceled[:, :, :, 1, 2] = -sin_lon * sin_lat * cos_lat
+  plane_to_sphere_jacobian_canceled[:, :, :, 2, 0] = -cos_lon * sin_lat # cancel cos_lat
+  plane_to_sphere_jacobian_canceled[:, :, :, 2, 1] = -sin_lon * sin_lat # ditto
+  plane_to_sphere_jacobian_canceled[:, :, :, 2, 2] = cos_lat # ditto
+  plane_to_sphere_jacobian_canceled /= norm_cart[:, :, :, np.newaxis, np.newaxis]
+  cart_to_sphere_jac_canceled = np.zeros((*gll_latlon.shape[:-1], 2, 3))
+  # Note: we are flipping lat/lon here to match pySEs conventions.
+  cart_to_sphere_jac_canceled[:, :, :, 1, 0] = -sin_lon
+  cart_to_sphere_jac_canceled[:, :, :, 1, 1] = cos_lon
+  cart_to_sphere_jac_canceled[:, :, :, 0, 2] = 1.0
+
+  cart_to_sphere_jacobian = np.einsum("fijpc,fijcd->fijdp",
+                                      cart_to_sphere_jac_canceled,
+                                      plane_to_sphere_jacobian_canceled)
+
+  # gll_latlon[:, :, :, 1] = np.mod(gll_latlon[:, :, :, 1], 2 * np.pi - 1e-9)
+  # too_close_to_top = np.abs(gll_latlon[:, :, :, 0] - np.pi / 2) < 1e-8
+  # too_close_to_bottom = np.abs(gll_latlon[:, :, :, 0] + np.pi / 2) < 1e-8
+  # mask = np.logical_or(too_close_to_top,
+  #                      too_close_to_bottom)
+  # gll_latlon[:, :, :, 1] = np.where(mask, 0.0, gll_latlon[:, :, :, 1])
+  return gll_latlon, gll_to_cart_jacobian, cart_to_sphere_jacobian
+
+
+def init_grid_from_topo_elem_local(face_connectivity,
+                                   face_mask,
+                                   face_position_2d,
+                                   vert_redundancy,
+                                   npt,
+                                   calc_smooth_tensor=False,
+                                   wrapped=use_wrapper):
+  """
+  Generate a SpectralElementGrid from cubed-sphere topology using the
+  element-local bilinear metric.
+
+  Element-local analogue of
+  :func:`pyses.mesh_generation.equiangular_metric.init_grid_from_topo`, sharing
+  its signature so it is a drop-in replacement.  Element-corner
+  latitudes/longitudes are read from the equiangular projection (the corners
+  are exact cubed-sphere vertices, shared by both metrics), then
+  :func:`eval_metric_terms_elem_local` builds the GLL metric by bilinearly
+  mapping those corners.
+
+  Parameters
+  ----------
+  face_connectivity : Array[tuple[elem_idx, edge_idx, 3], Int]
+      Topological connectivity array.  Accepted for signature parity with the
+      equiangular constructor; not used directly (redundancy is passed in
+      explicitly via ``vert_redundancy``).
+  face_mask : Array[tuple[elem_idx], Int]
+      Integer mask describing which cubed-sphere face each element lies on.
+  face_position_2d : Array[tuple[elem_idx, vert_idx, xy], Float]
+      Element-vertex positions in the local (x, y) coordinates of the
+      cubed-sphere face that contains each element.
+  vert_redundancy : dict[local_elem_idx, dict[vert_idx, set[tuple[remote_elem_idx, vert_idx]]]]
+      Element-corner redundancy struct.
+  npt : int
+      Number of GLL points per element edge.
+  calc_smooth_tensor : bool, optional
+      If ``True``, smooth the hyperviscosity tensor after grid assembly.
+      Defaults to ``False``.
+  wrapped : bool, optional
+      If ``True``, arrays are moved onto the configured device after assembly.
+      Defaults to ``use_wrapper``.
+
+  Returns
+  -------
+  grid : SpectralElementGrid
+      Assembled spectral element grid struct.
+  dims : frozendict[str, int]
+      Grid dimension metadata ``{"N", "shape", "npt", "num_elem"}``.
+  """
+  gll_position_equi, gll_jacobian = mesh_to_cart_bilinear(face_position_2d, npt)
+  cube_redundancy = init_spectral_grid_redundancy(vert_redundancy, npt)
+  gll_latlon_equi, _ = eval_metric_terms_equiangular(face_mask, gll_position_equi, npt)
+  latlon_corners = np.zeros((gll_latlon_equi.shape[0], 4, 2))
+  for vert_idx, (i_in, j_in) in enumerate([(0, 0), (npt - 1, 0), (0, npt - 1), (npt - 1, npt - 1)]):
+      latlon_corners[:, vert_idx, :] = gll_latlon_equi[:, i_in, j_in, :]
+
+  gll_latlon, gll_to_cart_jacobian, cart_to_sphere_jacobian = eval_metric_terms_elem_local(latlon_corners,
+                                                                                           npt)
+
+  return metric_terms_to_grid(gll_latlon,
+                              gll_to_cart_jacobian,
+                              cart_to_sphere_jacobian,
+                              cube_redundancy,
+                              npt,
+                              calc_smooth_tensor=calc_smooth_tensor,
+                              wrapped=wrapped)
 
 
 def init_quasi_uniform_grid_elem_local(nx,
                                        npt,
                                        wrapped=use_wrapper,
-                                       calc_smooth_tensor=False,
-                                       rotate=True):
+                                       calc_smooth_tensor=False):
   """
   Build a quasi-uniform cubed-sphere spectral element grid using element-local bilinear metric.
 
@@ -102,9 +240,6 @@ def init_quasi_uniform_grid_elem_local(nx,
   calc_smooth_tensor : bool, optional
       If ``True``, smooth the hyperviscosity tensor after grid assembly.
       Defaults to ``False``.
-  rotate : bool, optional
-      If ``True``, apply a small rotation to break element symmetry.
-      Defaults to ``True``.
 
   Returns
   -------
@@ -115,30 +250,13 @@ def init_quasi_uniform_grid_elem_local(nx,
   """
   face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
   vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
-  gll_position_equi, gll_jacobian = mesh_to_cart_bilinear(face_position_2d, npt)
-  cube_redundancy = init_spectral_grid_redundancy(vert_redundancy, npt)
-  gll_latlon_equi, _ = eval_metric_terms_equiangular(face_mask, gll_position_equi, npt)
-  latlon_corners = np.zeros((gll_latlon_equi.shape[0], 4, 2))
-  for vert_idx, (i_in, j_in) in enumerate([(0, 0), (npt - 1, 0), (0, npt - 1), (npt - 1, npt - 1)]):
-      latlon_corners[:, vert_idx, :] = gll_latlon_equi[:, i_in, j_in, :]
-
-  # too_close_to_top = np.abs(latlon_corners[:, :, 0] - np.pi / 2) < 1e-8
-  # too_close_to_bottom = np.abs(latlon_corners[:, :, 0] + np.pi / 2) < 1e-8
-  # mask = np.logical_or(too_close_to_top,
-  #                      too_close_to_bottom)
-  # latlon_corners[:, :, 1] = np.where(mask, 0.0, latlon_corners[:, :, 1])
-
-  gll_latlon, gll_to_cart_jacobian, cart_to_sphere_jacobian = eval_metric_terms_elem_local(latlon_corners,
-                                                                                           npt,
-                                                                                           rotate=rotate)
-
-  return metric_terms_to_grid(gll_latlon,
-                              gll_to_cart_jacobian,
-                              cart_to_sphere_jacobian,
-                              cube_redundancy,
-                              npt,
-                              calc_smooth_tensor=calc_smooth_tensor,
-                              wrapped=wrapped)
+  return init_grid_from_topo_elem_local(face_connectivity,
+                                        face_mask,
+                                        face_position_2d,
+                                        vert_redundancy,
+                                        npt,
+                                        calc_smooth_tensor=calc_smooth_tensor,
+                                        wrapped=wrapped)
 
 
 def init_stretched_grid_elem_local(nx,
@@ -147,8 +265,7 @@ def init_stretched_grid_elem_local(nx,
                                    orthogonal_transform=None,
                                    offset=None,
                                    wrapped=use_wrapper,
-                                   calc_smooth_tensor=False,
-                                   rotate=True):
+                                   calc_smooth_tensor=False):
   """
   Build a stretched cubed-sphere spectral element grid using element-local metric.
 
@@ -179,9 +296,6 @@ def init_stretched_grid_elem_local(nx,
   calc_smooth_tensor : bool, optional
       If ``True``, smooth the hyperviscosity tensor after grid assembly.
       Defaults to ``False``.
-  rotate : bool, optional
-      If ``True``, apply a small rotation to break element symmetry.
-      Defaults to ``True``.
 
   Returns
   -------
@@ -222,8 +336,7 @@ def init_stretched_grid_elem_local(nx,
   latlon_corners = cart_to_unit_sphere_coords(cart_corners[:, :, np.newaxis, :])[:, :, 0, :]
 
   gll_latlon, gll_to_cart_jacobian, cart_to_sphere_jacobian = eval_metric_terms_elem_local(latlon_corners,
-                                                                                           npt,
-                                                                                           rotate=rotate)
+                                                                                           npt)
 
   return metric_terms_to_grid(gll_latlon,
                               gll_to_cart_jacobian,
@@ -238,8 +351,7 @@ def init_unstructured_grid(face_connectivity,
                            corner_cart_positions,
                            npt,
                            wrapped=use_wrapper,
-                           calc_smooth_tensor=False,
-                           rotate=False):
+                           calc_smooth_tensor=False):
   """
   Build a spectral element grid from an arbitrary unstructured mesh.
 
@@ -264,9 +376,6 @@ def init_unstructured_grid(face_connectivity,
   calc_smooth_tensor : bool, optional
       If ``True``, smooth the hyperviscosity tensor after grid assembly.
       Defaults to ``False``.
-  rotate : bool, optional
-      If ``True``, apply a small rotation to break element symmetry.
-      Defaults to ``False``.
 
   Returns
   -------
@@ -280,16 +389,10 @@ def init_unstructured_grid(face_connectivity,
   cube_redundancy = init_spectral_grid_redundancy(vert_redundancy, npt)
   print("spectral redundancy finished")
 
-  # too_close_to_top = np.abs(latlon_corners[:, :, 0] - np.pi / 2) < 1e-8
-  # too_close_to_bottom = np.abs(latlon_corners[:, :, 0] + np.pi / 2) < 1e-8
-  # mask = np.logical_or(too_close_to_top,
-  #                      too_close_to_bottom)
-  # latlon_corners[:, :, 1] = np.where(mask, 0.0, latlon_corners[:, :, 1])
   latlon_corners = cart_to_unit_sphere_coords(corner_cart_positions[:, :, np.newaxis, :])[:, :, 0, :]
 
   gll_latlon, gll_to_cart_jacobian, cart_to_sphere_jacobian = eval_metric_terms_elem_local(latlon_corners,
-                                                                                           npt,
-                                                                                           rotate=rotate)
+                                                                                           npt)
 
   return metric_terms_to_grid(gll_latlon,
                               gll_to_cart_jacobian,

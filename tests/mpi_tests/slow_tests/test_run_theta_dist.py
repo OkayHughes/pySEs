@@ -5,7 +5,7 @@ from pyses.analytic_initialization.moist_baroclinic_wave import (init_baroclinic
                                                                perturbation_opts,
                                                                init_baroclinic_wave_state)
 from pyses.dynamical_cores.run_dycore import init_simulator
-from pyses.mesh_generation.equiangular_metric import init_quasi_uniform_grid
+from pyses.mesh_generation.element_local_metric import init_quasi_uniform_grid_elem_local
 from pyses.dynamical_cores.mass_coordinate import init_vertical_grid
 from pyses.operations_2d.horizontal_grid import make_grid_mpi_ready
 from pyses.dynamical_cores.model_info import models
@@ -21,7 +21,7 @@ def test_theta_steady_state():
   for model in [models.homme_hydrostatic, models.cam_se]:
     npt = 4
     nx = 15
-    h_grid, dims = init_quasi_uniform_grid(nx, npt)
+    h_grid, dims = init_quasi_uniform_grid_elem_local(nx, npt)
     h_grid, dims = make_grid_mpi_ready(h_grid, dims, mpi_rank)
     v_grid = init_vertical_grid(cam30["hybrid_a_i"],
                                 cam30["hybrid_b_i"],
@@ -63,7 +63,7 @@ def test_theta_steady_state():
 def test_theta_baro_wave():
   npt = 4
   nx = 15
-  h_grid, dims = init_quasi_uniform_grid(nx, npt)
+  h_grid, dims = init_quasi_uniform_grid_elem_local(nx, npt)
   h_grid, dims = make_grid_mpi_ready(h_grid, dims, mpi_rank)
   model = models.homme_hydrostatic
   v_grid = init_vertical_grid(cam30["hybrid_a_i"],

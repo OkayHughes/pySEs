@@ -23,6 +23,7 @@ def test_gen_mass_mat(nx, npt):
                 grid["gll_weights"][np.newaxis, np.newaxis, :]))
   integrand = get_global_array(integrand, dims)
   assert (np.allclose(np.sum(integrand), 4 * np.pi))
+
 @pytest.mark.parametrize("nx, npt",
                          [(nx, npt) for nx in [15, 16] for npt in test_npts])
 def test_new_grid_tmp(nx, npt):

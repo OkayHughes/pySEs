@@ -20,7 +20,8 @@ def init_default_config(nx,
                         model,
                         physics_dt=-1.0,
                         hypervis_type=hypervis_opts.variable_resolution,
-                        force_nonhydro_explicit=False):
+                        force_nonhydro_explicit=False,
+                        physics_config=None):
   """
   Build physics, diffusion, and time-stepping configs with sensible defaults.
 
@@ -49,6 +50,13 @@ def init_default_config(nx,
       Hyperviscosity variant.  ``variable_resolution`` (default) uses the
       tensor formulation; ``quasi_uniform`` uses the constant-coefficient
       formulation; ``none`` disables diffusion.
+  physics_config : dict, optional
+      Pre-built physics configuration to use instead of the model default.
+      Supply this to run non-default planets (e.g. a reduced-radius,
+      non-rotating small planet for the DCMIP mountain-wave tests) so that the
+      diffusion and CFL-derived time-step configs are consistent with the
+      overridden constants.  If ``None`` (default) a default config is built
+      via :func:`init_physics_config`.
 
   Returns
   -------
@@ -62,7 +70,8 @@ def init_default_config(nx,
   if physics_dt < 0:
     physics_dt = 900.0 * (30.0 / nx)
     physics_dt = round(physics_dt, -(int(floor(log10(abs(physics_dt)))) - 1))
-  physics_config = init_physics_config(model)
+  if physics_config is None:
+    physics_config = init_physics_config(model)
 
   if model in shallow_water_models:
     n_sponge = 0

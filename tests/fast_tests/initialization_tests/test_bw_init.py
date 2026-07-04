@@ -2,7 +2,7 @@ from pyses._config import get_backend as _get_backend
 import numpy as np
 from pyses.mesh_generation.cubed_sphere import init_cube_topo
 from pyses.mesh_generation.mesh import init_element_corner_vert_redundancy
-from pyses.mesh_generation.equiangular_metric import init_grid_from_topo
+from pyses.mesh_generation.element_local_metric import init_grid_from_topo_elem_local
 from pyses.analytic_initialization.moist_baroclinic_wave import (init_baroclinic_wave_config,
                                                                eval_pressure_temperature,
                                                                eval_state)
@@ -25,7 +25,7 @@ def test_shallow():
   nx = 31
   face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
   vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
-  grid, dims = init_grid_from_topo(face_connectivity, face_mask, face_position_2d, vert_redundancy, npt)
+  grid, dims = init_grid_from_topo_elem_local(face_connectivity, face_mask, face_position_2d, vert_redundancy, npt)
   config_shallow = init_baroclinic_wave_config(pertu0=0.0,
                                                pertup=0.0)
   lat = grid["physical_coords"][:, :, :, 0]
@@ -53,7 +53,7 @@ def test_moist_shallow():
   nx = 31
   face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
   vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
-  grid, dims = init_grid_from_topo(face_connectivity, face_mask, face_position_2d, vert_redundancy, npt)
+  grid, dims = init_grid_from_topo_elem_local(face_connectivity, face_mask, face_position_2d, vert_redundancy, npt)
   config_moist = init_baroclinic_wave_config(pertu0=0.0,
                                              pertup=0.0)
   config_pseudo_moist = init_baroclinic_wave_config(pertu0=0.0,
@@ -85,7 +85,7 @@ def test_deep():
   nx = 31
   face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
   vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
-  grid, dims = init_grid_from_topo(face_connectivity, face_mask, face_position_2d, vert_redundancy, npt)
+  grid, dims = init_grid_from_topo_elem_local(face_connectivity, face_mask, face_position_2d, vert_redundancy, npt)
   lat = grid["physical_coords"][:, :, :, 0]
   lon = grid["physical_coords"][:, :, :, 1]
   eps = device_wrapper(1e-3)

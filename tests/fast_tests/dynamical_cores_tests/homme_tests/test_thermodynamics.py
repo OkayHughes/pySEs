@@ -2,7 +2,7 @@ from pyses.analytic_initialization.moist_baroclinic_wave import (init_baroclinic
                                                                eval_pressure_temperature,
                                                                init_baroclinic_wave_state)
 from pyses.dynamical_cores.physics_config import init_physics_config
-from ..conftest import cached_quasi_uniform_grid
+from ..conftest import cached_quasi_uniform_grid_elem_local
 from pyses._config import get_backend as _get_backend
 from ....test_data.mass_coordinate_grids import vertical_grid_finite_diff
 from pyses.dynamical_cores.utils_3d import interface_to_midlevel
@@ -16,7 +16,7 @@ jnp = _be.np
 def test_eos_hydro():
   npt = 4
   nx = 5
-  h_grid, dims = cached_quasi_uniform_grid(nx, npt)
+  h_grid, dims = cached_quasi_uniform_grid_elem_local(nx, npt)
   lat = h_grid["physical_coords"][:, :, :, 0]
   vstruct = vertical_grid_finite_diff(200)
   model = models.homme_hydrostatic
@@ -53,7 +53,7 @@ def test_eos_nonhydro():
   npt = 4
   nx = 5
   model = models.homme_nonhydrostatic
-  h_grid, dims = cached_quasi_uniform_grid(nx, npt)
+  h_grid, dims = cached_quasi_uniform_grid_elem_local(nx, npt)
   lat = h_grid["physical_coords"][:, :, :, 0]
   vstruct = vertical_grid_finite_diff(100)
   v_grid = init_vertical_grid(vstruct["hybrid_a_i"],

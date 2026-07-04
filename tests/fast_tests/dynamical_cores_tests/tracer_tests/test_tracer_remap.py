@@ -1,6 +1,6 @@
 from pyses._config import get_backend as _get_backend
 import numpy as np
-from ..conftest import cached_quasi_uniform_grid
+from ..conftest import cached_quasi_uniform_grid_elem_local
 from pyses.analytic_initialization.moist_baroclinic_wave import init_baroclinic_wave_config, init_baroclinic_wave_state
 from pyses.dynamical_cores.model_info import models
 from pyses.dynamical_cores.mass_coordinate import init_vertical_grid
@@ -15,7 +15,7 @@ jnp = _be.np
 def test_remap_tracers():
   npt = 4
   nx = 4
-  h_grid, dims = cached_quasi_uniform_grid(nx, npt)
+  h_grid, dims = cached_quasi_uniform_grid_elem_local(nx, npt)
   model = models.cam_se_whole_atmosphere
   v_grid = init_vertical_grid(cam30["hybrid_a_i"],
                               cam30["hybrid_b_i"],

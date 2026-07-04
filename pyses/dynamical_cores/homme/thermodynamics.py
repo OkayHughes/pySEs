@@ -129,6 +129,7 @@ def eval_mu(state,
   if model in hydrostatic_models:
       d_nh_pressure_d_mass = jnp.ones_like(phi_i)
   else:
+    d_mass_i = midlevel_to_interface(state["d_mass"])
     if "height" in v_grid.keys():
       p_top = p_model[:, :, :, 0] - d_mass_i[:, :, :, 0] / 2.0
     else:
@@ -137,7 +138,6 @@ def eval_mu(state,
       # rebind rather than in-place: p_top may be a 0-d scalar and the rhs a
       # full field; numpy scalars rebind on /=, torch 0-d tensors raise.
       p_top = p_top / r_hat_i[:, :, :, 0]**2
-    d_mass_i = midlevel_to_interface(state["d_mass"])
     d_nh_pressure_d_mass_top = 2 * (p_model[:, :, :, 0] - p_top) / d_mass_i[:, :, :, 0]
     d_nh_pressure_d_mass_bottom = jnp.ones_like(p_model[:, :, :, 0])
     d_nh_pressure_d_mass_int = interface_to_delta(p_model) / d_mass_i[:, :, :, 1:-1]

@@ -24,7 +24,7 @@ from pyses.analytic_initialization.hydrostatic_solid_body import (
 from pyses.dynamical_cores.mass_coordinate import init_vertical_grid
 from pyses.dynamical_cores.model_info import models
 from pyses.dynamical_cores.physics_config import init_physics_config
-from pyses.mesh_generation.equiangular_metric import init_quasi_uniform_grid
+from pyses.mesh_generation.element_local_metric import init_quasi_uniform_grid_elem_local
 from ..state_cache import default_cache_dir, evict, load, save
 from ..test_data.mass_coordinate_grids import cam30
 
@@ -36,7 +36,7 @@ _be = _get_backend()
 
 def _build_payload(nx=3, npt=4):
   """Tiny ne3/npt4 cam_se setup; cheap enough to rebuild in tests."""
-  h_grid, dims = init_quasi_uniform_grid(nx, npt)
+  h_grid, dims = init_quasi_uniform_grid_elem_local(nx, npt)
   v_grid = init_vertical_grid(cam30["hybrid_a_i"][::4],
                               cam30["hybrid_b_i"][::4],
                               cam30["p0"],

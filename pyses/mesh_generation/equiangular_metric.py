@@ -298,7 +298,9 @@ def eval_metric_terms_equiangular(face_mask,
   #   gll_latlon = np.stack((np.asin(xyz_rotated[:, :, :, 2]),
   #                          np.atan2(xyz_rotated[:, :, :, 1],
   #                                   xyz_rotated[:, :, :, 0])), axis=-1)
-
+  # note: the following causes problems with the inverse metric
+  # and so this metric is now deprecated in favor of the element-local metric.
+  cube_to_sphere_jacobian[:, :, :, 1, :] *= np.cos(gll_latlon[:, :, :, 0])[:, :, :, np.newaxis]
   return gll_latlon, cube_to_sphere_jacobian
 
 
@@ -355,7 +357,8 @@ def init_grid_from_topo(face_connectivity,
                               cube_redundancy,
                               npt,
                               calc_smooth_tensor=calc_smooth_tensor,
-                              wrapped=wrapped)
+                              wrapped=wrapped,
+                              mask_pole=True)
 
 
 def init_quasi_uniform_grid(nx,

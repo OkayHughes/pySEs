@@ -1,7 +1,7 @@
 """Session-amortised builders for the dynamical-cores fast tests.
 
 The cubed-sphere mesh + Jacobian metric computation in
-``init_quasi_uniform_grid`` / ``init_quasi_uniform_grid_elem_local`` and
+``init_quasi_uniform_grid_elem_local`` and
 the analytic baroclinic-wave initialisation in
 ``init_baroclinic_wave_state`` dominate per-test setup cost.  Both
 results are pure functions of their inputs, so we memoise them in
@@ -29,7 +29,6 @@ from pyses.dynamical_cores.model_info import models
 from pyses.dynamical_cores.physics_config import init_physics_config
 from pyses.mesh_generation.element_local_metric import (
     init_quasi_uniform_grid_elem_local)
-from pyses.mesh_generation.equiangular_metric import init_quasi_uniform_grid
 from ...test_data.mass_coordinate_grids import cam30
 
 
@@ -37,7 +36,7 @@ from ...test_data.mass_coordinate_grids import cam30
 # Module-level caches.
 # ---------------------------------------------------------------------------
 
-_GRID_CACHE = {}              # (grid_kind, nx, npt, calc_smooth_tensor) -> (h_grid, dims)
+_GRID_CACHE = {}              # ("elem_local", nx, npt, calc_smooth_tensor) -> (h_grid, dims)
 _V_GRID_CACHE = {}            # model -> v_grid
 _PHYSICS_CACHE = {}           # model -> physics_config
 _BAROCLINIC_CFG_CACHE = {}    # model -> baroclinic-wave test_config
@@ -47,16 +46,6 @@ _BAROCLINIC_STATE_CACHE = {}  # state_key -> model_state
 # ---------------------------------------------------------------------------
 # Cached builders -- public.
 # ---------------------------------------------------------------------------
-
-def cached_quasi_uniform_grid(nx, npt, *, calc_smooth_tensor=False):
-  """Return ``(h_grid, dims)`` from the equiangular cubed-sphere builder,
-  cached by ``(nx, npt, calc_smooth_tensor)``."""
-  key = ("equiangular", int(nx), int(npt), bool(calc_smooth_tensor))
-  if key not in _GRID_CACHE:
-    _GRID_CACHE[key] = init_quasi_uniform_grid(
-        nx, npt, calc_smooth_tensor=calc_smooth_tensor)
-  return _GRID_CACHE[key]
-
 
 def cached_quasi_uniform_grid_elem_local(nx, npt, *, calc_smooth_tensor=False):
   """Return ``(h_grid, dims)`` from the element-local cubed-sphere builder,
@@ -117,24 +106,17 @@ def _deep_copy_state(obj):
 
 
 def cached_baroclinic_state(nx, npt, model, *, mountain=False, moist=False,
-                            grid_kind="equiangular",
                             calc_smooth_tensor=False,
                             eps=1e-5, enforce_hydrostatic=True):
-  """Memoised analytic baroclinic-wave state on the requested cubed-sphere
+  """Memoised analytic baroclinic-wave state on the element-local cubed-sphere
   grid.  Returns a *deep-copied* state so the caller can mutate without
   corrupting the cache."""
-  key = (grid_kind, int(nx), int(npt), bool(calc_smooth_tensor),
+  key = (int(nx), int(npt), bool(calc_smooth_tensor),
          model, bool(mountain), bool(moist),
          float(eps), bool(enforce_hydrostatic))
   if key not in _BAROCLINIC_STATE_CACHE:
-    if grid_kind == "equiangular":
-      h_grid, dims = cached_quasi_uniform_grid(
-          nx, npt, calc_smooth_tensor=calc_smooth_tensor)
-    elif grid_kind == "elem_local":
-      h_grid, dims = cached_quasi_uniform_grid_elem_local(
-          nx, npt, calc_smooth_tensor=calc_smooth_tensor)
-    else:
-      raise ValueError(f"unknown grid_kind {grid_kind!r}")
+    h_grid, dims = cached_quasi_uniform_grid_elem_local(
+        nx, npt, calc_smooth_tensor=calc_smooth_tensor)
     _BAROCLINIC_STATE_CACHE[key] = init_baroclinic_wave_state(
         h_grid, cached_v_grid(model), cached_physics_config(model),
         cached_baroclinic_test_config(model), dims, model,
@@ -149,25 +131,18 @@ def cached_baroclinic_state(nx, npt, model, *, mountain=False, moist=False,
 # ---------------------------------------------------------------------------
 
 def quasi_uniform_test_states(nx, npt, model, mountain=False, moist=False,
-                              *, grid_kind="equiangular",
-                              calc_smooth_tensor=False, eps=1e-5,
+                              *, calc_smooth_tensor=False, eps=1e-5,
                               enforce_hydrostatic=True):
   """Build (or retrieve from cache) the grid + analytic baroclinic-wave state."""
-  if grid_kind == "equiangular":
-    h_grid, dims = cached_quasi_uniform_grid(
-        nx, npt, calc_smooth_tensor=calc_smooth_tensor)
-  elif grid_kind == "elem_local":
-    h_grid, dims = cached_quasi_uniform_grid_elem_local(
-        nx, npt, calc_smooth_tensor=calc_smooth_tensor)
-  else:
-    raise ValueError(f"unknown grid_kind {grid_kind!r}")
+  h_grid, dims = cached_quasi_uniform_grid_elem_local(
+      nx, npt, calc_smooth_tensor=calc_smooth_tensor)
   return {"h_grid": h_grid,
           "v_grid": cached_v_grid(model),
           "dims": dims,
           "physics_config": cached_physics_config(model),
           "model_state": cached_baroclinic_state(
               nx, npt, model, mountain=mountain, moist=moist,
-              grid_kind=grid_kind, calc_smooth_tensor=calc_smooth_tensor,
+              calc_smooth_tensor=calc_smooth_tensor,
               eps=eps, enforce_hydrostatic=enforce_hydrostatic)}
 
 

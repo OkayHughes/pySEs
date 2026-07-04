@@ -1,4 +1,3 @@
-from pyses.mesh_generation.equiangular_metric import init_quasi_uniform_grid
 from pyses.mesh_generation.element_local_metric import (init_quasi_uniform_grid_elem_local,
                                                       init_stretched_grid_elem_local)
 from pyses.operations_2d.horizontal_grid import eval_hypervis_tensor, get_global_array, smooth_tensor
@@ -17,12 +16,10 @@ device_wrapper = _be.array
 def test_hypervisc_tensor():
   for nx in [5, 6]:
     for npt in test_npts:
-      grid_equi, _ = init_quasi_uniform_grid(nx, npt, wrapped=False)
-      grid_elem_local, _ = init_quasi_uniform_grid_elem_local(nx, npt, wrapped=False)
-      for grid in [grid_equi, grid_elem_local]:
-        visc_tensor_for = tensor_hypervis_ref(grid["metric_inverse"], grid["contra_to_physical"])
-        visc_tensor_operational, _ = eval_hypervis_tensor(grid["metric_inverse"], grid["contra_to_physical"])
-        assert np.allclose(visc_tensor_for, visc_tensor_operational)
+      grid, _ = init_quasi_uniform_grid_elem_local(nx, npt, wrapped=False)
+      visc_tensor_for = tensor_hypervis_ref(grid["metric_inverse"], grid["contra_to_physical"])
+      visc_tensor_operational, _ = eval_hypervis_tensor(grid["metric_inverse"], grid["contra_to_physical"])
+      assert np.allclose(visc_tensor_for, visc_tensor_operational)
 
 
 def test_hypervisc_tensor_algebraic():

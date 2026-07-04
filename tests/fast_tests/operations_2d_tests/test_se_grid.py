@@ -1,4 +1,4 @@
-from pyses.mesh_generation.equiangular_metric import init_grid_from_topo, init_quasi_uniform_grid
+from pyses.mesh_generation.element_local_metric import init_grid_from_topo_elem_local, init_quasi_uniform_grid_elem_local
 import pytest
 from pyses.mesh_generation.cubed_sphere import init_cube_topo
 from pyses.mesh_generation.mesh import init_element_corner_vert_redundancy
@@ -98,7 +98,7 @@ def test_vert_red_triage():
       for nx in range(2, 5):
         face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
         vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
-        grid, dims = init_grid_from_topo(face_connectivity,
+        grid, dims = init_grid_from_topo_elem_local(face_connectivity,
                                          face_mask,
                                          face_position_2d,
                                          vert_redundancy,
@@ -211,8 +211,8 @@ def test_triples_order(nx, npt):
   if do_sharding:
     pytest.skip("triples-order check is unsupported under sharding")
   for nproc in range(1, 3):
-    grid_total, dim_total = init_quasi_uniform_grid(nx, npt, wrapped=True)
-    grid_total_n, dim_total_n = init_quasi_uniform_grid(nx, npt, wrapped=False)
+    grid_total, dim_total = init_quasi_uniform_grid_elem_local(nx, npt, wrapped=True)
+    grid_total_n, dim_total_n = init_quasi_uniform_grid_elem_local(nx, npt, wrapped=False)
     decomp = init_decomp(dim_total["num_elem"], nproc)
     grids = []
     grids_nowrapper = []

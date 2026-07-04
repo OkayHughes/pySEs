@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 from pyses._config import get_backend as _get_backend
-from pyses.mesh_generation.equiangular_metric import init_quasi_uniform_grid
+from pyses.mesh_generation.element_local_metric import init_quasi_uniform_grid_elem_local
 from pyses.mpi.processor_decomposition import init_mapping
 from pyses.operations_2d.local_assembly import init_global_comm_map
 from ...context import test_npts, seed
@@ -28,7 +28,7 @@ def _ref_assemble(f, triple):
 
 def _run_case(nx, npt, n_subdiv=7, n_fields=5):
   num_devices = _be.num_devices
-  grid, dim = init_quasi_uniform_grid(nx, npt, wrapped=False)
+  grid, dim = init_quasi_uniform_grid_elem_local(nx, npt, wrapped=False)
   nelem = dim["num_elem"]
   data, rows, cols = grid["assembly_triple"]
   data = np.asarray(data)

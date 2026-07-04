@@ -387,7 +387,8 @@ def metric_terms_to_grid(gll_latlon,
                          vert_redundancy_gll,
                          npt,
                          wrapped=use_wrapper,
-                         calc_smooth_tensor=False):
+                         calc_smooth_tensor=False,
+                         mask_pole=False):
   """
   Collate individual coordinate mappings into global SpectralElementGrid
   on an equiangular cubed sphere grid.
@@ -422,27 +423,28 @@ def metric_terms_to_grid(gll_latlon,
   """
 
   gll_to_sphere_jacobian = np.einsum("fijpg,fijps->fijgs", cartesian_to_sphere_jacobian, gll_to_cartesian_jacobian)
-  gll_to_sphere_jacobian[:, :, :, 1, :] *= np.cos(gll_latlon[:, :, :, 0])[:, :, :, np.newaxis]
+  #gll_to_sphere_jacobian[:, :, :, 1, :] *= np.cos(gll_latlon[:, :, :, 0])[:, :, :, np.newaxis]
   gll_to_sphere_jacobian_inv = np.linalg.inv(gll_to_sphere_jacobian)
 
   rmetdet = np.linalg.det(gll_to_sphere_jacobian_inv)
 
   metdet = 1.0 / rmetdet
-  too_close_to_top = np.abs(gll_latlon[:, :, :, 0] - np.pi / 2) < 1e-8
-  too_close_to_bottom = np.abs(gll_latlon[:, :, :, 0] + np.pi / 2) < 1e-8
-  for i_idx, j_idx, entry in zip([0, 1, 0, 1],
-                                 [0, 1, 1, 0],
-                                 [1.0, 1.0, 0.0, 0.0]):
-    gll_to_sphere_jacobian[:, :, :,
-                           i_idx, j_idx] = np.where(np.logical_or(too_close_to_top,
-                                                                  too_close_to_bottom),
-                                                    entry,
-                                                    gll_to_sphere_jacobian[:, :, :, i_idx, j_idx])
-    gll_to_sphere_jacobian_inv[:, :, :,
-                               i_idx, j_idx] = np.where(np.logical_or(too_close_to_top,
-                                                                      too_close_to_bottom),
-                                                        entry,
-                                                        gll_to_sphere_jacobian_inv[:, :, :, i_idx, j_idx])
+  if mask_pole:
+    too_close_to_top = np.abs(gll_latlon[:, :, :, 0] - np.pi / 2) < 1e-8
+    too_close_to_bottom = np.abs(gll_latlon[:, :, :, 0] + np.pi / 2) < 1e-8
+    for i_idx, j_idx, entry in zip([0, 1, 0, 1],
+                                  [0, 1, 1, 0],
+                                  [1.0, 1.0, 0.0, 0.0]):
+      gll_to_sphere_jacobian[:, :, :,
+                            i_idx, j_idx] = np.where(np.logical_or(too_close_to_top,
+                                                                    too_close_to_bottom),
+                                                      entry,
+                                                      gll_to_sphere_jacobian[:, :, :, i_idx, j_idx])
+      gll_to_sphere_jacobian_inv[:, :, :,
+                                i_idx, j_idx] = np.where(np.logical_or(too_close_to_top,
+                                                                        too_close_to_bottom),
+                                                          entry,
+                                                          gll_to_sphere_jacobian_inv[:, :, :, i_idx, j_idx])
   spectrals = init_spectral(npt)
 
   mass_mat = metdet.copy() * (spectrals["gll_weights"][np.newaxis, :, np.newaxis] *
