@@ -1,4 +1,57 @@
 import numpy as np
+from .._config import get_backend as _get_backend
+
+_be = _get_backend()
+jnp = _be.np
+
+
+def symmetric_eigh_2x2(m):
+  """
+  Closed-form eigendecomposition of a batch of symmetric 2x2 matrices.
+
+  Drop-in replacement for ``jnp.linalg.eigh`` on the ``(..., 2, 2)`` symmetric
+  case: eigenvalues in ascending order, orthonormal eigenvectors as columns
+  (``eigvecs[..., :, i]`` pairs with ``eigvals[..., i]``).
+
+  For a fixed 2x2 block the analytic formula is exact and sidesteps the batched
+  symmetric eigensolver (LAPACK ``syevd`` / cuSOLVER ``syevBatched``), which on
+  the torch-GPU backend can fail for large batches
+  (``CUSOLVER_STATUS_INTERNAL_ERROR`` or a spurious multi-GiB workspace).  It
+  also runs on every backend and stays on device (pure arithmetic through the
+  backend namespace).
+
+  Parameters
+  ----------
+  m : Array[tuple[..., 2, 2], Float]
+      Batch of symmetric matrices (only the ``[0,0]``, ``[0,1]`` and ``[1,1]``
+      entries are read).
+
+  Returns
+  -------
+  eigvals : Array[tuple[..., 2], Float]
+      Eigenvalues in ascending order.
+  eigvecs : Array[tuple[..., 2, 2], Float]
+      Orthonormal eigenvectors as columns.
+  """
+  a = m[..., 0, 0]
+  b = m[..., 0, 1]
+  d = m[..., 1, 1]
+  half_tr = 0.5 * (a + d)
+  radius = jnp.sqrt(((a - d) * 0.5) ** 2 + b ** 2)
+  lam_lo = half_tr - radius
+  lam_hi = half_tr + radius
+  # Jacobi rotation angle that diagonalises the block; robust at b == 0 and
+  # a == d, where atan2(0, 0) == 0 yields the identity basis (any orthonormal
+  # basis is valid for the degenerate eigenvalue).
+  theta = 0.5 * jnp.arctan2(2.0 * b, a - d)
+  cos_t = jnp.cos(theta)
+  sin_t = jnp.sin(theta)
+  # column 0 <-> lam_lo eigenvector (-sin, cos); column 1 <-> lam_hi (cos, sin).
+  col_lo = jnp.stack((-sin_t, cos_t), axis=-1)
+  col_hi = jnp.stack((cos_t, sin_t), axis=-1)
+  eigvals = jnp.stack((lam_lo, lam_hi), axis=-1)
+  eigvecs = jnp.stack((col_lo, col_hi), axis=-1)
+  return eigvals, eigvecs
 
 
 def eval_quasi_uniform_hypervisc_coeff(ne,

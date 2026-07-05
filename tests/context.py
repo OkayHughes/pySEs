@@ -99,6 +99,28 @@ def allclose_global(sharded_array_1, sharded_array_2, dims):
                          _be.get_global_array(sharded_array_2, dims))
 
 
+def to_host(x, dims=None, elem_sharding_axis=0):
+  """Explicit device->host egress of a backend array, returned as plain numpy.
+
+  Use this at the assertion boundary so results can be compared with numpy
+  reference functions (``np.allclose``, ``np.sum``, ...).  It makes the
+  device->host copy *visible* in the test instead of relying on an implicit
+  conversion that only happens to be legal on CPU: the torch backend refuses to
+  turn a GPU tensor into numpy without an explicit ``.cpu()`` (which
+  :meth:`Backend.unwrap` performs), so ``np.allclose(gpu_tensor, ...)`` raises.
+
+  Pass ``dims`` to also gather sharded shards and strip element padding
+  (delegates to :meth:`Backend.get_global_array`); omit it for unsharded or
+  already-global arrays (delegates to :meth:`Backend.unwrap`).  Numpy arrays and
+  numpy-backend values pass through unchanged.
+  """
+  from pyses._config import get_backend as _get_backend
+  _be = _get_backend()
+  if dims is not None:
+    return _be.get_global_array(x, dims, elem_sharding_axis)
+  return _be.unwrap(x)
+
+
 def pretty_print_scalar(array, digits=5):
   num_pad = 20
   lines = ["=" * num_pad]

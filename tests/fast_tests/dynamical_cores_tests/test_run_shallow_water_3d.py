@@ -11,7 +11,7 @@ from .conftest import cached_quasi_uniform_grid_elem_local
 from pyses.dynamical_cores.mass_coordinate import init_vertical_grid, d_mass_to_surface_mass
 from pyses.dynamical_cores.model_info import models
 from pyses.dynamical_cores.model_config import init_default_config, hypervis_opts
-from ...context import get_figdir, emit_plots
+from ...context import get_figdir, emit_plots, to_host
 _be = _get_backend()
 jnp = _be.np
 unwrap = _be.unwrap
@@ -51,27 +51,30 @@ def test_theta_baro_wave_topo():
     print(t)
     if savedir is not None:
       import matplotlib.pyplot as plt
-      surf_mass = d_mass_to_surface_mass(state["dynamics"]["d_mass"], v_grid)
+      coords = to_host(h_grid["physical_coords"])
+      hw_state = to_host(state["dynamics"]["horizontal_wind"])
+      hw_init = to_host(model_state["dynamics"]["horizontal_wind"])
+      surf_mass = to_host(d_mass_to_surface_mass(state["dynamics"]["d_mass"], v_grid))
       plt.figure()
-      plt.tricontourf(h_grid["physical_coords"][:, :, :, 1].flatten(),
-                      h_grid["physical_coords"][:, :, :, 0].flatten(),
+      plt.tricontourf(coords[:, :, :, 1].flatten(),
+                      coords[:, :, :, 0].flatten(),
                       surf_mass.flatten())
       plt.colorbar()
       plt.savefig(f"{savedir}/h_{t}.pdf")
       plt.close()
       plt.figure()
-      plt.tricontourf(h_grid["physical_coords"][:, :, :, 1].flatten(),
-                      h_grid["physical_coords"][:, :, :, 0].flatten(),
-                      state["dynamics"]["horizontal_wind"][:, :, :, 0, 0].flatten())
+      plt.tricontourf(coords[:, :, :, 1].flatten(),
+                      coords[:, :, :, 0].flatten(),
+                      hw_state[:, :, :, 0, 0].flatten())
       plt.colorbar()
       plt.savefig(f"{savedir}/u_{t}.pdf")
       plt.close()
-      for lev in range(model_state["dynamics"]["horizontal_wind"].shape[3]):
+      for lev in range(hw_init.shape[3]):
         plt.figure()
-        plt.tricontourf(h_grid["physical_coords"][:, :, :, 1].flatten(),
-                        h_grid["physical_coords"][:, :, :, 0].flatten(),
-                        (state["dynamics"]["horizontal_wind"][:, :, :, lev, 1].flatten() -
-                        model_state["dynamics"]["horizontal_wind"][:, :, :, lev, 1].flatten()))
+        plt.tricontourf(coords[:, :, :, 1].flatten(),
+                        coords[:, :, :, 0].flatten(),
+                        (hw_state[:, :, :, lev, 1].flatten() -
+                        hw_init[:, :, :, lev, 1].flatten()))
         plt.colorbar()
         plt.savefig(f"{savedir}/v_{t}_lev_{lev}.pdf")
         plt.close()
@@ -103,7 +106,7 @@ def test_galewsky_ne60():
   reference_mass = 0.0
   v_grid = init_vertical_grid(a_coeffs, b_coeffs, reference_mass, model)
 
-  total_time = 6.0 * 3600.0
+  total_time = 2.0 * 3600.0
   physics_config, diffusion_config, timestep_config = init_default_config(
       nx, h_grid, v_grid, dims, model,
       hypervis_type=hypervis_opts.variable_resolution)

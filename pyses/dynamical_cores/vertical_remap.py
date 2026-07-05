@@ -323,12 +323,11 @@ def zerroukat_remap(tracer_mass,
   za1_mapped = jnp.take_along_axis(za1[:, :, :, :, :], idxs[:, :, :, 1:, np.newaxis], -2)
   za2_mapped = jnp.take_along_axis(za2[:, :, :, :, :], idxs[:, :, :, 1:, np.newaxis], -2)
 
-  # Each level's antiderivative zv2[k] depends only on that level's mapped
-  # arrays, so build the whole column at once and take the running difference
-  # with jnp.diff (prepend 0 == the zv1 = 0 seed) instead of unrolling num_lev
-  # level copies into the graph.
+
   zgam_mid = zgam[:, :, :, 1:, np.newaxis]
   zv2 = zv_mapped + (za0_mapped * zgam_mid +
                      za1_mapped / 2.0 * zgam_mid**2 +
                      za2_mapped / 3.0 * zgam_mid**3) * zhdp_mapped
-  return jnp.diff(zv2, axis=-2, prepend=0.0)
+  zv2_shifted = jnp.concatenate([jnp.zeros_like(zv2[:, :, :, :1, :]),
+                                 zv2[:, :, :, :-1, :]], axis=-2)
+  return zv2 - zv2_shifted

@@ -2,7 +2,7 @@ from pyses.mesh_generation.periodic_plane import init_periodic_plane, metric_ter
 import pytest
 from pyses._config import get_backend as _get_backend
 import numpy as np
-from ...context import test_npts
+from ...context import test_npts, to_host
 _be = _get_backend()
 jnp = _be.np
 get_global_array = _be.get_global_array
@@ -33,6 +33,6 @@ def test_metric(nx, npt):
   ny = nx + 1
   physical_coords, ref_to_planar, vert_red = init_periodic_plane(nx, ny, npt)
   grid, dims = metric_terms_to_grid(physical_coords, ref_to_planar, vert_red, npt)
-  assert np.allclose(jnp.sum(get_global_array(grid["metric_determinant"], dims) *
+  assert np.allclose(to_host(jnp.sum(get_global_array(grid["metric_determinant"], dims) *
                              (grid["gll_weights"][np.newaxis, :, np.newaxis] *
-                              grid["gll_weights"][np.newaxis, np.newaxis, :])), 4.0)
+                              grid["gll_weights"][np.newaxis, np.newaxis, :]))), 4.0)

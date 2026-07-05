@@ -4,6 +4,7 @@ from ..conftest import cached_quasi_uniform_grid_elem_local
 from pyses._config import get_backend as _get_backend
 import numpy as np
 from ....test_data.mass_coordinate_grids import cam30
+from ....context import to_host
 from pyses.dynamical_cores.utils_3d import phi_to_g
 from pyses.dynamical_cores.mass_coordinate import init_vertical_grid
 from pyses.dynamical_cores.model_state import remap_dynamics
@@ -32,9 +33,9 @@ def test_remap_state():
     static_forcing = model_state["static_forcing"]
     u = dynamics["horizontal_wind"]
     w_i = np.random.normal(size=dynamics["w_i"].shape)
-    w_i[:, :, :, -1] = ((u[:, :, :, -1, 0] * static_forcing["grad_phi_surf"][:, :, :, 0] +
-                         u[:, :, :, -1, 1] * static_forcing["grad_phi_surf"][:, :, :, 1]) /
-                        phi_to_g(static_forcing["phi_surf"], model_config, model))
+    w_i[:, :, :, -1] = to_host(((u[:, :, :, -1, 0] * static_forcing["grad_phi_surf"][:, :, :, 0] +
+                                 u[:, :, :, -1, 1] * static_forcing["grad_phi_surf"][:, :, :, 1]) /
+                                phi_to_g(static_forcing["phi_surf"], model_config, model)))
     dynamics["w_i"] = device_wrapper(w_i, elem_sharding_axis=0)
     dynamics_remapped = remap_dynamics(dynamics, static_forcing, v_grid, model_config, len(v_grid["hybrid_a_m"]), model)
 

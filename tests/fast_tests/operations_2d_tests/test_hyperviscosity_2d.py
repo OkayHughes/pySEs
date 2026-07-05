@@ -1,11 +1,12 @@
 from pyses.mesh_generation.element_local_metric import (init_quasi_uniform_grid_elem_local,
                                                       init_stretched_grid_elem_local)
-from pyses.operations_2d.horizontal_grid import eval_hypervis_tensor, get_global_array, smooth_tensor
+from pyses.operations_2d.horizontal_grid import (eval_hypervis_tensor, get_global_array,
+                                                 smooth_tensor, symmetric_eigh_2x2)
 from pyses.operations_2d.operators import horizontal_weak_laplacian
 from pyses.operations_2d.local_assembly import project_scalar
 from pyses._config import get_backend as _get_backend
 import numpy as np
-from ...context import test_npts
+from ...context import test_npts, to_host
 from ...reference_implementations.tensor_hypervis_ref import tensor_hypervis_ref
 from scipy.special import sph_harm_y
 _be = _get_backend()
@@ -26,8 +27,11 @@ def test_hypervisc_tensor_algebraic():
   nx = 31
   npt = 4
   grid, dims = init_quasi_uniform_grid_elem_local(nx, npt)
-  evals, evecs = jnp.linalg.eigh(grid["metric_inverse"])
-  visc_tensor, _ = eval_hypervis_tensor(grid["metric_inverse"], grid["contra_to_physical"], hypervis_scaling=0.0)
+  evals, evecs = symmetric_eigh_2x2(grid["metric_inverse"])
+  # eval_hypervis_tensor is a host-numpy construction helper; unwrap the wrapped
+  # grid fields so it runs on host (avoids materializing a device tensor).
+  visc_tensor, _ = eval_hypervis_tensor(to_host(grid["metric_inverse"]),
+                                        to_host(grid["contra_to_physical"]), hypervis_scaling=0.0)
   shucked_tensor = jnp.einsum("fijsr,fijmr->fijsm", visc_tensor, grid["physical_to_contra"])
   shucked_tensor = jnp.einsum("fijsm,fijns->fijmn", shucked_tensor, grid["physical_to_contra"])
   assert jnp.max(jnp.abs(get_global_array(shucked_tensor, dims) -
@@ -35,9 +39,9 @@ def test_hypervisc_tensor_algebraic():
 
   shucked_tensor = jnp.einsum("fijnm,fijnc->fijmc", shucked_tensor, evecs)
   shucked_tensor = jnp.einsum("fijmc,fijmd->fijdc", shucked_tensor, evecs)
-  diag_evals = np.zeros_like(shucked_tensor)
-  diag_evals[:, :, :, 0, 0] = evals[:, :, :, 0]
-  diag_evals[:, :, :, 1, 1] = evals[:, :, :, 1]
+  diag_evals = np.zeros_like(to_host(shucked_tensor))
+  diag_evals[:, :, :, 0, 0] = to_host(evals)[:, :, :, 0]
+  diag_evals[:, :, :, 1, 1] = to_host(evals)[:, :, :, 1]
   assert jnp.max(jnp.abs(diag_evals[:dims["num_elem"], :, :, :, :] - get_global_array(shucked_tensor, dims))) < 1e-8
 
 
@@ -60,11 +64,11 @@ def test_hyperviscosity_sphere_harmonics_mobius():
     lon = grid["physical_coords"][:, :, :, 1]
     m = 5
     wavenumber_l = 10
-    Ymn = jnp.real(device_wrapper(sph_harm_y(wavenumber_l, m, lat + np.pi / 2.0, lon)))
+    Ymn = jnp.real(device_wrapper(sph_harm_y(wavenumber_l, m, to_host(lat + np.pi / 2.0), to_host(lon))))
     biharmonic_Ymn_discont = horizontal_weak_laplacian(-wavenumber_l * (wavenumber_l + 1) * Ymn, grid, a=radius_earth)
     biharmonic_Ymn = project_scalar(biharmonic_Ymn_discont, grid, dims)
     norm_const = (wavenumber_l * (wavenumber_l + 1))**2
-    evals, evecs = np.linalg.eigh(grid["metric_inverse"])
+    evals, evecs = np.linalg.eigh(to_host(grid["metric_inverse"]))
     hv_scaling = 3.2
     area_ratio = grid["mass_matrix"] / grid_uniform["mass_matrix"]
     variable_resolution_coefficient = np.sqrt(area_ratio)**(hv_scaling)
@@ -82,7 +86,7 @@ def test_hyperviscosity_sphere_harmonics_mobius():
     biharmonic_Ymn_tensor = get_global_array(biharmonic_Ymn_tensor, dims)
     mask = np.logical_and(jnp.abs(reference_scaling_tensor) > jnp.max(jnp.abs(reference_scaling_tensor)) / 2,
                           jnp.abs(reference_scaling) > jnp.max(jnp.abs(reference_scaling)) / 2)
-    ratio = np.log10(np.abs(reference_scaling_tensor[mask] / reference_scaling[mask]))
+    ratio = np.log10(np.abs(reference_scaling_tensor[to_host(mask)] / reference_scaling[to_host(mask)]))
     assert np.max(np.abs(ratio)) < 1.0
 
     # TODO [scalars]

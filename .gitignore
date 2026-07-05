@@ -3,6 +3,7 @@ __pycache__/
 .flake8
 .vscode/
 tests/_figures
+tests/_output
 pysces_config.json
 pyses.egg-info
 dist/

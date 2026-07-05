@@ -257,8 +257,14 @@ class NumpyBackend:
             ys.append(y)
         if reverse:
             ys = ys[::-1]
-        if isinstance(ys[0], (tuple, list)):
-            stacked = tuple(np.stack([y[j] for y in ys], axis=axis) for j in range(len(ys[0])))
+        if ys[0] is None:
+            # A None y-output is a valid jax.lax.scan result (an empty pytree
+            # leaf); mirror that instead of trying to stack Nones.
+            stacked = None
+        elif isinstance(ys[0], (tuple, list)):
+            stacked = tuple(None if ys[0][j] is None
+                            else np.stack([y[j] for y in ys], axis=axis)
+                            for j in range(len(ys[0])))
         else:
             stacked = np.stack(ys, axis=axis)
         return carry, stacked
@@ -741,6 +747,27 @@ class _TorchNamespace:
     def cumsum(self, x, axis=-1):
         return self._torch.cumsum(self._coerce(x), dim=axis)
 
+    def diff(self, a, n=1, axis=-1, prepend=None, append=None):
+        # numpy/jax accept a scalar prepend/append that broadcasts along the
+        # diff axis (e.g. jnp.diff(x, prepend=0.0)); torch.diff requires a tensor
+        # shaped like ``a`` with size 1 along that axis. Coerce scalars to that
+        # shaped tensor so callers written against the numpy API work unchanged.
+        a = self._coerce(a)
+
+        def _pad(val):
+            if isinstance(val, (int, float, complex)):
+                shape = list(a.shape)
+                shape[axis] = 1
+                return self._torch.full(shape, val, dtype=a.dtype, device=self._device)
+            return self._coerce(val)
+
+        kwargs = {}
+        if prepend is not None:
+            kwargs["prepend"] = _pad(prepend)
+        if append is not None:
+            kwargs["append"] = _pad(append)
+        return self._torch.diff(a, n=n, dim=axis, **kwargs)
+
     def sum(self, x, axis=None):
         x = self._coerce(x)
         return self._torch.sum(x) if axis is None else self._torch.sum(x, dim=axis)
@@ -1083,10 +1110,19 @@ class TorchBackend:
         # dominant cost before this was switched over.
         torch = self._torch
 
-        def wrapped(x):
-            x = self.np._coerce(x)
-            in_dims = in_axes % x.ndim
-            return torch.func.vmap(func, in_dims=in_dims, out_dims=out_axes)(x)
+        def wrapped(*args):
+            args = tuple(self.np._coerce(a) for a in args)
+            if len(args) == 1 and not isinstance(in_axes, (tuple, list)):
+                # Single-array fast path (unchanged behaviour).
+                in_dims = in_axes % args[0].ndim
+                return torch.func.vmap(func, in_dims=in_dims, out_dims=out_axes)(args[0])
+            # Multiple positional args: an int ``in_axes`` maps that axis on every
+            # arg; a per-arg tuple gives each its own axis (``None`` = unmapped /
+            # broadcast). Matches NumpyBackend.vmap and jax.vmap.
+            axes = in_axes if isinstance(in_axes, (tuple, list)) else (in_axes,) * len(args)
+            in_dims = tuple(None if ax is None else (ax % a.ndim)
+                            for a, ax in zip(args, axes))
+            return torch.func.vmap(func, in_dims=in_dims, out_dims=out_axes)(*args)
         return wrapped
 
     def scan(self, f, init, xs, reverse=False, axis=0):
@@ -1105,8 +1141,14 @@ class TorchBackend:
             ys.append(y)
         if reverse:
             ys = ys[::-1]
-        if isinstance(ys[0], (tuple, list)):
-            stacked = tuple(self.np.stack([y[j] for y in ys], axis=axis) for j in range(len(ys[0])))
+        if ys[0] is None:
+            # A None y-output is a valid jax.lax.scan result (an empty pytree
+            # leaf); mirror that instead of trying to stack Nones.
+            stacked = None
+        elif isinstance(ys[0], (tuple, list)):
+            stacked = tuple(None if ys[0][j] is None
+                            else self.np.stack([y[j] for y in ys], axis=axis)
+                            for j in range(len(ys[0])))
         else:
             stacked = self.np.stack(ys, axis=axis)
         return carry, stacked

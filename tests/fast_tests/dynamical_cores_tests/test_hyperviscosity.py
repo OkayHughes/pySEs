@@ -361,8 +361,10 @@ def test_hypervis_energy_estimate_mobius():
   # does not hold. E.g., multiply dt times 2
   # and this test fails.
   for _ in range(3):
-    scale = device_wrapper(np.random.uniform(high=1.2, low=0.8, size=3))
-    offset = device_wrapper(np.random.uniform(high=0.2, low=0.2, size=3))
+    # axis_dilation/offset feed host-numpy grid-construction math
+    # (np.einsum/np.dot); pass them as plain numpy like every other caller.
+    scale = np.random.uniform(high=1.2, low=0.8, size=3)
+    offset = np.random.uniform(high=0.2, low=0.2, size=3)
     model = models.homme_nonhydrostatic
     npt = 4
     nx = 7

@@ -1,5 +1,6 @@
 from pyses._config import get_backend as _get_backend
 import numpy as np
+from ...context import to_host
 from .conftest import cached_quasi_uniform_grid_elem_local
 from pyses.operations_2d.operators import inner_product
 from pyses.dynamical_cores.operators_3d import (horizontal_divergence_3d,
@@ -37,8 +38,8 @@ def test_vector_identites():
   config = {"radius_earth": 1.0}
   fn = jnp.cos(grid["physical_coords"][:, :, :, 1]) * jnp.cos(grid["physical_coords"][:, :, :, 0])
   fn_3d = device_wrapper(threedify(fn, nlev) * jnp.arange(nlev).reshape((1, 1, 1, -1)))
-  v = np.stack((jnp.cos(grid["physical_coords"][:, :, :, 0]),
-                jnp.cos(grid["physical_coords"][:, :, :, 0])), axis=-1)
+  v = np.stack((to_host(jnp.cos(grid["physical_coords"][:, :, :, 0])),
+                to_host(jnp.cos(grid["physical_coords"][:, :, :, 0]))), axis=-1)
   v_3d = threedify(device_wrapper(v), nlev, axis=-2)
 
   grad = horizontal_gradient_3d(fn_3d, grid, config)
@@ -60,19 +61,20 @@ def test_divergence():
   nlev = 3
   grid, dims = cached_quasi_uniform_grid_elem_local(nx, npt)
   config = {"radius_earth": 1.0}
-  vec = np.zeros_like(grid["physical_coords"])
-  lat = grid["physical_coords"][:, :, :, 0]
-  lon = grid["physical_coords"][:, :, :, 1]
+  coords = to_host(grid["physical_coords"])
+  vec = np.zeros_like(coords)
+  lat = coords[:, :, :, 0]
+  lon = coords[:, :, :, 1]
   vec[:, :, :, 0] = np.cos(lat)**2 * np.cos(lon)**3
   vec[:, :, :, 1] = np.cos(lat)**2 * np.cos(lon)**3
 
   vec_3d = threedify(device_wrapper(vec), nlev, axis=-2)
 
-  vort_analytic = (-3.0 * np.cos(lon)**2 * np.sin(lon) * np.cos(lat) +
-                   3.0 * np.cos(lat) * np.sin(lat) * np.cos(lon)**3)
+  vort_analytic = device_wrapper((-3.0 * np.cos(lon)**2 * np.sin(lon) * np.cos(lat) +
+                                  3.0 * np.cos(lat) * np.sin(lat) * np.cos(lon)**3))
 
-  div_analytic = (-3.0 * np.cos(lon)**2 * np.sin(lon) * np.cos(lat) -
-                  3.0 * np.cos(lat) * np.sin(lat) * np.cos(lon)**3)
+  div_analytic = device_wrapper((-3.0 * np.cos(lon)**2 * np.sin(lon) * np.cos(lat) -
+                                 3.0 * np.cos(lat) * np.sin(lat) * np.cos(lon)**3))
   div = project_scalar_3d(horizontal_divergence_3d(vec_3d, grid, config), grid, dims)
   vort = project_scalar_3d(horizontal_vorticity_3d(vec_3d, grid, config), grid, dims)
   for lev_idx in range(nlev):

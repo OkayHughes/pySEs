@@ -9,7 +9,7 @@ from .local_assembly import (triage_vert_redundancy_flat,
 from ..mpi.processor_decomposition import init_decomp
 from ..mesh_generation.bilinear_utils import eval_bilinear_mapping
 from ..mpi.global_communication import global_max, global_min
-from .tensor_hyperviscosity import eval_hypervis_tensor
+from .tensor_hyperviscosity import eval_hypervis_tensor, symmetric_eigh_2x2
 from ..mesh_generation.spectral import init_spectral
 from math import floor
 _be = _get_backend()
@@ -201,7 +201,9 @@ def eval_grid_deformation_metrics(grid,
   dx_long : `Array[tuple[elem_idx, gll_idx, gll_idx], Float]`
       Longest effective grid spacing at each GLL node (in reference units).
   """
-  eigs, _ = jnp.linalg.eigh(grid["metric_inverse"])
+  # Closed-form 2x2 symmetric eigenvalues -- avoids the batched cuSOLVER
+  # symmetric eigensolver, which fails on large GPU batches (e.g. ne60).
+  eigs, _ = symmetric_eigh_2x2(grid["metric_inverse"])
   max_svd = jnp.sqrt(jnp.max(eigs, axis=-1))
   min_svd = jnp.sqrt(jnp.min(eigs, axis=-1))
   dx_short = 1.0 / (max_svd * 0.5 * (npt - 1))
@@ -395,7 +397,14 @@ def smooth_tensor(grid, dims):
     right_col = jnp.stack((upper_right_out, lower_right_out), axis=-1)
     return jnp.stack((left_col, right_col), axis=-1)
 
-  tensor_cont = project_matrix(grid["viscosity_tensor"])
+  # The bilinear resampling below is a host-numpy scratch-buffer loop
+  # (``np.zeros_like`` + per-node assignment). Unwrap the projected tensor to
+  # host explicitly so it runs on every backend: numpy/jax converted implicitly
+  # here, but torch refuses to turn a GPU tensor into numpy without an explicit
+  # copy. ``gll_points`` is already host numpy and ``eval_bilinear_mapping`` is
+  # pure arithmetic, so the whole loop stays on host; ``device_wrapper`` at the
+  # end re-uploads the result.
+  tensor_cont = device_unwrapper(project_matrix(grid["viscosity_tensor"]))
   tensor_bilinear = np.zeros_like(tensor_cont)
   for i_idx in range(npt):
     for j_idx in range(npt):

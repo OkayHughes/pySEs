@@ -33,6 +33,7 @@ from pyses.dynamical_cores.model_info import models
 from pyses.dynamical_cores.physics_config import init_physics_config
 from pyses.mesh_generation.element_local_metric import init_quasi_uniform_grid_elem_local
 from ....test_data.mass_coordinate_grids import cam30
+from ....context import to_host
 
 _be = _get_backend()
 unwrap = _be.unwrap
@@ -107,7 +108,7 @@ def test_calc_perceived_phi_tend_vanishes_at_rest(synthetic_state):
   gw = calc_perceived_phi_tend(quiescent, s["d_mass"], s["grad_phi_surf"],
                                s["phi_i"], s["physics_config"], s["v_grid"],
                                models.homme_nonhydrostatic)
-  assert np.allclose(gw, 0.0)
+  assert np.allclose(to_host(gw), 0.0)
 
 
 def test_calc_perceived_phi_tend_vanishes_flat_surface(synthetic_state):
@@ -117,7 +118,7 @@ def test_calc_perceived_phi_tend_vanishes_flat_surface(synthetic_state):
   gw = calc_perceived_phi_tend(s["horizontal_wind"], s["d_mass"], flat,
                                s["phi_i"], s["physics_config"], s["v_grid"],
                                models.homme_nonhydrostatic)
-  assert np.allclose(gw, 0.0)
+  assert np.allclose(to_host(gw), 0.0)
 
 
 # ---------------------------------------------------------------------------
@@ -138,6 +139,7 @@ def test_calc_dirk_jacobian_strict_diagonal_dominance(synthetic_state):
   s = synthetic_state
   jacL, jacD, jacU = calc_dirk_jacobian(100.0, s["d_mass"], s["d_phi"],
                                          s["pnh"], s["physics_config"])
+  jacL, jacD, jacU = to_host(jacL), to_host(jacD), to_host(jacU)
   pad_L = np.concatenate((np.zeros_like(jacL[..., :1]), np.abs(jacL)),
                          axis=-1)
   pad_U = np.concatenate((np.abs(jacU), np.zeros_like(jacU[..., :1])),
@@ -153,9 +155,9 @@ def test_calc_dirk_jacobian_dt_zero_limit(synthetic_state):
   s = synthetic_state
   jacL, jacD, jacU = calc_dirk_jacobian(0.0, s["d_mass"], s["d_phi"],
                                          s["pnh"], s["physics_config"])
-  assert np.allclose(jacL, 0.0)
-  assert np.allclose(jacU, 0.0)
-  assert np.allclose(jacD, 1.0)
+  assert np.allclose(to_host(jacL), 0.0)
+  assert np.allclose(to_host(jacU), 0.0)
+  assert np.allclose(to_host(jacD), 1.0)
 
 
 # ---------------------------------------------------------------------------
@@ -191,7 +193,7 @@ def test_solve_tridiag_identity(synthetic_state):
   jacL = np.zeros(off_shape)
   jacU = np.zeros(off_shape)
   x = solve_strict_diag_dominant_tridiag(jacL, jacD, jacU, rhs.copy())
-  assert np.allclose(x, rhs)
+  assert np.allclose(to_host(x), rhs)
 
 
 # ---------------------------------------------------------------------------
@@ -243,7 +245,7 @@ def test_take_limited_step_no_op_with_zero_search_direction(synthetic_state):
   _, w_out = take_limited_step(100.0, s["phi_i"], s["d_phi"], s["w_guess"],
                                 zero_xdir, s["physics_config"],
                                 models.homme_nonhydrostatic)
-  assert np.allclose(w_out, s["w_guess"])
+  assert np.allclose(to_host(w_out), s["w_guess"])
 
 
 # ---------------------------------------------------------------------------

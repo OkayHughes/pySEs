@@ -506,6 +506,17 @@ def init_shard_extraction_map(assembly_triple, num_devices, nelem_padded, dims, 
   # this will maybe eventually be rewritten to work for bigger grids?
   assert np.abs(np.round(nelem_padded / num_devices) - nelem_padded / num_devices) < 1e-6, "Did you pad your array?"
 
+  # ``assembly_triple`` carries the DSS index arrays, which are backend arrays
+  # under a wrapped grid. Everything below is pure-numpy host index logic
+  # (meshgrid lookups, Python list building, scatter into numpy buffers), so
+  # bring the index arrays to host explicitly: numpy/jax convert implicitly, but
+  # torch cannot materialize a GPU tensor into numpy. Mirrors the same unwrap in
+  # horizontal_grid.init_spectral_element_grid.
+  _unwrap = _be.unwrap
+  assembly_triple = (assembly_triple[0],
+                     [np.asarray(_unwrap(a)) for a in assembly_triple[1]],
+                     [np.asarray(_unwrap(a)) for a in assembly_triple[2]])
+
   if wrapped:
     wrapper = device_wrapper
   else:

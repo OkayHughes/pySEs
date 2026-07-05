@@ -11,7 +11,7 @@ from pyses.operations_2d.operators import (horizontal_weak_divergence,
                                          horizontal_weak_gradient_covariant,
                                          horizontal_weak_vector_laplacian)
 from pyses.mesh_generation.periodic_plane import init_uniform_grid
-from ...context import test_npts, seed
+from ...context import test_npts, seed, to_host
 _be = _get_backend()
 jnp = _be.np
 eps = _be.eps
@@ -27,7 +27,7 @@ def test_vector_identites_sphere(nx, npt):
   grad = horizontal_gradient(fn, grid)
   vort = horizontal_vorticity(grad, grid)
   iprod_vort = inner_product(vort, vort, grid)
-  assert (np.allclose(iprod_vort, 0.0, atol=eps))
+  assert (np.allclose(to_host(iprod_vort), 0.0, atol=eps))
   v = jnp.stack((jnp.cos(grid["physical_coords"][:, :, :, 0]),
                 jnp.cos(grid["physical_coords"][:, :, :, 0])), axis=-1)
 
@@ -117,9 +117,10 @@ def test_divergence():
   for npt in test_npts:
     for nx in [60, 61]:
       grid, dims = init_quasi_uniform_grid_elem_local(nx, npt)
-      vec = np.zeros_like(grid["physical_coords"])
-      lat = grid["physical_coords"][:, :, :, 0]
-      lon = grid["physical_coords"][:, :, :, 1]
+      coords = to_host(grid["physical_coords"])
+      vec = np.zeros_like(coords)
+      lat = coords[:, :, :, 0]
+      lon = coords[:, :, :, 1]
       vec[:, :, :, 0] = np.cos(lat)**2 * np.cos(lon)**3
       vec[:, :, :, 1] = np.cos(lat)**2 * np.cos(lon)**3
       vec = device_wrapper(vec)

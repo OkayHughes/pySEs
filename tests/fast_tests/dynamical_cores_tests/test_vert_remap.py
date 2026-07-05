@@ -2,7 +2,7 @@ from pyses._config import get_backend as _get_backend
 import numpy as np
 from ...reference_implementations.vert_remap_reference import for_loop_remap
 from pyses.dynamical_cores.vertical_remap import zerroukat_remap
-from ...context import seed as global_seed
+from ...context import seed as global_seed, to_host
 _be = _get_backend()
 jnp = _be.np
 device_wrapper = _be.array
@@ -54,8 +54,10 @@ def test_remap():
   for _ in range(100):
     deltas, deltas_ref, Qs, Qdps = get_testbed(seed=True, random=True, wrap=True)
 
-    Qdp_out_for = device_wrapper(for_loop_remap(Qdps, deltas, deltas_ref, filter=False))
-    Qdp_out_for_filt = device_wrapper(for_loop_remap(Qdps, deltas, deltas_ref, filter=True))
+    Qdp_out_for = device_wrapper(for_loop_remap(to_host(Qdps), to_host(deltas),
+                                                to_host(deltas_ref), filter=False))
+    Qdp_out_for_filt = device_wrapper(for_loop_remap(to_host(Qdps), to_host(deltas),
+                                                     to_host(deltas_ref), filter=True))
 
     Qdp_out = zerroukat_remap(Qdps, deltas, deltas_ref, Qdps.shape[-2])
     Qdp_out_filt = zerroukat_remap(Qdps, deltas, deltas_ref, Qdps.shape[-2], filter=True)
