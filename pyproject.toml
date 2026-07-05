@@ -1,6 +1,6 @@
 [project]
 name = "pyses"
-version = "0.1.1"
+version = "0.1.3a2"
 description = "A highly readable, well documented, well tested set of atmospheric dynamical cores with support for variable resolution meshes, as well as automatic differentiation for machine learning and data assimilation."
 readme = "README.md"
 authors = [{ name = "Owen Hughes", email = "okayhughes@gmail.com" }]
@@ -8,7 +8,7 @@ requires-python = ">=3.10"
 dependencies = [
     "frozendict>=2.4.7",
     "numpy>=2.2.6",
-    "jax[cuda]>=0.6.2",
+    "jax>=0.6.2",
     "setuptools>=80.9.0",
     "jaxlib>=0.6.2",
     "torch>=2.12.0",
