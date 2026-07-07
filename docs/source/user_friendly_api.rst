@@ -2,9 +2,9 @@ The pySEs public API
 ====================
 
 All user-facing functionality is exposed through a small set of Python
-modules in the ``src/`` directory.  They are imported as, e.g.,
+modules in the ``pyses`` package.  They are imported as, e.g.,
 ``from pyses.grids import init``.  Internal implementation details live
-in the sub-packages below ``src/`` and are not part of the stable API.
+in the sub-packages below ``pyses`` and are not part of the stable API.
 
 .. contents:: Modules
    :local:
@@ -32,11 +32,7 @@ the rest of the API.
 ``init.init_quasi_uniform_grid(nx, npt, ...)``
     Element-local quasi-uniform cubed-sphere.  This is the recommended
     constructor for most production runs; it avoids the coordinate singularities
-    of the equiangular metric.
-
-``init.init_equiangular_grid(nx, npt, ...)``
-    Equiangular cubed-sphere using a global metric tensor.  Useful when the
-    equiangular property is desirable (e.g. certain convergence tests).
+    of a global metric tensor.
 
 ``init.init_stretched_grid(nx, npt, axis_dilation, ...)``
     Element-local stretched cubed-sphere.  ``axis_dilation`` is a length-3
@@ -51,7 +47,7 @@ the rest of the API.
 ``init.init_periodic_plane_grid(nx, npt, ...)``
     Doubly-periodic flat-plane grid for idealised channel experiments.
 
-``init.exodus_to_pyses_grid_corners(filepath)``
+``init.exodus_to_pysces_grid_corners(filepath)``
     Read an Exodus II mesh file and convert its corner-node coordinates into
     the format expected by ``init_unstructured_grid``.
 
@@ -222,9 +218,14 @@ test case.
       atmosphere (full Coriolis vector)
     * ``models.homme_hydrostatic_f_plane`` — hydrostatic HOMME, f-plane
     * ``models.homme_nonhydrostatic_f_plane`` — non-hydrostatic HOMME, f-plane
-    * ``models.cam_se`` — CAM-SE hydrostatic
+    * ``models.cam_se`` — CAM-SE hydrostatic (temperature ``T`` prognostic)
+    * ``models.cam_se_stable`` — CAM-SE hydrostatic using a dry
+      potential-temperature (``theta_d``) prognostic and the skew-symmetric
+      explicit step; more numerically robust than the ``T``-based ``cam_se``.
     * ``models.cam_se_whole_atmosphere`` — CAM-SE with variable gas constant
       for whole-atmosphere runs
+    * ``models.cam_se_whole_atmosphere_stable`` — whole-atmosphere CAM-SE with
+      the ``theta_d`` / skew-symmetric formulation of ``cam_se_stable``
     * ``models.shallow_water`` — 3-D shallow water on the sphere.  Uses the
       same simulator and configuration machinery as the 3-D dry cores
       with a single hybrid layer; the standalone
@@ -388,23 +389,22 @@ return the expected output shape.
 
 ----
 
-``pyses.shallow_water`` — Standalone shallow-water model (**deprecated**)
---------------------------------------------------------------------------
+Shallow water — use the 3-D core (former ``pyses.shallow_water``, **removed**)
+------------------------------------------------------------------------------
 
-.. deprecated::
-   The self-contained ``pyses.shallow_water`` package is deprecated and
-   slated for removal.  Its functionality is subsumed by the 3-D
-   dynamical core via ``models.shallow_water`` (and
-   ``models.shallow_water_f_plane`` for the f-plane variant), which uses
-   the same simulator, configuration, and analytic-init machinery as the
-   3-D dry cores.  New code should use the 3-D path:
+.. note::
+   The self-contained ``pyses.shallow_water`` package has been **removed**.
+   Its functionality is subsumed by the 3-D dynamical core via
+   ``models.shallow_water`` (and ``models.shallow_water_f_plane`` for the
+   f-plane variant), which uses the same simulator, configuration, and
+   analytic-init machinery as the 3-D dry cores.  Use the 3-D path:
 
    .. code-block:: python
 
        from pyses.grids import init
        from pyses.initialize import galewsky_barotropic_instability
        from pyses.model_utils import model_config, model_info, mass_coordinate
-       from pyses.run_model import init_simulator
+       from pyses.simulate import init_simulator
 
        h_grid, dims = init.init_quasi_uniform_grid(60, 4, calc_smooth_tensor=True)
 
@@ -432,7 +432,5 @@ return the expected output shape.
    The Williamson TC2 and Galewsky analytic initialisations live in
    ``pyses.initialize`` (see ``williamson_steady_state`` and
    ``galewsky_barotropic_instability`` above).  The legacy
-   ``pyses.shallow_water`` import path still works as a thin shim while
-   the deprecation proceeds, but the underlying
-   ``pyses.shallow_water_models`` package will be removed once all
-   callers have migrated.
+   ``pyses.shallow_water`` / ``pyses.shallow_water_models`` import paths no
+   longer exist; update any code that still imports them.

@@ -211,6 +211,186 @@ and <code class="docutils literal notranslate"><span class="pre">perturbation_op
 </dl>
 </section>
 </section>
+<section id="coupling-user-provided-physics-to-the-non-hydrostatic-core">
+<h1>Coupling user-provided physics to the non-hydrostatic core<a class="headerlink" href="#coupling-user-provided-physics-to-the-non-hydrostatic-core" title="Link to this heading">¶</a></h1>
+<p>Examples 1 and 2 iterate <code class="docutils literal notranslate"><span class="pre">init_simulator</span></code> with a plain <code class="docutils literal notranslate"><span class="pre">for</span></code> loop, which
+advances <em>pure dynamics</em>.  The generator it returns is also a coroutine: on each
+step it can be handed a <em>physics-forcing dict</em> via <code class="docutils literal notranslate"><span class="pre">send</span></code> to couple your own
+physics — microphysics, surface fluxes, radiative or Newtonian forcing,
+idealised relaxation, etc. — to the core.  (<code class="docutils literal notranslate"><span class="pre">send</span></code> simply forwards the dict to
+the underlying <code class="docutils literal notranslate"><span class="pre">advance_coupling_step</span></code> primitive, which the test calls
+directly.)</p>
+<p>The non-hydrostatic planar fuzzing test
+<code class="docutils literal notranslate"><span class="pre">tests/slow_tests/test_random_periodic_plane.py</span></code> is a complete worked example:
+it couples idealised surface drag, a diurnal land/lake surface and Kessler
+warm-rain microphysics to the non-hydrostatic HOMME core on a doubly-periodic
+plane.  This section distils its coupling pattern; see the test for the full
+physics implementation.</p>
+<section id="the-coupling-contract">
+<h2>The coupling contract<a class="headerlink" href="#the-coupling-contract" title="Link to this heading">¶</a></h2>
+<p>Your physics is any callable <code class="docutils literal notranslate"><span class="pre">physics(state,</span> <span class="pre">t)</span> <span class="pre">-&gt;</span> <span class="pre">physics_forcing</span></code> (the test
+implements it as a class <code class="docutils literal notranslate"><span class="pre">_SurfacePhysics</span></code> that caches its time-invariant
+pieces, but a plain function works too).  It receives the current model-state
+dict and the elapsed time in seconds, and returns a nested dict</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">physics_forcing</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;dynamics&quot;</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">dynamics</span><span class="o">-</span><span class="n">tendency</span> <span class="nb">dict</span><span class="o">&gt;</span><span class="p">,</span>
+                   <span class="s2">&quot;tracers&quot;</span><span class="p">:</span>  <span class="o">&lt;</span><span class="n">tracers</span><span class="o">-</span><span class="n">tendency</span> <span class="nb">dict</span><span class="o">&gt;</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>Every entry is a <strong>tendency</strong> — the field’s rate of change per second.  Under
+<code class="docutils literal notranslate"><span class="pre">lump_all</span></code> coupling the core applies it as an operator-split forward-Euler
+add, <code class="docutils literal notranslate"><span class="pre">field</span> <span class="pre">+=</span> <span class="pre">physics_dt</span> <span class="pre">*</span> <span class="pre">tendency</span></code>, <em>before</em> taking the dynamics step.  The
+two sub-dicts are assembled with the <code class="docutils literal notranslate"><span class="pre">wrap_dynamics</span></code> and <code class="docutils literal notranslate"><span class="pre">wrap_tracers</span></code>
+helpers so the keys match the prognostic variables of the chosen <code class="docutils literal notranslate"><span class="pre">model</span></code>.</p>
+</section>
+<section id="enabling-the-coupling-lump-all">
+<h2>Enabling the coupling (<code class="docutils literal notranslate"><span class="pre">lump_all</span></code>)<a class="headerlink" href="#enabling-the-coupling-lump-all" title="Link to this heading">¶</a></h2>
+<p>The forcing is only applied if the timestep config selects a coupling mode that
+consumes it.  The default (<code class="docutils literal notranslate"><span class="pre">coupling_types.none</span></code>) <strong>silently ignores</strong> the
+<code class="docutils literal notranslate"><span class="pre">physics_forcing</span></code> argument, so the essential switch is
+<code class="docutils literal notranslate"><span class="pre">physics_dynamics_coupling=coupling_types.lump_all</span></code>.  This example uses pySEs’
+friendly API throughout — the same <code class="docutils literal notranslate"><span class="pre">pyses.grids</span></code> / <code class="docutils literal notranslate"><span class="pre">pyses.model_utils</span></code> /
+<code class="docutils literal notranslate"><span class="pre">pyses.simulate</span></code> facades as Examples 1 and 2</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pyses.grids</span><span class="w"> </span><span class="kn">import</span> <span class="n">init</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pyses.model_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">mass_coordinate</span><span class="p">,</span> <span class="n">model_config</span><span class="p">,</span> <span class="n">model_info</span><span class="p">,</span> <span class="n">model_state</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pyses.simulate</span><span class="w"> </span><span class="kn">import</span> <span class="n">init_simulator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pyses._config</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_backend</span>
+
+<span class="n">jnp</span> <span class="o">=</span> <span class="n">get_backend</span><span class="p">()</span><span class="o">.</span><span class="n">np</span>
+
+<span class="c1"># A doubly-periodic 50 km plane with the non-hydrostatic HOMME core.</span>
+<span class="n">npt</span> <span class="o">=</span> <span class="mi">4</span>
+<span class="n">nx</span> <span class="o">=</span> <span class="n">ny</span> <span class="o">=</span> <span class="mi">20</span>
+<span class="n">h_grid</span><span class="p">,</span> <span class="n">dims</span> <span class="o">=</span> <span class="n">init</span><span class="o">.</span><span class="n">init_periodic_plane_uniform</span><span class="p">(</span>
+    <span class="n">nx</span><span class="p">,</span> <span class="n">ny</span><span class="p">,</span> <span class="n">npt</span><span class="p">,</span> <span class="n">length_x</span><span class="o">=</span><span class="mf">50e3</span><span class="p">,</span> <span class="n">length_y</span><span class="o">=</span><span class="mf">50e3</span><span class="p">,</span> <span class="n">calc_smooth_tensor</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">model_info</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">homme_nonhydrostatic_f_plane</span>  <span class="c1"># non-hydrostatic, constant Coriolis</span>
+
+<span class="n">v_grid</span> <span class="o">=</span> <span class="n">mass_coordinate</span><span class="o">.</span><span class="n">init_vertical_grid</span><span class="p">(</span><span class="n">hybrid_a_i</span><span class="p">,</span> <span class="n">hybrid_b_i</span><span class="p">,</span> <span class="n">p0</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
+
+<span class="c1"># The planar operators use a unit length scale (the grid is already in</span>
+<span class="c1"># metres), so set radius_earth=1.  See the test for the matching top-sponge</span>
+<span class="c1"># rescaling (``nu_top``) this implies.</span>
+<span class="n">physics_config</span> <span class="o">=</span> <span class="n">model_config</span><span class="o">.</span><span class="n">init_physics_config</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">radius_earth</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+<span class="n">diffusion_config</span> <span class="o">=</span> <span class="n">model_config</span><span class="o">.</span><span class="n">init_diffusion_config</span><span class="p">(</span>
+    <span class="n">h_grid</span><span class="p">,</span> <span class="n">v_grid</span><span class="p">,</span> <span class="n">dims</span><span class="p">,</span> <span class="n">physics_config</span><span class="p">,</span> <span class="n">n_sponge</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">physics_dt</span> <span class="o">=</span> <span class="mf">3.0</span>  <span class="c1"># seconds between physics updates</span>
+<span class="n">timestep_config</span> <span class="o">=</span> <span class="n">model_config</span><span class="o">.</span><span class="n">init_timestep_config</span><span class="p">(</span>
+    <span class="n">physics_dt</span><span class="p">,</span> <span class="n">h_grid</span><span class="p">,</span> <span class="n">physics_config</span><span class="p">,</span> <span class="n">diffusion_config</span><span class="p">,</span> <span class="n">dims</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span>
+    <span class="n">dynamics_tstep_type</span><span class="o">=</span><span class="n">model_config</span><span class="o">.</span><span class="n">time_step_options</span><span class="o">.</span><span class="n">RK3_5STAGE_HEVI</span><span class="p">,</span>  <span class="c1"># HEVI integrator</span>
+    <span class="n">physics_dynamics_coupling</span><span class="o">=</span><span class="n">model_config</span><span class="o">.</span><span class="n">coupling_types</span><span class="o">.</span><span class="n">lump_all</span><span class="p">,</span>      <span class="c1"># &lt;-- apply the forcing</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">RK3_5STAGE_HEVI</span></code> is the horizontally-explicit / vertically-implicit
+Runge–Kutta integrator the non-hydrostatic core uses; the hydrostatic core uses
+<code class="docutils literal notranslate"><span class="pre">RK3_5STAGE</span></code> instead.</p>
+</section>
+<section id="building-the-forcing-dict">
+<h2>Building the forcing dict<a class="headerlink" href="#building-the-forcing-dict" title="Link to this heading">¶</a></h2>
+<p>Two non-hydrostatic specifics shape the <code class="docutils literal notranslate"><span class="pre">wrap_dynamics</span></code> call:</p>
+<ul class="simple">
+<li><p>The non-hydrostatic prognostic state carries the interface geopotential
+<code class="docutils literal notranslate"><span class="pre">phi_i</span></code> and interface vertical velocity <code class="docutils literal notranslate"><span class="pre">w_i</span></code> in addition to the
+hydrostatic fields, so <code class="docutils literal notranslate"><span class="pre">wrap_dynamics</span></code> accepts <code class="docutils literal notranslate"><span class="pre">phi_i=</span></code> and <code class="docutils literal notranslate"><span class="pre">w_i=</span></code>
+tendencies.  Pass zeros for fields you do not force.</p></li>
+<li><p>HOMME’s thermodynamic prognostic is <code class="docutils literal notranslate"><span class="pre">theta_v_d_mass</span></code> (virtual potential
+temperature times layer mass), <strong>not</strong> temperature.  A physical temperature
+tendency <code class="docutils literal notranslate"><span class="pre">dT</span></code> (K/s) must therefore be converted with the diagnosed Exner
+function, <code class="docutils literal notranslate"><span class="pre">dtheta</span> <span class="pre">=</span> <span class="pre">(d_mass</span> <span class="pre">/</span> <span class="pre">exner)</span> <span class="pre">*</span> <span class="pre">dT</span></code>.</p></li>
+</ul>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">my_physics</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+    <span class="n">dyn</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s2">&quot;dynamics&quot;</span><span class="p">]</span>
+    <span class="n">d_mass</span> <span class="o">=</span> <span class="n">dyn</span><span class="p">[</span><span class="s2">&quot;d_mass&quot;</span><span class="p">]</span>
+
+    <span class="c1"># Diagnose temperature / Exner / pressure from the prognostic state.</span>
+    <span class="c1"># (``_diagnose_state`` in the test wraps ``eval_mu`` for this.)</span>
+    <span class="n">T</span><span class="p">,</span> <span class="n">exner</span><span class="p">,</span> <span class="n">p</span> <span class="o">=</span> <span class="n">diagnose_state</span><span class="p">(</span><span class="n">dyn</span><span class="p">,</span> <span class="n">v_grid</span><span class="p">,</span> <span class="n">physics_config</span><span class="p">)</span>
+
+    <span class="c1"># --- your physics: compute tendencies of each prognostic field ---</span>
+    <span class="n">du</span>   <span class="o">=</span> <span class="o">...</span>        <span class="c1"># (E, i, j, lev, 2)  horizontal-wind tendency (m/s / s)</span>
+    <span class="n">dw_i</span> <span class="o">=</span> <span class="o">...</span>        <span class="c1"># (E, i, j, ilev)    vertical-velocity tendency</span>
+    <span class="n">dT</span>   <span class="o">=</span> <span class="o">...</span>        <span class="c1"># (E, i, j, lev)     temperature tendency (K/s)</span>
+    <span class="n">dm_v</span> <span class="o">=</span> <span class="o">...</span>        <span class="c1"># water-vapour mixing-ratio tendency (1/s)</span>
+    <span class="n">dm_c</span> <span class="o">=</span> <span class="o">...</span>        <span class="c1"># cloud-water tendency</span>
+    <span class="n">dm_r</span> <span class="o">=</span> <span class="o">...</span>        <span class="c1"># rain-water tendency</span>
+
+    <span class="c1"># temperature tendency -&gt; theta_v_d_mass tendency</span>
+    <span class="n">dtheta</span> <span class="o">=</span> <span class="p">(</span><span class="n">d_mass</span> <span class="o">/</span> <span class="n">exner</span><span class="p">)</span> <span class="o">*</span> <span class="n">dT</span>
+
+    <span class="n">zeros_mass</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">d_mass</span><span class="p">)</span>
+    <span class="n">zeros_phi</span>  <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">dyn</span><span class="p">[</span><span class="s2">&quot;phi_i&quot;</span><span class="p">])</span>
+    <span class="n">dyn_forcing</span> <span class="o">=</span> <span class="n">model_state</span><span class="o">.</span><span class="n">wrap_dynamics</span><span class="p">(</span>
+        <span class="n">du</span><span class="p">,</span> <span class="n">dtheta</span><span class="p">,</span> <span class="n">zeros_mass</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span>   <span class="c1"># wind, thermodynamic, d_mass tendencies</span>
+        <span class="n">phi_i</span><span class="o">=</span><span class="n">zeros_phi</span><span class="p">,</span>                 <span class="c1"># not forcing the geopotential here</span>
+        <span class="n">w_i</span><span class="o">=</span><span class="n">dw_i</span><span class="p">,</span>                        <span class="c1"># non-hydrostatic vertical-velocity forcing</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Water vapour lives in ``moisture_species``; extra tracers (cloud,</span>
+    <span class="c1"># rain, ...) in ``tracers``.  Both must be declared on the state.</span>
+    <span class="n">trac_forcing</span> <span class="o">=</span> <span class="n">model_state</span><span class="o">.</span><span class="n">wrap_tracers</span><span class="p">(</span>
+        <span class="p">{</span><span class="s2">&quot;water_vapor&quot;</span><span class="p">:</span> <span class="n">dm_v</span><span class="p">},</span>
+        <span class="p">{</span><span class="s2">&quot;cloud_water&quot;</span><span class="p">:</span> <span class="n">dm_c</span><span class="p">,</span> <span class="s2">&quot;rain_water&quot;</span><span class="p">:</span> <span class="n">dm_r</span><span class="p">},</span>
+        <span class="n">model</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;dynamics&quot;</span><span class="p">:</span> <span class="n">dyn_forcing</span><span class="p">,</span> <span class="s2">&quot;tracers&quot;</span><span class="p">:</span> <span class="n">trac_forcing</span><span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="the-driver-loop">
+<h2>The driver loop<a class="headerlink" href="#the-driver-loop" title="Link to this heading">¶</a></h2>
+<p>Build the simulator exactly as in Examples 1 and 2, then drive its generator as
+a coroutine: prime it, and <code class="docutils literal notranslate"><span class="pre">send</span></code> the forcing recomputed from the freshly
+yielded state on every step</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">simulator</span> <span class="o">=</span> <span class="n">init_simulator</span><span class="p">(</span>
+    <span class="n">h_grid</span><span class="p">,</span> <span class="n">v_grid</span><span class="p">,</span> <span class="n">physics_config</span><span class="p">,</span> <span class="n">diffusion_config</span><span class="p">,</span> <span class="n">timestep_config</span><span class="p">,</span>
+    <span class="n">dims</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">state</span> <span class="o">=</span> <span class="o">...</span>   <span class="c1"># balanced non-hydrostatic IC, e.g. via</span>
+              <span class="c1"># pyses.initialize.custom_init.init_analytic_state (see the test)</span>
+
+<span class="c1"># Priming the generator takes the first step (using the forcing passed</span>
+<span class="c1"># here); ``send`` supplies the forcing for each step thereafter.</span>
+<span class="n">sim</span> <span class="o">=</span> <span class="n">simulator</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">my_physics</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">))</span>
+<span class="n">t</span><span class="p">,</span> <span class="n">state</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">sim</span><span class="p">)</span>
+<span class="n">total_time</span> <span class="o">=</span> <span class="mf">3600.0</span>
+<span class="k">while</span> <span class="n">t</span> <span class="o">&lt;</span> <span class="n">total_time</span><span class="p">:</span>
+    <span class="n">t</span><span class="p">,</span> <span class="n">state</span> <span class="o">=</span> <span class="n">sim</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">my_physics</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">t</span><span class="p">))</span>
+    <span class="c1"># archiving / analysis here</span>
+</pre></div>
+</div>
+<p>Because the forcing is recomputed from the freshly yielded <code class="docutils literal notranslate"><span class="pre">state</span></code> every step,
+state-dependent physics (saturation adjustment, surface fluxes that depend on
+the current near-surface temperature, etc.) closes the loop with the dynamics
+naturally.</p>
+<p>If you do not need the <code class="docutils literal notranslate"><span class="pre">send</span></code> protocol you can equally call the lower-level
+<code class="docutils literal notranslate"><span class="pre">advance_coupling_step(...,</span> <span class="pre">physics_forcing=forcing)</span></code> in your own loop — this
+is what <code class="docutils literal notranslate"><span class="pre">test_random_periodic_plane.py</span></code> does.</p>
+</section>
+<section id="coupling-concepts">
+<h2>Coupling concepts<a class="headerlink" href="#coupling-concepts" title="Link to this heading">¶</a></h2>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">physics_forcing</span></code> dict</dt><dd><p><code class="docutils literal notranslate"><span class="pre">{&quot;dynamics&quot;:</span> <span class="pre">...,</span> <span class="pre">&quot;tracers&quot;:</span> <span class="pre">...}</span></code> of <strong>tendencies</strong> (field per second).
+Built with <code class="docutils literal notranslate"><span class="pre">wrap_dynamics</span></code> / <code class="docutils literal notranslate"><span class="pre">wrap_tracers</span></code> so keys match the model’s
+prognostic variables.  Recompute it from the live <code class="docutils literal notranslate"><span class="pre">state</span></code> each step.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">coupling_types.lump_all</span></code></dt><dd><p>Applies the forcing as an operator-split forward-Euler add to <em>both</em>
+dynamics and tracers before each dynamics step.  Required — the default
+<code class="docutils literal notranslate"><span class="pre">coupling_types.none</span></code> drops the <code class="docutils literal notranslate"><span class="pre">physics_forcing</span></code> argument silently.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">wrap_dynamics(...,</span> <span class="pre">phi_i=,</span> <span class="pre">w_i=)</span></code></dt><dd><p>The non-hydrostatic core adds the interface geopotential <code class="docutils literal notranslate"><span class="pre">phi_i</span></code> and
+vertical velocity <code class="docutils literal notranslate"><span class="pre">w_i</span></code> to the prognostic set; supply their tendencies
+(or zeros).  The hydrostatic core omits both.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">theta_v_d_mass</span></code> thermodynamic variable</dt><dd><p>HOMME evolves virtual potential temperature times layer mass.  Convert a
+temperature tendency with <code class="docutils literal notranslate"><span class="pre">dtheta</span> <span class="pre">=</span> <span class="pre">(d_mass</span> <span class="pre">/</span> <span class="pre">exner)</span> <span class="pre">*</span> <span class="pre">dT</span></code> using the
+Exner function diagnosed from the state.</p>
+</dd>
+</dl>
+</section>
+</section>
 
 
           </div>
@@ -248,11 +428,19 @@ and <code class="docutils literal notranslate"><span class="pre">perturbation_op
 <li class="toctree-l2"><a class="reference internal" href="#key-concepts">Key concepts</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="#coupling-user-provided-physics-to-the-non-hydrostatic-core">Coupling user-provided physics to the non-hydrostatic core</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#the-coupling-contract">The coupling contract</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#enabling-the-coupling-lump-all">Enabling the coupling (<code class="docutils literal notranslate"><span class="pre">lump_all</span></code>)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#building-the-forcing-dict">Building the forcing dict</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#the-driver-loop">The driver loop</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#coupling-concepts">Coupling concepts</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="user_friendly_api.html">The pySEs public API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="anatomy_of_a_model_struct.html">How is the atmospheric state represented in pySEs?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="grid_generation.html">Horizontal grid generation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api/modules.html">src</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/modules.html">pyses</a></li>
 </ul>
 
 <div class="relations">

@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>pyses.dynamical_cores.homme.implicit_terms module &#8212; pyses  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="pyses.dynamical_cores.homme.thermodynamics module" href="pyses.dynamical_cores.homme.thermodynamics.html" />
+    <link rel="prev" title="pyses.dynamical_cores.homme.homme_state module" href="pyses.dynamical_cores.homme.homme_state.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-pyses.dynamical_cores.homme.implicit_terms">
+<span id="pyses-dynamical-cores-homme-implicit-terms-module"></span><h1>pyses.dynamical_cores.homme.implicit_terms module<a class="headerlink" href="#module-pyses.dynamical_cores.homme.implicit_terms" title="Link to this heading">¶</a></h1>
+<p>HOMME non-hydrostatic DIRK implicit-stage solver.</p>
+<p>Direct port of <code class="docutils literal notranslate"><span class="pre">compute_stage_value_dirk</span></code> (and its helpers
+<code class="docutils literal notranslate"><span class="pre">get_dirk_jacobian</span></code>, <code class="docutils literal notranslate"><span class="pre">compute_gwphis</span></code>,
+<code class="docutils literal notranslate"><span class="pre">solve_strict_diag_dominant_tridiag</span></code>) from HOMME’s <code class="docutils literal notranslate"><span class="pre">imex_mod</span></code> /
+<code class="docutils literal notranslate"><span class="pre">prim_advance_mod</span></code>.  The Fortran reference is reproduced verbatim in
+<code class="docutils literal notranslate"><span class="pre">implicit_terms_ref.txt</span></code> next to this file.</p>
+<p>The DIRK stage equation is</p>
+<blockquote>
+<div><p>w_np1   = w_n0   + dt2 * g(phi_n0) * (mu - 1)
+phi_np1 = phi_n0 + dt2 * g(phi_n0) * w_np1</p>
+</div></blockquote>
+<p>with <code class="docutils literal notranslate"><span class="pre">w_n0</span></code> / <code class="docutils literal notranslate"><span class="pre">phi_n0</span></code> already pre-loaded by the explicit
+<code class="docutils literal notranslate"><span class="pre">alphadt_n0</span></code> / <code class="docutils literal notranslate"><span class="pre">alphadt_nm1</span></code> contributions and the <code class="docutils literal notranslate"><span class="pre">np1</span></code> surface-
+topography <code class="docutils literal notranslate"><span class="pre">gw_phis</span></code> term subtracted.  <code class="docutils literal notranslate"><span class="pre">mu</span> <span class="pre">=</span> <span class="pre">d</span> <span class="pre">p_nh</span> <span class="pre">/</span> <span class="pre">d</span> <span class="pre">(d_mass)</span></code>
+is recomputed from <code class="docutils literal notranslate"><span class="pre">(theta_v_d_mass,</span> <span class="pre">d_mass,</span> <span class="pre">dphi)</span></code> each Newton step.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="pyses.dynamical_cores.homme.implicit_terms.advance_buoyancy_explicit">
+<span class="sig-prename descclassname"><span class="pre">pyses.dynamical_cores.homme.implicit_terms.</span></span><span class="sig-name descname"><span class="pre">advance_buoyancy_explicit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">alpha_dts</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dynamics_series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">w_init</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phi_init</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">static_forcing</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pyses.dynamical_cores.homme.implicit_terms.advance_buoyancy_explicit" title="Link to this definition">¶</a></dt>
+<dd><p>Accumulate the explicit <code class="docutils literal notranslate"><span class="pre">alpha</span> <span class="pre">dt</span> <span class="pre">*</span> <span class="pre">S(u_nt)</span></code> contributions.</p>
+<p>Mirrors the <code class="docutils literal notranslate"><span class="pre">alphadt_n0</span></code> / <code class="docutils literal notranslate"><span class="pre">alphadt_nm1</span></code> blocks of
+<code class="docutils literal notranslate"><span class="pre">compute_stage_value_dirk</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">w_n0</span>   <span class="o">+=</span> <span class="n">alpha</span> <span class="n">dt</span> <span class="o">*</span> <span class="n">g</span><span class="p">(</span><span class="n">phi_n0</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">mu</span><span class="p">(</span><span class="n">nt</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">phi_n0</span> <span class="o">+=</span> <span class="n">alpha</span> <span class="n">dt</span> <span class="o">*</span> <span class="p">(</span><span class="n">g</span><span class="p">(</span><span class="n">phi_n0</span><span class="p">)</span> <span class="o">*</span> <span class="n">w</span><span class="p">(</span><span class="n">nt</span><span class="p">)</span> <span class="o">-</span> <span class="n">gw_phis</span><span class="p">(</span><span class="n">nt</span><span class="p">))</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">g</span></code> is evaluated at the <em>running</em> <code class="docutils literal notranslate"><span class="pre">phi_n0</span></code> accumulator (matching
+Fortran’s <code class="docutils literal notranslate"><span class="pre">g_from_phi(phi_n0)</span></code>).</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pyses.dynamical_cores.homme.implicit_terms.calc_dirk_jacobian">
+<span class="sig-prename descclassname"><span class="pre">pyses.dynamical_cores.homme.implicit_terms.</span></span><span class="sig-name descname"><span class="pre">calc_dirk_jacobian</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_mass</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_phi</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pnh</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pyses.dynamical_cores.homme.implicit_terms.calc_dirk_jacobian" title="Link to this definition">¶</a></dt>
+<dd><p>Exact analytic Jacobian of the DIRK fixed-point residual.</p>
+<p>Mirrors <code class="docutils literal notranslate"><span class="pre">get_dirk_jacobian</span></code> (exact branch).  <code class="docutils literal notranslate"><span class="pre">jacD</span></code> has length
+<code class="docutils literal notranslate"><span class="pre">nlev</span></code>; the two off-diagonals have length <code class="docutils literal notranslate"><span class="pre">nlev</span> <span class="pre">-</span> <span class="pre">1</span></code>, matching
+the layout the tridiagonal solver expects.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pyses.dynamical_cores.homme.implicit_terms.calc_implicit_update">
+<span class="sig-prename descclassname"><span class="pre">pyses.dynamical_cores.homme.implicit_terms.</span></span><span class="sig-name descname"><span class="pre">calc_implicit_update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dt_implicit</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nh_vars_before_implicit</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dynamics_before_implicit</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">static_forcing</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pyses.dynamical_cores.homme.implicit_terms.calc_implicit_update" title="Link to this definition">¶</a></dt>
+<dd><p>Solve the DIRK stage equation for <code class="docutils literal notranslate"><span class="pre">(phi_np1,</span> <span class="pre">w_np1)</span></code>.</p>
+<p>Direct port of <code class="docutils literal notranslate"><span class="pre">compute_stage_value_dirk</span></code>.
+<code class="docutils literal notranslate"><span class="pre">nh_vars_before_implicit</span></code> carries the explicit RHS (<code class="docutils literal notranslate"><span class="pre">w_n0</span></code>,
+<code class="docutils literal notranslate"><span class="pre">phi_n0</span></code> augmented with the accumulated <code class="docutils literal notranslate"><span class="pre">alpha</span> <span class="pre">dt</span> <span class="pre">S(u_nt)</span></code>
+contributions); <code class="docutils literal notranslate"><span class="pre">dynamics_before_implicit[&quot;phi_i&quot;]</span></code> provides the
+hydrostatic initial guess.</p>
+<p>Newton iteration runs a fixed budget of 20 sweeps.  A JIT-
+compatible early exit on <code class="docutils literal notranslate"><span class="pre">deltaerr</span> <span class="pre">&lt;</span> <span class="pre">deltatol</span></code> would require
+<code class="docutils literal notranslate"><span class="pre">lax.while_loop</span></code> and is left for a follow-up.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pyses.dynamical_cores.homme.implicit_terms.init_search_dir">
+<span class="sig-prename descclassname"><span class="pre">pyses.dynamical_cores.homme.implicit_terms.</span></span><span class="sig-name descname"><span class="pre">init_search_dir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dt_implicit</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">w_guess</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dphi_guess</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_mass</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nh_pressure</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">w_phi_compatibility_residual</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pyses.dynamical_cores.homme.implicit_terms.init_search_dir" title="Link to this definition">¶</a></dt>
+<dd><p>Solve <code class="docutils literal notranslate"><span class="pre">J</span> <span class="pre">x</span> <span class="pre">=</span> <span class="pre">-F</span></code> on the interior nlev levels.</p>
+<p>Returned array is padded with a zero at the surface so its shape
+matches <code class="docutils literal notranslate"><span class="pre">w_guess</span></code> (length <code class="docutils literal notranslate"><span class="pre">nlev</span> <span class="pre">+</span> <span class="pre">1</span></code>).</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pyses.dynamical_cores.homme.implicit_terms.solve_strict_diag_dominant_tridiag">
+<span class="sig-prename descclassname"><span class="pre">pyses.dynamical_cores.homme.implicit_terms.</span></span><span class="sig-name descname"><span class="pre">solve_strict_diag_dominant_tridiag</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">jacL</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">jacD</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">jacU</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rhs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pyses.dynamical_cores.homme.implicit_terms.solve_strict_diag_dominant_tridiag" title="Link to this definition">¶</a></dt>
+<dd><p>Thomas-algorithm tridiagonal solver for a strictly diagonally
+dominant system.  Matches HOMME’s
+<code class="docutils literal notranslate"><span class="pre">solve_strict_diag_dominant_tridiag</span></code>.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pyses.dynamical_cores.homme.implicit_terms.take_limited_step">
+<span class="sig-prename descclassname"><span class="pre">pyses.dynamical_cores.homme.implicit_terms.</span></span><span class="sig-name descname"><span class="pre">take_limited_step</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dt_implicit</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phi_n0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dphi_n0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">w_guess</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">w_search_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">physics_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pyses.dynamical_cores.homme.implicit_terms.take_limited_step" title="Link to this definition">¶</a></dt>
+<dd><p>Backtracking-limited Newton update for <code class="docutils literal notranslate"><span class="pre">(dphi,</span> <span class="pre">w)</span></code>.</p>
+<p>Computes the alpha-1 trial <code class="docutils literal notranslate"><span class="pre">dphi_trial</span> <span class="pre">=</span> <span class="pre">dphi_n0</span> <span class="pre">+</span> <span class="pre">dt</span> <span class="pre">*</span> <span class="pre">d/dt(dphi)</span></code>,
+detects unphysical (<code class="docutils literal notranslate"><span class="pre">dphi</span> <span class="pre">&gt;=</span> <span class="pre">0</span></code>) columns, and per such column
+halves the smallest non-negative <code class="docutils literal notranslate"><span class="pre">alpha_k</span></code> that would zero out
+some <code class="docutils literal notranslate"><span class="pre">dphi</span></code> – matching Fortran’s <code class="docutils literal notranslate"><span class="pre">alpha</span> <span class="pre">=</span> <span class="pre">alpha/2</span></code> rule.  All
+<code class="docutils literal notranslate"><span class="pre">g</span></code> evaluations follow Fortran and use <code class="docutils literal notranslate"><span class="pre">g_from_phi(phi_n0)</span></code> (the
+fixed RHS), not the current iterate.</p>
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">pyses</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation_and_validation.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html#coupling-user-provided-physics-to-the-non-hydrostatic-core">Coupling user-provided physics to the non-hydrostatic core</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_friendly_api.html">The pySEs public API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../anatomy_of_a_model_struct.html">How is the atmospheric state represented in pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">Horizontal grid generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">pyses</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="pyses.html">pyses package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="pyses.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="pyses.analytic_initialization.html">pyses.analytic_initialization package</a></li>
+<li class="toctree-l4 current"><a class="reference internal" href="pyses.dynamical_cores.html">pyses.dynamical_cores package</a><ul class="current">
+<li class="toctree-l5 current"><a class="reference internal" href="pyses.dynamical_cores.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l6"><a class="reference internal" href="pyses.dynamical_cores.cam_se.html">pyses.dynamical_cores.cam_se package</a></li>
+<li class="toctree-l6 current"><a class="reference internal" href="pyses.dynamical_cores.homme.html">pyses.dynamical_cores.homme package</a><ul class="current">
+<li class="toctree-l7 current"><a class="reference internal" href="pyses.dynamical_cores.homme.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l8"><a class="reference internal" href="pyses.dynamical_cores.homme.explicit_terms.html">pyses.dynamical_cores.homme.explicit_terms module</a></li>
+<li class="toctree-l8"><a class="reference internal" href="pyses.dynamical_cores.homme.homme_state.html">pyses.dynamical_cores.homme.homme_state module</a></li>
+<li class="toctree-l8 current"><a class="current reference internal" href="#">pyses.dynamical_cores.homme.implicit_terms module</a><ul>
+<li class="toctree-l9"><a class="reference internal" href="#pyses.dynamical_cores.homme.implicit_terms.advance_buoyancy_explicit"><code class="docutils literal notranslate"><span class="pre">advance_buoyancy_explicit()</span></code></a></li>
+<li class="toctree-l9"><a class="reference internal" href="#pyses.dynamical_cores.homme.implicit_terms.calc_dirk_jacobian"><code class="docutils literal notranslate"><span class="pre">calc_dirk_jacobian()</span></code></a></li>
+<li class="toctree-l9"><a class="reference internal" href="#pyses.dynamical_cores.homme.implicit_terms.calc_implicit_update"><code class="docutils literal notranslate"><span class="pre">calc_implicit_update()</span></code></a></li>
+<li class="toctree-l9"><a class="reference internal" href="#pyses.dynamical_cores.homme.implicit_terms.init_search_dir"><code class="docutils literal notranslate"><span class="pre">init_search_dir()</span></code></a></li>
+<li class="toctree-l9"><a class="reference internal" href="#pyses.dynamical_cores.homme.implicit_terms.solve_strict_diag_dominant_tridiag"><code class="docutils literal notranslate"><span class="pre">solve_strict_diag_dominant_tridiag()</span></code></a></li>
+<li class="toctree-l9"><a class="reference internal" href="#pyses.dynamical_cores.homme.implicit_terms.take_limited_step"><code class="docutils literal notranslate"><span class="pre">take_limited_step()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l8"><a class="reference internal" href="pyses.dynamical_cores.homme.thermodynamics.html">pyses.dynamical_cores.homme.thermodynamics module</a></li>
+</ul>
+</li>
+<li class="toctree-l7"><a class="reference internal" href="pyses.dynamical_cores.homme.html#module-pyses.dynamical_cores.homme">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="pyses.dynamical_cores.shallow_water_3d.html">pyses.dynamical_cores.shallow_water_3d package</a></li>
+<li class="toctree-l6"><a class="reference internal" href="pyses.dynamical_cores.tracer_advection.html">pyses.dynamical_cores.tracer_advection package</a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="pyses.dynamical_cores.html#submodules">Submodules</a></li>
+<li class="toctree-l5"><a class="reference internal" href="pyses.dynamical_cores.html#module-pyses.dynamical_cores">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="pyses.mesh_generation.html">pyses.mesh_generation package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pyses.mpi.html">pyses.mpi package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pyses.operations_2d.html">pyses.operations_2d package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pyses.tracer_transport.html">pyses.tracer_transport package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="pyses.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pyses.html#module-pyses">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">pyses</a><ul>
+  <li><a href="pyses.html">pyses package</a><ul>
+  <li><a href="pyses.dynamical_cores.html">pyses.dynamical_cores package</a><ul>
+  <li><a href="pyses.dynamical_cores.homme.html">pyses.dynamical_cores.homme package</a><ul>
+      <li>Previous: <a href="pyses.dynamical_cores.homme.homme_state.html" title="previous chapter">pyses.dynamical_cores.homme.homme_state module</a></li>
+      <li>Next: <a href="pyses.dynamical_cores.homme.thermodynamics.html" title="next chapter">pyses.dynamical_cores.homme.thermodynamics module</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Owen K Hughes.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/api/pyses.dynamical_cores.homme.implicit_terms.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

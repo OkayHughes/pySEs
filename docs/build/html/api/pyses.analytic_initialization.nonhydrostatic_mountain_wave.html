@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>pyses.analytic_initialization.nonhydrostatic_mountain_wave module &#8212; pyses  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="pyses.analytic_initialization.williamson_init module" href="pyses.analytic_initialization.williamson_init.html" />
+    <link rel="prev" title="pyses.analytic_initialization.moist_baroclinic_wave module" href="pyses.analytic_initialization.moist_baroclinic_wave.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-pyses.analytic_initialization.nonhydrostatic_mountain_wave">
+<span id="pyses-analytic-initialization-nonhydrostatic-mountain-wave-module"></span><h1>pyses.analytic_initialization.nonhydrostatic_mountain_wave module<a class="headerlink" href="#module-pyses.analytic_initialization.nonhydrostatic_mountain_wave" title="Link to this heading">¶</a></h1>
+<p>DCMIP-2012 non-hydrostatic orographic gravity-wave test cases (2-1 / 2-2).</p>
+<p>This module provides the analytic initialisation for the Schar-type mountain
+wave experiments of Ullrich et al. (2012), <em>DCMIP Test Case Document</em>,
+section 2.X (tests 2-1 and 2-2).  A non-rotating, reduced-size planet
+(<code class="docutils literal notranslate"><span class="pre">a</span> <span class="pre">=</span> <span class="pre">aref</span> <span class="pre">/</span> <span class="pre">X</span></code> with <code class="docutils literal notranslate"><span class="pre">X</span> <span class="pre">=</span> <span class="pre">500</span></code> by default) carries a background zonal jet
+over Schar-type orography.</p>
+<p>The governing analytic relations are</p>
+<ul class="simple">
+<li><p>topography   <code class="docutils literal notranslate"><span class="pre">zs</span> <span class="pre">=</span> <span class="pre">h0</span> <span class="pre">exp(-(r/d)^2)</span> <span class="pre">cos^2(pi</span> <span class="pre">r</span> <span class="pre">/</span> <span class="pre">xi)</span></code></p></li>
+<li><dl class="simple">
+<dt>great circle <a href="#id1"><span class="problematic" id="id2">``</span></a>r  = a arccos(sin phic sin phi</dt><dd><ul>
+<li><p>cos phic cos phi cos(lon - lonc))``</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p>temperature  <code class="docutils literal notranslate"><span class="pre">T(phi)</span> <span class="pre">=</span> <span class="pre">Teq</span> <span class="pre">(1</span> <span class="pre">-</span> <span class="pre">c</span> <span class="pre">ueq^2</span> <span class="pre">/</span> <span class="pre">g</span> <span class="pre">sin^2</span> <span class="pre">phi)</span></code></p></li>
+<li><dl class="simple">
+<dt>pressure   <a href="#id3"><span class="problematic" id="id4">``</span></a>p = peq exp(- ueq^2 / (2 Rd Teq) sin^2 phi</dt><dd><ul>
+<li><p>g z / (Rd T(phi)))``</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>zonal wind  <a href="#id5"><span class="problematic" id="id6">``</span></a>u = ueq cos(phi)</dt><dd><p>sqrt(2 Teq / T(phi) c z + T(phi) / Teq)``</p>
+</dd>
+</dl>
+</li>
+</ul>
+<p>with <code class="docutils literal notranslate"><span class="pre">v</span> <span class="pre">=</span> <span class="pre">w</span> <span class="pre">=</span> <span class="pre">0</span></code> and density from the ideal gas law.</p>
+<section id="reference">
+<h2>Reference<a class="headerlink" href="#reference" title="Link to this heading">¶</a></h2>
+<p>P. A. Ullrich, C. Jablonowski, J. Kent, P. H. Lauritzen, R. D. Nair,
+M. A. Taylor, <em>Dynamical Core Model Intercomparison Project (DCMIP) Test Case
+Document</em>, version 1.7 (2012), section 2.X.</p>
+</section>
+<dl class="py function">
+<dt class="sig sig-object py" id="pyses.analytic_initialization.nonhydrostatic_mountain_wave.eval_great_circle_dist">
+<span class="sig-prename descclassname"><span class="pre">pyses.analytic_initialization.nonhydrostatic_mountain_wave.</span></span><span class="sig-name descname"><span class="pre">eval_great_circle_dist</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pyses.analytic_initialization.nonhydrostatic_mountain_wave.eval_great_circle_dist" title="Link to this definition">¶</a></dt>
+<dd><p>Evaluate the physical great-circle distance (m) from the mountain centre.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>lat</strong><span class="classifier">Array[Float, tuple[elem_idx, i_idx, j_idx]]</span></dt><dd><p>Latitude (radians).</p>
+</dd>
+<dt><strong>lon</strong><span class="classifier">Array[Float, tuple[elem_idx, i_idx, j_idx]]</span></dt><dd><p>Longitude (radians).</p>
+</dd>
+<dt><strong>config</strong><span class="classifier">TestConfig</span></dt><dd><p>Dict-like containing parameters for the test case.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>r</strong><span class="classifier">Array[Float, tuple[elem_idx, i_idx, j_idx]]</span></dt><dd><p>Great-circle distance from <code class="docutils literal notranslate"><span class="pre">(mountain_lat,</span> <span class="pre">mountain_lon)</span></code> in metres.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>See <a class="reference internal" href="#pyses.analytic_initialization.nonhydrostatic_mountain_wave.init_mountain_wave_config" title="pyses.analytic_initialization.nonhydrostatic_mountain_wave.init_mountain_wave_config"><code class="xref py py-func docutils literal notranslate"><span class="pre">init_mountain_wave_config()</span></code></a> for how to initialise <code class="docutils literal notranslate"><span class="pre">config</span></code>.</p></li>
+<li><p>The distance uses the <em>scaled</em> radius <code class="docutils literal notranslate"><span class="pre">a</span> <span class="pre">=</span> <span class="pre">aref</span> <span class="pre">/</span> <span class="pre">X</span></code> (eq. 77), so the
+Schar ridge occupies a physically fixed footprint on the reduced planet.</p></li>
+</ul>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pyses.analytic_initialization.nonhydrostatic_mountain_wave.eval_pressure_temperature">
+<span class="sig-prename descclassname"><span class="pre">pyses.analytic_initialization.nonhydrostatic_mountain_wave.</span></span><span class="sig-name descname"><span class="pre">eval_pressure_temperature</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">z</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">deep</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pyses.analytic_initialization.nonhydrostatic_mountain_wave.eval_pressure_temperature" title="Link to this definition">¶</a></dt>
+<dd><p>Evaluate pressure and (dry) temperature on a 3-D grid.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>z</strong><span class="classifier">Array[Float, tuple[elem_idx, i_idx, j_idx, level_idx]]</span></dt><dd><p>Geometric height above the model surface in metres.</p>
+</dd>
+<dt><strong>lat</strong><span class="classifier">Array[Float, tuple[elem_idx, i_idx, j_idx]]</span></dt><dd><p>Latitude (radians).</p>
+</dd>
+<dt><strong>config</strong><span class="classifier">TestConfig</span></dt><dd><p>Dict-like containing parameters for the test case.</p>
+</dd>
+<dt><strong>deep</strong><span class="classifier">bool, default=False</span></dt><dd><p>If true, use the deep-atmosphere base state (<code class="docutils literal notranslate"><span class="pre">r_hat</span> <span class="pre">=</span> <span class="pre">r</span> <span class="pre">/</span> <span class="pre">a</span></code> in the
+height-to-pressure relation).  The DCMIP mountain-wave test is a
+shallow-atmosphere test, so this is normally False.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>pressure</strong><span class="classifier">Array[Float, tuple[elem_idx, i_idx, j_idx, level_idx]]</span></dt><dd><p>Moist pressure (Pa); for this dry test case it equals the dry pressure.</p>
+</dd>
+<dt><strong>temperature</strong><span class="classifier">Array[Float, tuple[elem_idx, i_idx, j_idx, level_idx]]</span></dt><dd><p>Temperature (not virtual), in Kelvin.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>See <a class="reference internal" href="#pyses.analytic_initialization.nonhydrostatic_mountain_wave.init_mountain_wave_config" title="pyses.analytic_initialization.nonhydrostatic_mountain_wave.init_mountain_wave_config"><code class="xref py py-func docutils literal notranslate"><span class="pre">init_mountain_wave_config()</span></code></a> for how to initialise <code class="docutils literal notranslate"><span class="pre">config</span></code>.</p></li>
+<li><p>Temperature is column-isothermal but latitude-dependent; the
+latitudinal surface-pressure factor <code class="docutils literal notranslate"><span class="pre">-ueq^2</span> <span class="pre">/</span> <span class="pre">(2</span> <span class="pre">Rd</span> <span class="pre">Teq)</span> <span class="pre">sin^2</span> <span class="pre">phi</span></code>
+carries the balance with the background zonal jet.</p></li>
+</ul>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pyses.analytic_initialization.nonhydrostatic_mountain_wave.eval_state">
+<span class="sig-prename descclassname"><span class="pre">pyses.analytic_initialization.nonhydrostatic_mountain_wave.</span></span><span class="sig-name descname"><span class="pre">eval_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">deep</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pyses.analytic_initialization.nonhydrostatic_mountain_wave.eval_state" title="Link to this definition">¶</a></dt>
+<dd><p>Calculate zonal wind, meridional wind, pressure, temperature, and moisture.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>lat</strong><span class="classifier">Array[Float, tuple[elem_idx, i_idx, j_idx]]</span></dt><dd><p>Latitude (radians).</p>
+</dd>
+<dt><strong>lon</strong><span class="classifier">Array[Float, tuple[elem_idx, i_idx, j_idx]]</span></dt><dd><p>Longitude (radians).</p>
+</dd>
+<dt><strong>z</strong><span class="classifier">Array[Float, tuple[elem_idx, i_idx, j_idx, level_idx]]</span></dt><dd><p>Geometric height above the model surface in metres.</p>
+</dd>
+<dt><strong>config</strong><span class="classifier">TestConfig</span></dt><dd><p>Dict-like containing parameters for the test case.</p>
+</dd>
+<dt><strong>deep</strong><span class="classifier">bool</span></dt><dd><p>If true, use the deep-atmosphere base state for pressure/temperature.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>u</strong><span class="classifier">Array[Float, tuple[elem_idx, i_idx, j_idx, level_idx]]</span></dt><dd><p>Zonal wind (m s^-1).</p>
+</dd>
+<dt><strong>v</strong><span class="classifier">Array[Float, tuple[elem_idx, i_idx, j_idx, level_idx]]</span></dt><dd><p>Meridional wind (m s^-1); identically zero.</p>
+</dd>
+<dt><strong>pressure</strong><span class="classifier">Array[Float, tuple[elem_idx, i_idx, j_idx, level_idx]]</span></dt><dd><p>Moist pressure (Pa); equal to dry pressure for this test.</p>
+</dd>
+<dt><strong>temperature</strong><span class="classifier">Array[Float, tuple[elem_idx, i_idx, j_idx, level_idx]]</span></dt><dd><p>Virtual temperature (K); equal to dry temperature for this test.</p>
+</dd>
+<dt><strong>q</strong><span class="classifier">Array[Float, tuple[elem_idx, i_idx, j_idx, level_idx]]</span></dt><dd><p>Specific humidity (kg kg^-1), identically zero.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>See <a class="reference internal" href="#pyses.analytic_initialization.nonhydrostatic_mountain_wave.init_mountain_wave_config" title="pyses.analytic_initialization.nonhydrostatic_mountain_wave.init_mountain_wave_config"><code class="xref py py-func docutils literal notranslate"><span class="pre">init_mountain_wave_config()</span></code></a> for how to initialise <code class="docutils literal notranslate"><span class="pre">config</span></code>.</p></li>
+<li><p>This is a dry test case: <code class="docutils literal notranslate"><span class="pre">q_vapor</span></code> is identically zero, so temperature
+and virtual temperature coincide.</p></li>
+<li><p>The zonal wind is vertically sheared (eq. 82),
+<code class="docutils literal notranslate"><span class="pre">u</span> <span class="pre">=</span> <span class="pre">ueq</span> <span class="pre">cos(phi)</span> <span class="pre">sqrt(2</span> <span class="pre">Teq</span> <span class="pre">/</span> <span class="pre">T(phi)</span> <span class="pre">*</span> <span class="pre">shear</span> <span class="pre">*</span> <span class="pre">z</span> <span class="pre">+</span> <span class="pre">T(phi)</span> <span class="pre">/</span> <span class="pre">Teq)</span></code>.  For
+the non-sheared variant (<code class="docutils literal notranslate"><span class="pre">shear</span> <span class="pre">=</span> <span class="pre">0</span></code>, <code class="docutils literal notranslate"><span class="pre">T</span> <span class="pre">=</span> <span class="pre">Teq</span></code>) this reduces to the
+height-independent <code class="docutils literal notranslate"><span class="pre">u</span> <span class="pre">=</span> <span class="pre">ueq</span> <span class="pre">cos(phi)</span></code>.</p></li>
+</ul>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pyses.analytic_initialization.nonhydrostatic_mountain_wave.eval_surface_state">
+<span class="sig-prename descclassname"><span class="pre">pyses.analytic_initialization.nonhydrostatic_mountain_wave.</span></span><span class="sig-name descname"><span class="pre">eval_surface_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">deep</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mountain</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pyses.analytic_initialization.nonhydrostatic_mountain_wave.eval_surface_state" title="Link to this definition">¶</a></dt>
+<dd><p>Evaluate the surface height and (moist == dry) surface pressure.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>lat</strong><span class="classifier">Array[Float, tuple[elem_idx, i_idx, j_idx]]</span></dt><dd><p>Latitude (radians).</p>
+</dd>
+<dt><strong>lon</strong><span class="classifier">Array[Float, tuple[elem_idx, i_idx, j_idx]]</span></dt><dd><p>Longitude (radians).</p>
+</dd>
+<dt><strong>config</strong><span class="classifier">TestConfig</span></dt><dd><p>Dict-like containing parameters for the test case.</p>
+</dd>
+<dt><strong>deep</strong><span class="classifier">bool, default=False</span></dt><dd><p>If true, use the deep-atmosphere base state.</p>
+</dd>
+<dt><strong>mountain</strong><span class="classifier">bool, default=True</span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, use the Schar-type ridge; see <a class="reference internal" href="#pyses.analytic_initialization.nonhydrostatic_mountain_wave.eval_z_surface" title="pyses.analytic_initialization.nonhydrostatic_mountain_wave.eval_z_surface"><code class="xref py py-func docutils literal notranslate"><span class="pre">eval_z_surface()</span></code></a>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>z_surface</strong><span class="classifier">Array[Float, tuple[elem_idx, i_idx, j_idx]]</span></dt><dd><p>Surface height in metres.  Identically zero when <code class="docutils literal notranslate"><span class="pre">mountain=False</span></code>.</p>
+</dd>
+<dt><strong>p_surface</strong><span class="classifier">Array[Float, tuple[elem_idx, i_idx, j_idx]]</span></dt><dd><p>Surface pressure in Pascal evaluated at <code class="docutils literal notranslate"><span class="pre">z_surface</span></code>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>See <a class="reference internal" href="#pyses.analytic_initialization.nonhydrostatic_mountain_wave.init_mountain_wave_config" title="pyses.analytic_initialization.nonhydrostatic_mountain_wave.init_mountain_wave_config"><code class="xref py py-func docutils literal notranslate"><span class="pre">init_mountain_wave_config()</span></code></a> for how to initialise <code class="docutils literal notranslate"><span class="pre">config</span></code>.</p></li>
+</ul>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pyses.analytic_initialization.nonhydrostatic_mountain_wave.eval_z_surface">
+<span class="sig-prename descclassname"><span class="pre">pyses.analytic_initialization.nonhydrostatic_mountain_wave.</span></span><span class="sig-name descname"><span class="pre">eval_z_surface</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mountain</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pyses.analytic_initialization.nonhydrostatic_mountain_wave.eval_z_surface" title="Link to this definition">¶</a></dt>
+<dd><p>Evaluate surface height (m).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>lat</strong><span class="classifier">Array[Float, tuple[elem_idx, i_idx, j_idx]]</span></dt><dd><p>Latitude (radians).</p>
+</dd>
+<dt><strong>lon</strong><span class="classifier">Array[Float, tuple[elem_idx, i_idx, j_idx]]</span></dt><dd><p>Longitude (radians).</p>
+</dd>
+<dt><strong>config</strong><span class="classifier">TestConfig</span></dt><dd><p>Dict-like containing parameters for the test case.</p>
+</dd>
+<dt><strong>mountain</strong><span class="classifier">bool, default=True</span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, use the Schar-type ridge (eq. 76); if <code class="docutils literal notranslate"><span class="pre">False</span></code>, return a flat
+surface (a useful steady-state control since the balanced state should then
+remain at rest apart from the background jet).</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>z_surf</strong><span class="classifier">Array[Float, tuple[elem_idx, i_idx, j_idx]]</span></dt><dd><p>Surface height (m).  Identically zero when <code class="docutils literal notranslate"><span class="pre">mountain=False</span></code>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>See <a class="reference internal" href="#pyses.analytic_initialization.nonhydrostatic_mountain_wave.init_mountain_wave_config" title="pyses.analytic_initialization.nonhydrostatic_mountain_wave.init_mountain_wave_config"><code class="xref py py-func docutils literal notranslate"><span class="pre">init_mountain_wave_config()</span></code></a> for how to initialise <code class="docutils literal notranslate"><span class="pre">config</span></code>.</p></li>
+<li><p>The Schar-type profile <code class="docutils literal notranslate"><span class="pre">zs</span> <span class="pre">=</span> <span class="pre">h0</span> <span class="pre">exp(-(r/d)^2)</span> <span class="pre">cos^2(pi</span> <span class="pre">r</span> <span class="pre">/</span> <span class="pre">xi)</span></code> (eq. 76)
+combines a broad Gaussian envelope (half-width <code class="docutils literal notranslate"><span class="pre">d</span></code>) with a short-scale
+<code class="docutils literal notranslate"><span class="pre">cos^2</span></code> oscillation (wavelength <code class="docutils literal notranslate"><span class="pre">xi</span></code>), giving a quasi-two-dimensional
+ridge with compact support.</p></li>
+</ul>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pyses.analytic_initialization.nonhydrostatic_mountain_wave.init_mountain_wave_config">
+<span class="sig-prename descclassname"><span class="pre">pyses.analytic_initialization.nonhydrostatic_mountain_wave.</span></span><span class="sig-name descname"><span class="pre">init_mountain_wave_config</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Teq</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">300.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ueq</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">20.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">peq</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100000.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shear</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mountain_height</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">250.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mountain_half_width</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5000.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mountain_wavelength</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4000.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mountain_lat</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mountain_lon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.7853981633974483</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reduction_factor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">500.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">radius_earth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">6371000.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">angular_freq_earth</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Rgas</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">287.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gravity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">9.80616</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_config</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pyses.analytic_initialization.nonhydrostatic_mountain_wave.init_mountain_wave_config" title="Link to this definition">¶</a></dt>
+<dd><p>Create a struct containing all parameters necessary to initialise the
+DCMIP-2012 non-hydrostatic Schar-type mountain-wave test cases (2-1 / 2-2).</p>
+<p>The atmosphere is column-isothermal with a latitude-dependent temperature
+<code class="docutils literal notranslate"><span class="pre">T(phi)</span> <span class="pre">=</span> <span class="pre">Teq</span> <span class="pre">(1</span> <span class="pre">-</span> <span class="pre">shear</span> <span class="pre">*</span> <span class="pre">ueq^2</span> <span class="pre">/</span> <span class="pre">g</span> <span class="pre">*</span> <span class="pre">sin^2</span> <span class="pre">phi)</span></code>, a
+hydrostatically balanced pressure field carrying a background zonal jet
+(eq. 80), and a vertically sheared zonal wind.  The topography is a
+Schar-type ridge.</p>
+<p>The planet is non-rotating and reduced in size by <code class="docutils literal notranslate"><span class="pre">reduction_factor</span></code> (the
+DCMIP small-planet factor <code class="docutils literal notranslate"><span class="pre">X</span></code>), so the <em>scaled</em> radius used everywhere in
+this test is <code class="docutils literal notranslate"><span class="pre">a</span> <span class="pre">=</span> <span class="pre">radius_earth</span> <span class="pre">/</span> <span class="pre">reduction_factor</span></code>.  The reduced radius is
+what appears in the great-circle distance to the mountain center and
+must match the <code class="docutils literal notranslate"><span class="pre">radius_earth</span></code> used by the dynamical core; pass the same
+reduced-planet <code class="docutils literal notranslate"><span class="pre">model_config</span></code> here to keep the two consistent.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>Teq</strong><span class="classifier">float</span></dt><dd><p>Reference surface temperature at the equator <code class="docutils literal notranslate"><span class="pre">Teq</span></code> (K).</p>
+</dd>
+<dt><strong>ueq</strong><span class="classifier">float</span></dt><dd><p>Reference (equatorial surface) zonal wind speed <code class="docutils literal notranslate"><span class="pre">ueq</span></code> (m s^-1).</p>
+</dd>
+<dt><strong>peq</strong><span class="classifier">float</span></dt><dd><p>Reference surface pressure at the equator <code class="docutils literal notranslate"><span class="pre">peq</span></code> (Pa).</p>
+</dd>
+<dt><strong>shear</strong><span class="classifier">float</span></dt><dd><p>Surface wind-shear parameter <code class="docutils literal notranslate"><span class="pre">c</span></code> (m^-1).  <code class="docutils literal notranslate"><span class="pre">shear</span> <span class="pre">=</span> <span class="pre">0</span></code> selects the
+non-sheared test 2-1; <code class="docutils literal notranslate"><span class="pre">shear</span> <span class="pre">=</span> <span class="pre">dcmip_surface_shear</span></code> selects the sheared
+test 2-2.</p>
+</dd>
+<dt><strong>mountain_height</strong><span class="classifier">float</span></dt><dd><p>Maximum Schar-type mountain height <code class="docutils literal notranslate"><span class="pre">h0</span></code> (m).</p>
+</dd>
+<dt><strong>mountain_half_width</strong><span class="classifier">float</span></dt><dd><p>Schar-type mountain half-width <code class="docutils literal notranslate"><span class="pre">d</span></code> (m); the Gaussian envelope scale.</p>
+</dd>
+<dt><strong>mountain_wavelength</strong><span class="classifier">float</span></dt><dd><p>Schar-type mountain wavelength <code class="docutils literal notranslate"><span class="pre">xi</span></code> (m); the <code class="docutils literal notranslate"><span class="pre">cos^2</span></code> oscillation scale.</p>
+</dd>
+<dt><strong>mountain_lat</strong><span class="classifier">float</span></dt><dd><p>Latitude of the mountain centre <code class="docutils literal notranslate"><span class="pre">phic</span></code> (radians).  Defaults to the
+equator.</p>
+</dd>
+<dt><strong>mountain_lon</strong><span class="classifier">float</span></dt><dd><p>Longitude of the mountain centre <code class="docutils literal notranslate"><span class="pre">lonc</span></code> (radians).  Defaults to
+<code class="docutils literal notranslate"><span class="pre">pi</span> <span class="pre">/</span> <span class="pre">4</span></code>.</p>
+</dd>
+<dt><strong>reduction_factor</strong><span class="classifier">float</span></dt><dd><p>Small-planet reduction factor <code class="docutils literal notranslate"><span class="pre">X</span></code>; the scaled radius is
+<code class="docutils literal notranslate"><span class="pre">radius_earth</span> <span class="pre">/</span> <span class="pre">reduction_factor</span></code>.</p>
+</dd>
+<dt><strong>radius_earth</strong><span class="classifier">float</span></dt><dd><p>Unscaled (reference) radius of the planet surface <code class="docutils literal notranslate"><span class="pre">aref</span></code> (m); the scaled
+radius <code class="docutils literal notranslate"><span class="pre">a</span> <span class="pre">=</span> <span class="pre">radius_earth</span> <span class="pre">/</span> <span class="pre">reduction_factor</span></code> is stored in the returned
+config.</p>
+</dd>
+<dt><strong>angular_freq_earth</strong><span class="classifier">float</span></dt><dd><p>Angular frequency of the planet (s^-1).  Defaults to zero: the DCMIP
+mountain-wave tests use a non-rotating planet.</p>
+</dd>
+<dt><strong>Rgas</strong><span class="classifier">float</span></dt><dd><p>Gas constant of dry air (J kg^-1 K^-1).</p>
+</dd>
+<dt><strong>gravity</strong><span class="classifier">float</span></dt><dd><p>Constant strength of gravity at the surface (m s^-2).</p>
+</dd>
+<dt><strong>model_config</strong></dt><dd><p>physics_config struct for your dynamical core.  When supplied,
+<code class="docutils literal notranslate"><span class="pre">radius_earth</span></code>, <code class="docutils literal notranslate"><span class="pre">angular_freq_earth</span></code>, <code class="docutils literal notranslate"><span class="pre">Rgas</span></code> and <code class="docutils literal notranslate"><span class="pre">gravity</span></code> are read
+from it so the analytic state is consistent with the simulation
+configuration.  Pass the <em>reduced-planet</em> physics_config here (i.e. one
+whose <code class="docutils literal notranslate"><span class="pre">radius_earth</span></code> is already <code class="docutils literal notranslate"><span class="pre">aref</span> <span class="pre">/</span> <span class="pre">X</span></code>); its radius is used as the
+scaled radius <code class="docutils literal notranslate"><span class="pre">a</span></code> directly and <code class="docutils literal notranslate"><span class="pre">reduction_factor</span></code> is ignored in that
+case.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt>dict[str, Any]</dt><dd><p>test_config to be passed to the other functions in this module.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The non-sheared limit (<code class="docutils literal notranslate"><span class="pre">shear</span> <span class="pre">=</span> <span class="pre">0</span></code>) coincides with the isothermal,
+non-rotating solid-body-rotation base state of
+<code class="xref py py-func docutils literal notranslate"><span class="pre">hydrostatic_solid_body.init_solid_body_config()</span></code> (with <code class="docutils literal notranslate"><span class="pre">lapse</span> <span class="pre">=</span> <span class="pre">0</span></code>,
+<code class="docutils literal notranslate"><span class="pre">u_max</span> <span class="pre">=</span> <span class="pre">ueq</span></code>): the latitudinal pressure factor
+<code class="docutils literal notranslate"><span class="pre">-ueq^2</span> <span class="pre">/</span> <span class="pre">(2</span> <span class="pre">Rd</span> <span class="pre">Teq)</span> <span class="pre">sin^2</span> <span class="pre">phi</span></code> and the wind <code class="docutils literal notranslate"><span class="pre">ueq</span> <span class="pre">cos(phi)</span></code> are identical.
+The sheared variant departs from that base state through the
+latitude-dependent column temperature and the height-dependent wind.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pyses.analytic_initialization.nonhydrostatic_mountain_wave.init_mountain_wave_state">
+<span class="sig-prename descclassname"><span class="pre">pyses.analytic_initialization.nonhydrostatic_mountain_wave.</span></span><span class="sig-name descname"><span class="pre">init_mountain_wave_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">h_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">v_grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test_config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mountain</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-06</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enforce_hydrostatic</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pyses.analytic_initialization.nonhydrostatic_mountain_wave.init_mountain_wave_state" title="Link to this definition">¶</a></dt>
+<dd><p>Initialise model state for the DCMIP-2012 non-hydrostatic mountain-wave test.</p>
+<p>Wraps <code class="xref py py-func docutils literal notranslate"><span class="pre">init_analytic_state()</span></code> with the analytic surface state,
+pressure / temperature profile, and (sheared) wind functions of the
+Schar-type mountain-wave atmosphere.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><dl>
+<dt><strong>h_grid</strong><span class="classifier"><cite>SpectralElementGrid</cite></span></dt><dd><p>Horizontal spectral element grid struct.</p>
+</dd>
+<dt><strong>v_grid</strong><span class="classifier"><cite>dict</cite></span></dt><dd><p>Vertical grid struct containing hybrid coordinate coefficients.</p>
+</dd>
+<dt><strong>model_config</strong><span class="classifier"><cite>dict</cite></span></dt><dd><p>Model physics configuration dict.  For a faithful DCMIP setup this should
+be a reduced-planet, non-rotating config (<code class="docutils literal notranslate"><span class="pre">radius_earth</span> <span class="pre">=</span> <span class="pre">aref</span> <span class="pre">/</span> <span class="pre">X</span></code> and
+<code class="docutils literal notranslate"><span class="pre">angular_freq_earth</span> <span class="pre">=</span> <span class="pre">0</span></code>).</p>
+</dd>
+<dt><strong>test_config</strong><span class="classifier"><cite>dict</cite></span></dt><dd><p>Test-case parameters from <a class="reference internal" href="#pyses.analytic_initialization.nonhydrostatic_mountain_wave.init_mountain_wave_config" title="pyses.analytic_initialization.nonhydrostatic_mountain_wave.init_mountain_wave_config"><code class="xref py py-func docutils literal notranslate"><span class="pre">init_mountain_wave_config()</span></code></a>.</p>
+</dd>
+<dt><strong>dims</strong><span class="classifier">frozendict[str, int]</span></dt><dd><p>Grid dimension metadata.</p>
+</dd>
+<dt><strong>model</strong><span class="classifier">model_info.models</span></dt><dd><p>Dynamical core identifier (from <code class="docutils literal notranslate"><span class="pre">model_info.models</span></code>).</p>
+</dd>
+<dt><strong>mountain</strong><span class="classifier"><cite>bool</cite>, default=True</span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, add the Schar-type ridge configured in <code class="docutils literal notranslate"><span class="pre">test_config</span></code>.  The
+balanced background jet is exactly steady when <code class="docutils literal notranslate"><span class="pre">mountain=False</span></code>; the
+ridge is what triggers the gravity-wave response.</p>
+</dd>
+<dt><strong>eps</strong><span class="classifier"><cite>float</cite>, default=1e-6</span></dt><dd><p>Convergence tolerance passed to the height-inversion routines.</p>
+</dd>
+<dt><strong>enforce_hydrostatic</strong><span class="classifier"><cite>bool</cite>, default=False</span></dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, overwrite the initial interface geopotential with the
+hydrostatically balanced value (HOMME non-hydrostatic only).</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>model_state</strong><span class="classifier">model state struct</span></dt><dd><p>Fully initialised model state struct for the mountain-wave test.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">pyses</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation_and_validation.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_run_quickstart.html#coupling-user-provided-physics-to-the-non-hydrostatic-core">Coupling user-provided physics to the non-hydrostatic core</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../user_friendly_api.html">The pySEs public API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../anatomy_of_a_model_struct.html">How is the atmospheric state represented in pySEs?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../grid_generation.html">Horizontal grid generation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../contributing.html">Contributing</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">pyses</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="pyses.html">pyses package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="pyses.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="pyses.analytic_initialization.html">pyses.analytic_initialization package</a><ul class="current">
+<li class="toctree-l5 current"><a class="reference internal" href="pyses.analytic_initialization.html#submodules">Submodules</a><ul class="current">
+<li class="toctree-l6"><a class="reference internal" href="pyses.analytic_initialization.galewsky_init.html">pyses.analytic_initialization.galewsky_init module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="pyses.analytic_initialization.hydrostatic_solid_body.html">pyses.analytic_initialization.hydrostatic_solid_body module</a></li>
+<li class="toctree-l6"><a class="reference internal" href="pyses.analytic_initialization.moist_baroclinic_wave.html">pyses.analytic_initialization.moist_baroclinic_wave module</a></li>
+<li class="toctree-l6 current"><a class="current reference internal" href="#">pyses.analytic_initialization.nonhydrostatic_mountain_wave module</a><ul>
+<li class="toctree-l7"><a class="reference internal" href="#reference">Reference</a></li>
+<li class="toctree-l7"><a class="reference internal" href="#pyses.analytic_initialization.nonhydrostatic_mountain_wave.eval_great_circle_dist"><code class="docutils literal notranslate"><span class="pre">eval_great_circle_dist()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#pyses.analytic_initialization.nonhydrostatic_mountain_wave.eval_pressure_temperature"><code class="docutils literal notranslate"><span class="pre">eval_pressure_temperature()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#pyses.analytic_initialization.nonhydrostatic_mountain_wave.eval_state"><code class="docutils literal notranslate"><span class="pre">eval_state()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#pyses.analytic_initialization.nonhydrostatic_mountain_wave.eval_surface_state"><code class="docutils literal notranslate"><span class="pre">eval_surface_state()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#pyses.analytic_initialization.nonhydrostatic_mountain_wave.eval_z_surface"><code class="docutils literal notranslate"><span class="pre">eval_z_surface()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#pyses.analytic_initialization.nonhydrostatic_mountain_wave.init_mountain_wave_config"><code class="docutils literal notranslate"><span class="pre">init_mountain_wave_config()</span></code></a></li>
+<li class="toctree-l7"><a class="reference internal" href="#pyses.analytic_initialization.nonhydrostatic_mountain_wave.init_mountain_wave_state"><code class="docutils literal notranslate"><span class="pre">init_mountain_wave_state()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l6"><a class="reference internal" href="pyses.analytic_initialization.williamson_init.html">pyses.analytic_initialization.williamson_init module</a></li>
+</ul>
+</li>
+<li class="toctree-l5"><a class="reference internal" href="pyses.analytic_initialization.html#module-pyses.analytic_initialization">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="pyses.dynamical_cores.html">pyses.dynamical_cores package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pyses.mesh_generation.html">pyses.mesh_generation package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pyses.mpi.html">pyses.mpi package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pyses.operations_2d.html">pyses.operations_2d package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pyses.tracer_transport.html">pyses.tracer_transport package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="pyses.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pyses.html#module-pyses">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">pyses</a><ul>
+  <li><a href="pyses.html">pyses package</a><ul>
+  <li><a href="pyses.analytic_initialization.html">pyses.analytic_initialization package</a><ul>
+      <li>Previous: <a href="pyses.analytic_initialization.moist_baroclinic_wave.html" title="previous chapter">pyses.analytic_initialization.moist_baroclinic_wave module</a></li>
+      <li>Next: <a href="pyses.analytic_initialization.williamson_init.html" title="next chapter">pyses.analytic_initialization.williamson_init module</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Owen K Hughes.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/api/pyses.analytic_initialization.nonhydrostatic_mountain_wave.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

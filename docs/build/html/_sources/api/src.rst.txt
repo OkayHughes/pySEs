@@ -12,7 +12,6 @@ Subpackages
    src.mesh_generation
    src.mpi
    src.operations_2d
-   src.shallow_water_models
    src.tracer_transport
 
 Submodules
@@ -26,7 +25,6 @@ Submodules
    src.initialize
    src.model_utils
    src.set_config
-   src.shallow_water
    src.simulate
 
 Module contents
