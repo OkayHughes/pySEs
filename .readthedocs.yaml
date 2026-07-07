@@ -9,6 +9,14 @@ build:
   os: ubuntu-24.04
   tools:
     python: "3.13"
+  # Regenerate the autodoc API stubs from the current `pyses` package before
+  # each build. These stubs are generated artifacts and are NOT committed (see
+  # .gitignore), so RTD must rebuild them from the checked-out source. This
+  # mirrors docs/generate_api.sh (which uses `uv` for local builds); RTD has its
+  # own environment, so it calls sphinx-apidoc directly.
+  jobs:
+    pre_build:
+      - sphinx-apidoc -o docs/source/api pyses --force --separate
 
 # Build documentation in the "docs/" directory with Sphinx
 sphinx:
