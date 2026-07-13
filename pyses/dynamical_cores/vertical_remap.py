@@ -1,5 +1,5 @@
 import numpy as np
-from .._config import get_backend as _get_backend, runtime_assert
+from .._config import get_backend as _get_backend
 from functools import partial
 _be = _get_backend()
 jnp = _be.np
@@ -58,49 +58,17 @@ def zerroukat_remap(tracer_mass,
                                   jnp.cumsum(d_mass_model, axis=-1)), axis=-1)
   values_model = jnp.concatenate((jnp.zeros_like(tracer_mass[:, :, :, 0:1, :]),
                                  jnp.cumsum(tracer_mass, axis=-2)), axis=-2)
-  # binary search
-  # idxs is model to reference; inherit pi_int_reference's dtype (float64
-  # under PYSES_USE_DOUBLE=1, which is the default) so the bisection isn't
-  # silently downgraded to single precision relative to the pressures it
-  # indexes into.
-  idxs = jnp.zeros_like(pi_int_reference[:, :, :, 1:-1])
-  frac = 0.5
-  axis_size = 1.0 * num_lev
-  # The bisection jump halves from 0.5 * num_lev each step, so it takes
-  # ceil(log2(num_lev)) + 1 steps to resolve a single model cell for any
-  # num_lev.  The old hard-coded 8 could not converge for num_lev > 256 (and
-  # was marginal below that).  num_lev is a static JIT argument, so this stays
-  # a trace-time Python range.
-  n_iter = int(np.ceil(np.log2(num_lev))) + 1
-  for _ in range(n_iter):
-    # Clip only the gather index into pi_int_model (not the continuous search
-    # variable idxs, whose trajectory must be preserved): idxs - jump can
-    # transiently go negative, and floor(idxs) + 1 must stay a valid interface
-    # index in [0, num_lev].
-    floor_idx = jnp.clip(jnp.floor(idxs).astype(jnp.int64), 0, num_lev - 1)
-    levels_model = jnp.take_along_axis(pi_int_model, floor_idx, -1)
-    levels_model_below = jnp.take_along_axis(pi_int_model, floor_idx + 1, -1)
-    low_enough = pi_int_reference[:, :, :, 1:-1] > levels_model
-    too_low = pi_int_reference[:, :, :, 1:-1] > levels_model_below
-    converged = jnp.logical_and(low_enough,
-                                jnp.logical_not(too_low))
-    jump = frac * axis_size
-    idxs = jnp.where(jnp.logical_not(converged),
-                     jnp.where(too_low, idxs + jump, idxs - jump),
-                     idxs)
-    frac *= 0.5
-  # Ghost/padding columns — added to the element axis when the element count is
-  # not divisible by the JAX device count — carry no real data and may be
-  # non-finite after a dynamics step. They share no DSS redundancy with real
-  # elements and are masked out of every physical reduction, so their (expected)
-  # non-convergence must not trip the assert. Detect them intrinsically as the
-  # columns whose interface pressures are non-finite and exempt only those.
-  column_is_real = (jnp.all(jnp.isfinite(pi_int_model), axis=-1)
-                    & jnp.all(jnp.isfinite(pi_int_reference), axis=-1))
-  runtime_assert(
-      jnp.all(jnp.logical_or(converged, jnp.logical_not(column_is_real)[:, :, :, jnp.newaxis])),
-      "PPM binary search did not converge")
-  idxs = jnp.floor(idxs).astype(jnp.int64)
+  # Locate, for each interior reference interface, the model layer that
+  # contains it: the unique j with pi_int_model[j] < pi_ref <= pi_int_model[j+1].
+  # Counting the model interfaces strictly below each reference interface gives
+  # j directly (the interfaces are strictly increasing), replacing the former
+  # iterative bisection: one broadcast compare-and-reduce fusion instead of
+  # 2*ceil(log2(num_lev)) take_along_axis gathers per column, and it cannot
+  # fail to converge, so no runtime assert is needed.  The clip only guards
+  # degenerate (e.g. non-finite ghost-column) inputs, exactly like the gather
+  # clip in the bisection did.
+  below = pi_int_model[:, :, :, jnp.newaxis, :] < pi_int_reference[:, :, :, 1:-1, jnp.newaxis]
+  idxs = jnp.clip(jnp.sum(below, axis=-1).astype(jnp.int64) - 1, 0, num_lev - 1)
   idxs = jnp.concatenate((jnp.zeros_like(idxs[:, :, :, 0:1]),
                           idxs,
                           (num_lev - 1) * jnp.ones_like(idxs[:, :, :, 0:1])), axis=-1)
@@ -142,37 +110,23 @@ def zerroukat_remap(tracer_mass,
 
   # Thomas algorithm (tridiagonal solve) for the spline coefficients. Forward
   # elimination and back-substitution are sequential folds over the vertical
-  # levels; expressed through the backend ``scan`` so the loop body compiles
-  # once (``lax.scan`` on JAX) instead of unrolling ``num_lev`` times.
-  q0 = -upper_diag[:, :, :, 0, :] / diag[:, :, :, 0, :]
-  r0 = rhs_base[:, :, :, 0, :]
+  # levels, unrolled at trace time (num_lev is a static JIT argument).  A
+  # backend ``scan`` here lowers to an XLA ``while`` loop on GPU, which runs
+  # one ~2 us kernel per level *outside* CUDA-graph command buffers; the
+  # unrolled chain fuses into a handful of in-graph kernels instead, with each
+  # GPU thread carrying the recurrence for one column in registers.
+  q_levels = [-upper_diag[:, :, :, 0, :] / diag[:, :, :, 0, :]]
+  r_levels = [rhs_base[:, :, :, 0, :]]
+  for k in range(1, num_lev + 1):
+    denom = 1.0 / (diag[:, :, :, k, :] + lower_diag[:, :, :, k, :] * q_levels[-1])
+    q_levels.append(-upper_diag[:, :, :, k, :] * denom)
+    r_levels.append((rhs_base[:, :, :, k, :] - lower_diag[:, :, :, k, :] * r_levels[-1]) * denom)
 
-  def _forward(carry, level):
-    diag_k, lower_k, upper_k, rhs_base_k = level
-    q_prev, r_prev = carry
-    denom = 1.0 / (diag_k + lower_k * q_prev)
-    q_k = -upper_k * denom
-    r_k = (rhs_base_k - lower_k * r_prev) * denom
-    return (q_k, r_k), (q_k, r_k)
-
-  _, (q_rest, r_rest) = _be.scan(
-      _forward, (q0, r0),
-      (diag[:, :, :, 1:, :], lower_diag[:, :, :, 1:, :],
-       upper_diag[:, :, :, 1:, :], rhs_base[:, :, :, 1:, :]),
-      axis=-2)
-  q_diag = jnp.concatenate((q0[:, :, :, np.newaxis, :], q_rest), axis=-2)
-  rhs = jnp.concatenate((r0[:, :, :, np.newaxis, :], r_rest), axis=-2)
-
-  def _backward(sol_next, level):
-    rhs_k, q_k = level
-    sol_k = rhs_k + q_k * sol_next
-    return sol_k, sol_k
-
-  _, sol_lower = _be.scan(
-      _backward, rhs[:, :, :, num_lev, :],
-      (rhs[:, :, :, 0:num_lev, :], q_diag[:, :, :, 0:num_lev, :]),
-      reverse=True, axis=-2)
-  rhs = jnp.concatenate((sol_lower, rhs[:, :, :, num_lev:num_lev + 1, :]), axis=-2)
+  sol_levels = [r_levels[num_lev]]
+  for k in range(num_lev - 1, -1, -1):
+    sol_levels.append(r_levels[k] + q_levels[k] * sol_levels[-1])
+  sol_levels.reverse()
+  rhs = jnp.stack(sol_levels, axis=-2)
 
   if filter:
     filter_code = []

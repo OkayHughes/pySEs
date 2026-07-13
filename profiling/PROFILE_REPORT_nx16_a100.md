@@ -188,7 +188,42 @@ New fp64 device-time ranking: RK5 dynamics fusions 31.5 %, **vertical remaps
 hypervis 12.5 %, tracers 7.1 %. The Zerroukat remap restructure (avenue #3) is
 now the clear next target, followed by wider fusion/precision work (#5/#2).
 
-## 8. Methodology notes
+## 8. Third fix: Zerroukat remap vectorized (avenue #3)
+
+Two changes in [vertical_remap.py](../pyses/dynamical_cores/vertical_remap.py):
+the iterative interface bisection became a single broadcast compare-and-count
+(exact by construction — the convergence `runtime_assert` is gone along with
+2·⌈log₂ nlev⌉ `take_along_axis` gathers), and the two Thomas-algorithm
+`_be.scan` recurrences are unrolled at trace time over the static `num_lev`,
+so the solve fuses into in-graph kernels instead of running ~60 out-of-graph
+~2 µs `while`-loop kernels per call. Old-vs-new agree to machine epsilon
+(filter on and off), column totals are conserved, and the fast tests
+(now including `test_vert_remap.py`) pass 67/67 on numpy and jax.
+
+Re-profiled on a Derecho A100-SXM4-40GB (same class as §7 — directly
+comparable):
+
+| configuration | after fix #2 | after fix #3 | speedup |
+|---|---|---|---|
+| fp64 ms/step (SYPD) | 49.7 (93.7) | **45.2 (103.1)** | 1.10× |
+| fp32 ms/step (SYPD) | 26.7 (174.6) | **22.8 (204.2)** | 1.17× |
+
+Cumulative from the fp64 baseline: **5.3×** (238.2 → 45.2 ms on a slower GPU
+than the baseline's); fp64-baseline → fp32-now is **10.4×** (19.6 → 204 SYPD).
+Structural wins: device-to-device memcpys are effectively **gone**
+(5.0 → 0.05 ms per 3 steps — they were the while-loop plumbing), kernels/step
+fell 2 623 → 2 087, and compile time *dropped* (~166 → ~149 s) despite the
+unroll. Remap components halved (`remap_dynamics` 2.9 → 1.5 ms/call,
+`remap_tracers` 1.7 → 0.8 ms/call).
+
+The profile is now flat — the top kernel is 4.4 % (the remaining
+`take_along_axis` reconstruction gathers in `remap_tracers`, ~1.1 ms each),
+followed by DSS `project_dynamics` scatters and generic tendency fusions.
+Further gains now require the broader avenues: wider fusion / field packing in
+the RK5 tendency pipeline (34 % of device time), gather layout in the remap
+reconstruction, and the precision policy (fp32 currently delivers 204 SYPD).
+
+## 9. Methodology notes
 
 - `profile_baro_wave.py` modes: `timing` (synced + pipelined step times),
   `components` (standalone jitted sub-functions × subcycle counts; reconstructs
