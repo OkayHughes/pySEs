@@ -43,6 +43,48 @@ def pointwise_matvec(matrix, vec, transpose_matrix=False):
   return jnp.sum(matrix * vec[..., None, :], axis=-1)
 
 
+def gll_matvec(mat, x, axis):
+  """
+  Contract one GLL axis of a nodal field with an (npt x npt) operator matrix.
+
+  For a field whose trailing two axes are the intra-element GLL indices
+  ``(i, j)``, computes
+
+  * ``axis=-2``: ``out[..., k, j] = sum_i mat[k, i] * x[..., i, j]``
+  * ``axis=-1``: ``out[..., i, k] = sum_j mat[k, j] * x[..., i, j]``
+
+  as a broadcast-multiply-sum.  Any leading axes (elements, vertical levels,
+  vmap batches) broadcast through unchanged.
+
+  Parameters
+  ----------
+  mat : `Array[tuple[npt, npt], Float]`
+      Operator matrix (e.g. the GLL derivative matrix, or a weight-scaled
+      variant for weak-form contractions).
+  x : `Array[tuple[..., npt, npt], Float]`
+      Nodal field; the last two axes are the GLL tensor-product indices.
+  axis : `int`
+      Which GLL axis to contract: ``-2`` (first index) or ``-1`` (second).
+
+  Returns
+  -------
+  out : `Array[tuple[..., npt, npt], Float]`
+      The contracted field, same shape as ``x``.
+
+  Notes
+  -----
+  On GPU, XLA rewrites the equivalent ``einsum`` into a cuBLAS GEMM with a
+  4-wide inner dimension, forcing layout-shuffling transposes/concatenates
+  around each call and running well below memory bandwidth; this form stays
+  inside elementwise fusions on every backend (see ``pointwise_matvec``).
+  """
+  if axis == -2:
+    return jnp.sum(mat[:, :, None] * x[..., None, :, :], axis=-2)
+  if axis == -1:
+    return jnp.sum(mat * x[..., None, :], axis=-1)
+  raise ValueError("axis must be -1 or -2")
+
+
 @jit
 def horizontal_gradient(f,
                         grid,
@@ -69,8 +111,8 @@ def horizontal_gradient(f,
   grad_f: `Array[tuple[elem_idx, gll_idx, gll_idx, lon_lat], Float]`
       The spherical gradient of f
   """
-  df_da = jnp.einsum("fij,ki->fkj", f, grid["derivative_matrix"])
-  df_db = jnp.einsum("fij,kj->fik", f, grid["derivative_matrix"])
+  df_da = gll_matvec(grid["derivative_matrix"], f, axis=-2)
+  df_db = gll_matvec(grid["derivative_matrix"], f, axis=-1)
   df_dab = jnp.stack((df_da, df_db), axis=-1)
   return 1.0 / a * jnp.flip(pointwise_matvec(grid["physical_to_contra"], df_dab,
                                              transpose_matrix=True), -1)
@@ -104,8 +146,8 @@ def horizontal_divergence(u,
   the `grid` argument.
   """
   u_contra = 1.0 / a * grid["metric_determinant"][:, :, :, np.newaxis] * physical_to_contravariant(u, grid)
-  du_da = jnp.einsum("fij,ki->fkj", u_contra[:, :, :, 0], grid["derivative_matrix"])
-  du_db = jnp.einsum("fij,kj->fik", u_contra[:, :, :, 1], grid["derivative_matrix"])
+  du_da = gll_matvec(grid["derivative_matrix"], u_contra[..., 0], axis=-2)
+  du_db = gll_matvec(grid["derivative_matrix"], u_contra[..., 1], axis=-1)
   div = grid["recip_metric_determinant"][:, :, :] * (du_da + du_db)
   return div
 
@@ -138,8 +180,8 @@ def horizontal_vorticity(u,
   the `grid` argument.
   """
   u_cov = physical_to_covariant(u, grid)
-  dv_da = jnp.einsum("fij,ki->fkj", u_cov[:, :, :, 1], grid["derivative_matrix"])
-  du_db = jnp.einsum("fij,kj->fik", u_cov[:, :, :, 0], grid["derivative_matrix"])
+  dv_da = gll_matvec(grid["derivative_matrix"], u_cov[..., 1], axis=-2)
+  du_db = gll_matvec(grid["derivative_matrix"], u_cov[..., 0], axis=-1)
   vort = 1.0 / a * grid["recip_metric_determinant"][:, :, :] * (du_db - dv_da)
   return vort
 
@@ -254,8 +296,11 @@ def horizontal_weak_gradient_covariant(s,
   # and the metric) are j-independent, so apply them as elementwise multiplies
   # -- halving the FLOPs of the weak gradient, the inner kernel of all
   # hyperviscosity.
-  dt_s = jnp.einsum("j,fjn,jm->fmn", gll_weights, s, deriv)
-  s_d = jnp.einsum("j,fmj,jn->fmn", gll_weights, s, deriv)
+  # Fold the quadrature weight into the operator matrix once (npt x npt):
+  # weighted_deriv_t[m, j] = gll_weights[j] * deriv[j, m].
+  weighted_deriv_t = (gll_weights[:, None] * deriv).T
+  dt_s = gll_matvec(weighted_deriv_t, s, axis=-2)
+  s_d = gll_matvec(weighted_deriv_t, s, axis=-1)
   term_a = gll_weights[jnp.newaxis, jnp.newaxis, :] * dt_s
   term_b = gll_weights[jnp.newaxis, :, jnp.newaxis] * s_d
   ds_contra_0 = -met_det * (met_inv[:, :, :, 0, 0] * term_a + met_inv[:, :, :, 1, 0] * term_b)
@@ -293,8 +338,10 @@ def horizontal_weak_curl_covariant(s,
   """
   gll_weights = grid["gll_weights"]
   deriv = grid["derivative_matrix"]
-  ds_contra = jnp.stack((jnp.einsum("m,j,fmj,jn->fmn", gll_weights, gll_weights, s, deriv),
-                         -jnp.einsum("j,n,fjn,jm->fmn", gll_weights, gll_weights, s, deriv)), axis=-1)
+  weighted_deriv_t = (gll_weights[:, None] * deriv).T
+  ds_contra = jnp.stack(
+      (gll_weights[:, None] * gll_matvec(weighted_deriv_t, s, axis=-1),
+       -(gll_weights * gll_matvec(weighted_deriv_t, s, axis=-2))), axis=-1)
   return 1.0 / a * contravariant_to_physical(ds_contra, grid)
 
 
@@ -381,8 +428,9 @@ def horizontal_weak_divergence(u,
   gll_weights = grid["gll_weights"]
   met_det = grid["metric_determinant"]
   deriv = grid["derivative_matrix"]
-  du_da_wk = - jnp.einsum("n,j,fjn,fjn,jm->fmn", gll_weights, gll_weights, met_det, contra[:, :, :, 0], deriv)
-  du_db_wk = - jnp.einsum("m,j,fmj,fmj,jn->fmn", gll_weights, gll_weights, met_det, contra[:, :, :, 1], deriv)
+  weighted_deriv_t = (gll_weights[:, None] * deriv).T
+  du_da_wk = - (gll_weights * gll_matvec(weighted_deriv_t, met_det * contra[..., 0], axis=-2))
+  du_db_wk = - (gll_weights[:, None] * gll_matvec(weighted_deriv_t, met_det * contra[..., 1], axis=-1))
   return 1.0 / a * (du_da_wk + du_db_wk)
 
 

@@ -156,7 +156,39 @@ followed by the Zerroukat remap (#3, ~15 % incl. its ~970 µs `take_along_axis`
 gathers) and precision (#2). One-time cost: first compile of the new program
 rose to ~3 min (XLA fusion autotuning); cached thereafter.
 
-## 7. Methodology notes
+## 7. Second fix: GLL derivative contractions unrolled (avenue #4)
+
+The eight derivative-matrix einsums (`horizontal_gradient`, `horizontal_divergence`,
+`horizontal_vorticity`, and the weak gradient/curl/divergence forms) were
+rewritten through a `gll_matvec` helper in
+[operators.py](../pyses/operations_2d/operators.py) — a batch-agnostic
+broadcast-multiply-sum over one GLL axis, with the quadrature weights folded
+into a premultiplied `(w[:,None]*D).T` matrix for the weak forms. Verified:
+8/8 exact equivalence (with and without vmap-style batch dims) and 65/65 fast
+tests on both numpy and jax backends.
+
+Re-profiled on a **Derecho A100-SXM4-40GB** (develop queue; note: ~25 % less
+HBM bandwidth than the Casper 80 GB part used above, so the speedups below are
+conservative):
+
+| configuration | after fix #1 (80 GB) | after fix #2 (40 GB) | speedup |
+|---|---|---|---|
+| fp64 ms/step (SYPD) | 84.4 (55.2) | **49.7 (93.7)** | **1.70×** |
+| fp32 ms/step (SYPD) | 36.9 (126) | **26.7 (174.6)** | 1.38× |
+
+Cumulative from the fp64 baseline: **4.8×** (238.2 → 49.7 ms); fp64-baseline →
+fp32-now is **8.9×**. The compiled step now contains **zero cuBLAS custom
+calls** — the entire coupling step is XLA fusions — and XLA's per-step memory
+traffic dropped 81 → 48 GB (the GEMM-feeding transposes/concatenates are gone).
+Device is still ~96 % busy with 2 623 kernels/step (mean 21 µs).
+
+New fp64 device-time ranking: RK5 dynamics fusions 31.5 %, **vertical remaps
+26.4 %** (`remap_dynamics` 17.6 % + `remap_tracers` 8.8 %, led by the ~1.1 ms
+`take_along_axis` gathers and the out-of-graph while-loop microkernels),
+hypervis 12.5 %, tracers 7.1 %. The Zerroukat remap restructure (avenue #3) is
+now the clear next target, followed by wider fusion/precision work (#5/#2).
+
+## 8. Methodology notes
 
 - `profile_baro_wave.py` modes: `timing` (synced + pipelined step times),
   `components` (standalone jitted sub-functions × subcycle counts; reconstructs
