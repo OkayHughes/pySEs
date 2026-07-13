@@ -6,6 +6,43 @@ jnp = _be.np
 jit = _be.jit
 
 
+def pointwise_matvec(matrix, vec, transpose_matrix=False):
+  """
+  Apply a per-point (2x2-sized) matrix to a vector field, unrolled.
+
+  Computes ``out[..., g] = sum_s matrix[..., g, s] * vec[..., s]`` (or the
+  transposed contraction ``sum_s matrix[..., s, g] * vec[..., s]`` when
+  ``transpose_matrix`` is set) as a broadcast-multiply-sum instead of
+  ``einsum``.
+
+  Parameters
+  ----------
+  matrix : `Array[tuple[..., g, s], Float]`
+      Per-point matrix field (e.g. metric or viscosity tensor).  Leading axes
+      broadcast against ``vec``, so an axis of length 1 may be inserted to
+      apply one matrix across an extra ``vec`` axis (e.g. vertical levels).
+  vec : `Array[tuple[..., s], Float]`
+      Vector field whose trailing axis is contracted.
+  transpose_matrix : `bool`, default=False
+      Contract against the second-to-last ``matrix`` axis instead of the last.
+
+  Returns
+  -------
+  out : `Array[tuple[..., g], Float]`
+      The transformed vector field.
+
+  Notes
+  -----
+  On GPU, XLA rewrites the equivalent ``einsum`` (a batched contraction over a
+  length-2 axis) into one cuBLAS GEMM launch per grid point, which runs at a
+  few percent of memory bandwidth; this form stays inside elementwise fusions
+  on every backend.
+  """
+  if transpose_matrix:
+    return jnp.sum(matrix * vec[..., :, None], axis=-2)
+  return jnp.sum(matrix * vec[..., None, :], axis=-1)
+
+
 @jit
 def horizontal_gradient(f,
                         grid,
@@ -35,7 +72,8 @@ def horizontal_gradient(f,
   df_da = jnp.einsum("fij,ki->fkj", f, grid["derivative_matrix"])
   df_db = jnp.einsum("fij,kj->fik", f, grid["derivative_matrix"])
   df_dab = jnp.stack((df_da, df_db), axis=-1)
-  return 1.0 / a * jnp.flip(jnp.einsum("fijg,fijgs->fijs", df_dab, grid["physical_to_contra"]), -1)
+  return 1.0 / a * jnp.flip(pointwise_matvec(grid["physical_to_contra"], df_dab,
+                                             transpose_matrix=True), -1)
 
 
 @jit
@@ -172,7 +210,7 @@ def horizontal_weak_laplacian(f,
   """
   grad = horizontal_gradient(f, grid, a=a)
   if apply_tensor:
-    grad = jnp.einsum("fijs,fijts->fijt", grad, grid["viscosity_tensor"]) * a**4
+    grad = pointwise_matvec(grid["viscosity_tensor"], grad) * a**4
   lap_unscaled = horizontal_weak_divergence(grad, grid, a=a)
   lap_unscaled /= grid["mass_matrix"]
   return lap_unscaled
@@ -372,7 +410,7 @@ def contravariant_to_physical(u,
   One typically uses `se_grid.create_spectral_element_grid` to create
   the `grid` argument.
   """
-  return jnp.flip(jnp.einsum("fijg,fijsg->fijs", u, grid["contra_to_physical"]), -1)
+  return jnp.flip(pointwise_matvec(grid["contra_to_physical"], u), -1)
 
 
 @jit
@@ -399,7 +437,7 @@ def physical_to_contravariant(u,
   One typically uses `se_grid.create_spectral_element_grid` to create
   the `grid` argument.
   """
-  return jnp.einsum("fijs,fijgs->fijg", jnp.flip(u, -1), grid["physical_to_contra"])
+  return pointwise_matvec(grid["physical_to_contra"], jnp.flip(u, -1))
 
 
 @jit
@@ -426,7 +464,8 @@ def physical_to_covariant(u,
   One typically uses `se_grid.create_spectral_element_grid` to create
   the `grid` argument.
   """
-  return jnp.einsum("fijs,fijsg->fijg", jnp.flip(u, -1), grid["contra_to_physical"])
+  return pointwise_matvec(grid["contra_to_physical"], jnp.flip(u, -1),
+                          transpose_matrix=True)
 
 
 @jit

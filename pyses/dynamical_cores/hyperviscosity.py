@@ -1,6 +1,8 @@
 import numpy as np
 from .._config import get_backend as _get_backend
-from ..operations_2d.operators import horizontal_weak_vector_laplacian, horizontal_weak_laplacian
+from ..operations_2d.operators import (horizontal_weak_vector_laplacian,
+                                       horizontal_weak_laplacian,
+                                       pointwise_matvec)
 from ..operations_2d.tensor_hyperviscosity import (eval_quasi_uniform_hypervisc_coeff,
                                                    eval_variable_resolution_hypervisc_coeff)
 from ..operations_2d.horizontal_grid import eval_global_grid_deformation_metrics
@@ -130,14 +132,18 @@ def eval_hypervis_harmonic(dynamics,
     nu_d_mass = 1.0
 
   if "tensor_hypervis" in diffusion_config.keys():
-    u_cart = jnp.einsum("fijks,fijcs->fijkc", dynamics["horizontal_wind"], h_grid["physical_to_cartesian"])
+    # Insert a length-1 level axis on the per-point matrix so it broadcasts
+    # over the wind's vertical axis.
+    phys_to_cart = h_grid["physical_to_cartesian"][:, :, :, None]
+    u_cart = pointwise_matvec(phys_to_cart, dynamics["horizontal_wind"])
     components = []
     for comp_idx in range(u_cart.shape[-1]):
       components.append(scalar_harmonic_3d(u_cart[:, :, :, :, comp_idx],
                                            h_grid,
                                            physics_config,
                                            apply_tensor=apply_tensor))
-    hyperdiff_u = jnp.einsum("fijkc,fijcs->fijks", jnp.stack(components, axis=-1), h_grid["physical_to_cartesian"])
+    hyperdiff_u = pointwise_matvec(phys_to_cart, jnp.stack(components, axis=-1),
+                                   transpose_matrix=True)
   elif "constant_hypervis" in diffusion_config.keys():
     nu_div_factor = diffusion_config["nu_div_factor"] if apply_nu else 1.0
     hyperdiff_u = vector_harmonic_3d(dynamics["horizontal_wind"],
