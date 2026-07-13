@@ -1,0 +1,49 @@
+#!/bin/bash
+#PBS -N pyses_scaling
+#PBS -A P93300042
+#PBS -q develop
+#PBS -l job_priority=premium
+#PBS -l select=1:ncpus=32:mem=160GB:ngpus=2
+#PBS -l walltime=01:30:00
+#PBS -j oe
+#PBS -o /glade/derecho/scratch/owhughes/pyses_profiling/
+
+# Strong-scaling probe: NX15 baroclinic wave on 1 vs 2 A100s (fp64 + fp32),
+# plus NX30 on both to separate work-starvation from communication overhead.
+# GPU count is selected via CUDA_VISIBLE_DEVICES; with >1 device the backend
+# activates the explicit mesh + shard_map DSS path automatically.
+
+REPO=/glade/work/owhughes/development/python/pyses_07_02_26
+PROFROOT=/glade/derecho/scratch/owhughes/pyses_profiling
+OUT=$PROFROOT/scaling_${PBS_JOBID%%.*}
+PY=$REPO/.venv/bin/python
+mkdir -p "$OUT"
+cd "$REPO" || exit 1
+
+export PYSES_BACKEND=jax
+export PYSES_USE_CPU=0
+export JAX_COMPILATION_CACHE_DIR=$PROFROOT/jax_cache
+
+nvidia-smi --query-gpu=index,name --format=csv > "$OUT"/gpu_info.txt 2>&1
+
+run () {  # run <tag> <visible_devices> <extra args...>
+  tag=$1; vis=$2; shift 2
+  echo "=== $tag ==="
+  CUDA_VISIBLE_DEVICES=$vis $PY profiling/profile_baro_wave.py \
+      --mode timing --steps 20 --warmup 3 --outdir "$OUT"/$tag "$@" \
+      > "$OUT"/$tag.log 2>&1
+  echo "$tag exit: $?"
+}
+
+run nx15_1gpu_fp64 0   --nx 15
+run nx15_2gpu_fp64 0,1 --nx 15
+run nx15_1gpu_fp32 0   --nx 15 --float32
+run nx15_2gpu_fp32 0,1 --nx 15 --float32
+run nx30_1gpu_fp64 0   --nx 30
+run nx30_2gpu_fp64 0,1 --nx 30
+
+echo "=== summary ==="
+for f in "$OUT"/*.log; do
+  echo "--- $(basename $f)"
+  grep -E "num_devices|per-step \(synced\)|simulated years" "$f"
+done

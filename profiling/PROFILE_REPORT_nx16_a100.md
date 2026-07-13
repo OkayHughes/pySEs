@@ -223,7 +223,50 @@ Further gains now require the broader avenues: wider fusion / field packing in
 the RK5 tendency pipeline (34 % of device time), gather layout in the remap
 reconstruction, and the precision policy (fp32 currently delivers 204 SYPD).
 
-## 9. Methodology notes
+## 9. Strong-scaling probe: NX15 on 1 vs 2 A100s
+
+Measured after fixes #1–#3 on one Derecho node (2× A100-40GB visible via
+`CUDA_VISIBLE_DEVICES`; sharding activates the explicit-mesh `shard_map` +
+`ppermute` DSS path automatically). Runs `scaling_6728063`, traces
+`sctrace_6728337`.
+
+| case | 1 GPU | 2 GPU | speedup / efficiency |
+|---|---|---|---|
+| NX15 fp64 | 39.5 ms | 35.1 ms | **1.13× / 56 %** |
+| NX15 fp32 | 20.5 ms | 21.7 ms | **0.94× / 47 %** (slower) |
+| NX30 fp64 | 223.8 ms | 179.5 ms | **1.25× / 62 %** |
+
+**NX15 does not provide enough work for strong scaling, and the trace shows
+why quantitatively**: on one GPU the step is ~2 100 kernels averaging 20.6 µs;
+on two GPUs each device *still* runs ~1 950 kernels/step and the mean duration
+stays 20.2 µs — halving the per-kernel data does not shrink kernels already at
+the launch/scheduling latency floor. Total device-seconds therefore nearly
+double (131.9 → 236.9 ms per 3 steps, 1.80×), i.e. the second GPU mostly
+re-pays fixed per-kernel costs rather than sharing work. On top of that the
+sharded DSS runs hundreds of tiny per-round edge gather/scatter fusions
+(e.g. 354 × 7.3 µs concatenates per 3 steps). NX30 confirms it is a
+work-per-kernel problem, not only communication: 4× the work only lifts
+efficiency to 62 %.
+
+**What would fix it** (in leverage order):
+
+1. **Fewer, fatter kernels** — the same field-packing / megafusion work as
+   avenue #5: ~2 000 kernels × ~10–20 µs floor puts a hard ~20–40 ms/step
+   lower bound on *any* GPU count. Packing the prognostic dict into one array
+   and fusing the per-field pipelines would cut the kernel count several-fold,
+   which raises single-GPU speed *and* is precisely what makes small-problem
+   strong scaling possible.
+2. **Pack the DSS exchange** — one `ppermute` payload per round carrying all
+   fields' edges (currently per-field), eliminating most of the tiny exchange
+   fusions and collective launches.
+3. **Overlap communication** — interior/boundary element split so edge
+   exchange overlaps interior tendency compute (XLA async collectives).
+4. **Run bigger per GPU** — scaling recovers naturally with work: NX30 is
+   already 62 %; NX60+ (≈ 5 800 columns/GPU/level) should clear 80 %. For
+   throughput-oriented workloads (ensembles, ML training), batching runs is a
+   better use of the second GPU than strong-scaling one small run.
+
+## 10. Methodology notes
 
 - `profile_baro_wave.py` modes: `timing` (synced + pipelined step times),
   `components` (standalone jitted sub-functions × subcycle counts; reconstructs
