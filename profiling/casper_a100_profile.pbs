@@ -1,0 +1,71 @@
+#!/bin/bash
+#PBS -N pyses_gpu_prof
+#PBS -A P93300042
+#PBS -q casper
+#PBS -l select=1:ncpus=8:mem=80GB:ngpus=1:gpu_type=a100
+#PBS -l walltime=03:00:00
+#PBS -j oe
+
+# GPU profiling of the pySES JAX backend: NX16 baroclinic wave on one A100.
+# Stages are independent; a failure in one does not abort the rest.
+
+REPO=/glade/work/owhughes/development/python/pyses_07_02_26
+PROFROOT=/glade/derecho/scratch/owhughes/pyses_profiling
+OUT=$PROFROOT/run_${PBS_JOBID%%.*}
+PY=$REPO/.venv/bin/python
+mkdir -p "$OUT"/fp64 "$OUT"/fp32 "$OUT"/cam_se
+cd "$REPO" || exit 1
+
+module load cuda/12.9.0 2>/dev/null
+NSYS=$(command -v nsys || echo /glade/u/apps/common/25.10/spack/opt/spack/cuda/12.9.0/b74h/bin/nsys)
+
+export PYSES_BACKEND=jax
+export PYSES_USE_CPU=0
+# Shared compilation cache: the cost-mode HLO dump and the nsys run then refer
+# to the identical compiled program, so kernel names line up.
+export JAX_COMPILATION_CACHE_DIR=$PROFROOT/jax_cache
+mkdir -p "$JAX_COMPILATION_CACHE_DIR"
+
+nvidia-smi > "$OUT"/gpu_info.txt 2>&1
+echo "=== output dir: $OUT ==="
+
+echo "=== [1/6] fp64 timing + components + cost ==="
+$PY profiling/profile_baro_wave.py --mode timing,components,cost \
+    --steps 20 --warmup 3 --outdir "$OUT"/fp64 > "$OUT"/fp64.log 2>&1
+echo "stage 1 exit: $?"
+
+echo "=== [2/6] fp32 timing ==="
+$PY profiling/profile_baro_wave.py --mode timing --steps 20 --warmup 3 \
+    --float32 --outdir "$OUT"/fp32 > "$OUT"/fp32.log 2>&1
+echo "stage 2 exit: $?"
+
+echo "=== [3/6] jax profiler trace (fp64) ==="
+$PY profiling/profile_baro_wave.py --mode trace --profile-steps 3 --warmup 2 \
+    --outdir "$OUT"/fp64 > "$OUT"/fp64_trace.log 2>&1
+echo "stage 3 exit: $?"
+
+echo "=== [4/6] nsys capture (fp64) ==="
+"$NSYS" profile -c cudaProfilerApi --trace=cuda --sample=none \
+    --force-overwrite=true -o "$OUT"/fp64/baro_nsys \
+    $PY profiling/profile_baro_wave.py --mode nsys --profile-steps 3 --warmup 2 \
+    --outdir "$OUT"/fp64 > "$OUT"/nsys.log 2>&1
+echo "stage 4 exit: $?"
+"$NSYS" export --type sqlite --force-overwrite=true \
+    -o "$OUT"/fp64/baro_nsys.sqlite "$OUT"/fp64/baro_nsys.nsys-rep \
+    >> "$OUT"/nsys.log 2>&1
+echo "nsys export exit: $?"
+
+echo "=== [5/6] hotspot attribution ==="
+$PY profiling/analyze_hlo_hotspots.py \
+    --sqlite "$OUT"/fp64/baro_nsys.sqlite \
+    --hlo "$OUT"/fp64/coupling_step_hlo.txt \
+    --steps 3 --out "$OUT"/fp64/hotspots.json > "$OUT"/hotspots.log 2>&1
+echo "stage 5 exit: $?"
+
+echo "=== [6/6] cam_se fp64 timing (comparison) ==="
+$PY profiling/profile_baro_wave.py --mode timing --steps 10 --warmup 2 \
+    --model cam_se --outdir "$OUT"/cam_se > "$OUT"/cam_se.log 2>&1
+echo "stage 6 exit: $?"
+
+echo "=== done; contents of $OUT ==="
+ls -lR "$OUT" | head -60

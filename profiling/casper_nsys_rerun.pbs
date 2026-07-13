@@ -1,0 +1,39 @@
+#!/bin/bash
+#PBS -N pyses_nsys2
+#PBS -A P93300042
+#PBS -q casper
+#PBS -l select=1:ncpus=8:mem=80GB:ngpus=1:gpu_type=a100
+#PBS -l walltime=00:40:00
+#PBS -j oe
+
+# Redo the nsys capture with --cuda-graph-trace=node so kernels inside XLA's
+# CUDA graphs are recorded individually, then rerun the hotspot attribution.
+
+REPO=/glade/work/owhughes/development/python/pyses_07_02_26
+PROFROOT=/glade/derecho/scratch/owhughes/pyses_profiling
+OUT=$PROFROOT/run_5184109/fp64
+PY=$REPO/.venv/bin/python
+cd "$REPO" || exit 1
+
+module load cuda/12.9.0 2>/dev/null
+NSYS=$(command -v nsys || echo /glade/u/apps/common/25.10/spack/opt/spack/cuda/12.9.0/b74h/bin/nsys)
+
+export PYSES_BACKEND=jax
+export PYSES_USE_CPU=0
+export JAX_COMPILATION_CACHE_DIR=$PROFROOT/jax_cache
+
+"$NSYS" profile -c cudaProfilerApi --trace=cuda --sample=none \
+    --cuda-graph-trace=node --force-overwrite=true -o "$OUT"/baro_nsys_node \
+    $PY profiling/profile_baro_wave.py --mode nsys --profile-steps 3 --warmup 2 \
+    --outdir "$OUT" > "$PROFROOT"/run_5184109/nsys_node.log 2>&1
+echo "nsys exit: $?"
+"$NSYS" export --type sqlite --force-overwrite=true \
+    -o "$OUT"/baro_nsys_node.sqlite "$OUT"/baro_nsys_node.nsys-rep \
+    >> "$PROFROOT"/run_5184109/nsys_node.log 2>&1
+echo "export exit: $?"
+$PY profiling/analyze_hlo_hotspots.py \
+    --sqlite "$OUT"/baro_nsys_node.sqlite \
+    --hlo "$OUT"/coupling_step_hlo.txt \
+    --steps 3 --top 60 --out "$OUT"/hotspots_node.json \
+    > "$PROFROOT"/run_5184109/hotspots_node.log 2>&1
+echo "analysis exit: $?"
