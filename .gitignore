@@ -7,3 +7,5 @@ tests/_output
 pysces_config.json
 pyses.egg-info
 dist/
+profiling/
+docs/build/
