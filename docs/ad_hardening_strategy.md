@@ -150,14 +150,18 @@ new backend `custom_vjp` shim.
 
 ### 4.1 Design (following Blondel et al. 2022)
 
-Add to the `Backend` protocol a pair of primitives:
+Add to the `Backend` protocol a pair of primitives (implemented in
+increment 5; full contract in `pyses/implicit_diff.py`):
 
 ```python
-def root_solve(self, residual_fn, solver_fn, linear_solve_fn, x0, theta):
+def root_solve(self, residual_fn, solver_fn, x0, theta,
+               linear_solve=None, maxiter=50):
     """x* with F(x*, theta) = 0; differentiated via the implicit function
-    theorem instead of through solver_fn's iterations."""
+    theorem instead of through solver_fn's iterations. x is a single
+    array; theta an arbitrary pytree of arrays."""
 
-def fixed_point_solve(self, T, x0, theta):  # sugar: F(x, th) = T(x, th) - x
+def fixed_point_solve(self, T, solver_fn, x0, theta, ...):
+    # sugar: F(x, th) = T(x, th) - x
 ```
 
 Semantics: the primal runs `solver_fn` (opaque to AD); derivatives come from
@@ -167,9 +171,11 @@ Semantics: the primal runs `solver_fn` (opaque to AD); derivatives come from
   / `torch.func.jvp` of the *residual*, never materializing Jacobians).
 - VJP: solve `Aᵀ u = v`, return `uᵀ B` via one `vjp` of the residual.
 
-`linear_solve_fn(A_matvec, b)` is caller-supplied so structured solvers (the
-tridiagonal Thomas solve) can be used; a matrix-free CG/GMRES fallback is
-provided for the generic case.
+`linear_solve(matvec, rhs, x_star, theta, transpose)` is caller-supplied so
+structured solvers (the tridiagonal Thomas solve, rebuilt from
+`x_star`/`theta`) can replace the default; the fallback is a fixed-iteration
+matrix-free CG on the normal equations (`implicit_diff.cg_normal_equations`),
+jit-safe and backend-neutral.
 
 Per backend:
 

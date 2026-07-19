@@ -157,6 +157,22 @@ class Backend(Protocol):
         value- and gradient-preserving."""
         ...
 
+    def root_solve(self, residual_fn: Callable, solver_fn: Callable, x0,
+                   theta, linear_solve: Callable | None = None,
+                   maxiter: int = 50):
+        """Return ``x*`` with ``residual_fn(x*, theta) = 0``, computed by the
+        opaque ``solver_fn(x0, theta)`` and differentiated via the implicit
+        function theorem instead of through the solver's iterations. See
+        pyses/implicit_diff.py for the full contract; backends without AD
+        just run the solver."""
+        ...
+
+    def fixed_point_solve(self, T: Callable, solver_fn: Callable, x0, theta,
+                          linear_solve: Callable | None = None,
+                          maxiter: int = 50):
+        """``root_solve`` sugar for the residual ``T(x, theta) - x``."""
+        ...
+
     def shard_map(self, func: Callable, *args, **kwargs) -> Callable:
         ...
 
@@ -320,6 +336,15 @@ class NumpyBackend:
 
     def checkpoint(self, func):
         return func
+
+    def root_solve(self, residual_fn, solver_fn, x0, theta,
+                   linear_solve=None, maxiter=50):
+        # No AD: the primal is just the solver output.
+        return solver_fn(x0, theta)
+
+    def fixed_point_solve(self, T, solver_fn, x0, theta,
+                          linear_solve=None, maxiter=50):
+        return solver_fn(x0, theta)
 
     def shard_map(self, func, *_, **__):
         return func
@@ -578,6 +603,64 @@ class JaxBackend:
 
     def checkpoint(self, func):
         return self._jax.checkpoint(func)
+
+    def root_solve(self, residual_fn, solver_fn, x0, theta,
+                   linear_solve=None, maxiter=50):
+        # Implicit differentiation of a solver output (see
+        # pyses/implicit_diff.py for the math and contract). The rule is a
+        # custom_jvp that is structurally linear in the incoming tangents,
+        # so reverse mode falls out of JAX's linearize-then-transpose: the
+        # IFT linear solve is wrapped in lax.custom_linear_solve, whose
+        # registered transpose swaps in the adjoint solve.
+        from .implicit_diff import cg_normal_equations
+        jax = self._jax
+
+        @jax.custom_jvp
+        def _root(x0_, theta_):
+            return solver_fn(x0_, theta_)
+
+        @_root.defjvp
+        def _root_jvp(primals, tangents):
+            x0_, theta_ = primals
+            _, dtheta = tangents  # an exact root is independent of the guess
+            x_star = solver_fn(x0_, theta_)
+
+            def res_x(x):
+                return residual_fn(x, theta_)
+
+            def mv(u):
+                return jax.jvp(res_x, (x_star,), (u,))[1]
+
+            vjp_res_x = jax.vjp(res_x, x_star)[1]
+
+            def rmv(u):
+                return vjp_res_x(u)[0]
+
+            _, b = jax.jvp(lambda th: residual_fn(x_star, th),
+                           (theta_,), (dtheta,))
+            if linear_solve is None:
+                def _solve(_mv, rhs):
+                    return cg_normal_equations(mv, rmv, rhs, maxiter)
+
+                def _transpose_solve(_vm, rhs):
+                    return cg_normal_equations(rmv, mv, rhs, maxiter)
+            else:
+                def _solve(_mv, rhs):
+                    return linear_solve(mv, rhs, x_star, theta_, False)
+
+                def _transpose_solve(_vm, rhs):
+                    return linear_solve(rmv, rhs, x_star, theta_, True)
+            dx = jax.lax.custom_linear_solve(
+                mv, -b, solve=_solve, transpose_solve=_transpose_solve)
+            return x_star, dx
+
+        return _root(x0, theta)
+
+    def fixed_point_solve(self, T, solver_fn, x0, theta,
+                          linear_solve=None, maxiter=50):
+        return self.root_solve(lambda x, th: T(x, th) - x, solver_fn, x0,
+                               theta, linear_solve=linear_solve,
+                               maxiter=maxiter)
 
     def shard_map(self, func, *args, **kwargs):
         return self._jax.shard_map(func, *args, **kwargs)
@@ -1268,6 +1351,85 @@ class TorchBackend:
                 return func(*args, **kwargs)
             return _torch_checkpoint(func, *args, use_reentrant=False, **kwargs)
         return wrapped
+
+    def root_solve(self, residual_fn, solver_fn, x0, theta,
+                   linear_solve=None, maxiter=50):
+        # Implicit differentiation of a solver output (see
+        # pyses/implicit_diff.py for the math and contract), as an
+        # autograd.Function in the new setup_context style so it composes
+        # with torch.func: backward carries the IFT adjoint solve, the jvp
+        # staticmethod the forward-mode tangent solve. theta is flattened
+        # to tensor leaves at the boundary because autograd.Function takes
+        # flat arguments.
+        from .implicit_diff import cg_normal_equations
+        torch = self._torch
+        from torch.utils._pytree import tree_flatten, tree_unflatten
+
+        x0 = self.np._coerce(x0)
+        flat_theta, spec = tree_flatten(theta)
+        flat_theta = [self.np._coerce(t) for t in flat_theta]
+
+        def _mv_rmv(x_star, theta_):
+            def res_x(x):
+                return residual_fn(x, theta_)
+
+            def mv(u):
+                return torch.func.jvp(res_x, (x_star,), (u,))[1]
+
+            vjp_res_x = torch.func.vjp(res_x, x_star)[1]
+
+            def rmv(u):
+                return vjp_res_x(u)[0]
+            return mv, rmv
+
+        class _RootSolve(torch.autograd.Function):
+            @staticmethod
+            def forward(x0_, *flat_theta_):
+                theta_ = tree_unflatten(list(flat_theta_), spec)
+                return solver_fn(x0_, theta_)
+
+            @staticmethod
+            def setup_context(ctx, inputs, output):
+                ctx.save_for_backward(*inputs[1:], output)
+                ctx.save_for_forward(*inputs[1:], output)
+
+            @staticmethod
+            def backward(ctx, v):
+                *flat_theta_, x_star = ctx.saved_tensors
+                theta_ = tree_unflatten(list(flat_theta_), spec)
+                mv, rmv = _mv_rmv(x_star, theta_)
+                if linear_solve is None:
+                    w = cg_normal_equations(rmv, mv, v, maxiter)
+                else:
+                    w = linear_solve(rmv, v, x_star, theta_, True)
+                _, vjp_theta = torch.func.vjp(
+                    lambda th: residual_fn(x_star, th), theta_)
+                (theta_cot,) = vjp_theta(w)
+                flat_cot, _ = tree_flatten(theta_cot)
+                # x*'s cotangent w.r.t. the guess is zero (exact root).
+                return (None, *(-c for c in flat_cot))
+
+            @staticmethod
+            def jvp(ctx, dx0, *flat_dtheta):
+                *flat_theta_, x_star = ctx.saved_for_forward
+                theta_ = tree_unflatten(list(flat_theta_), spec)
+                flat_dtheta = [torch.zeros_like(t) if dt is None else dt
+                               for t, dt in zip(flat_theta_, flat_dtheta)]
+                dtheta = tree_unflatten(flat_dtheta, spec)
+                _, b = torch.func.jvp(lambda th: residual_fn(x_star, th),
+                                      (theta_,), (dtheta,))
+                mv, rmv = _mv_rmv(x_star, theta_)
+                if linear_solve is None:
+                    return cg_normal_equations(mv, rmv, -b, maxiter)
+                return linear_solve(mv, -b, x_star, theta_, False)
+
+        return _RootSolve.apply(x0, *flat_theta)
+
+    def fixed_point_solve(self, T, solver_fn, x0, theta,
+                          linear_solve=None, maxiter=50):
+        return self.root_solve(lambda x, th: T(x, th) - x, solver_fn, x0,
+                               theta, linear_solve=linear_solve,
+                               maxiter=maxiter)
 
     def shard_map(self, func, *_, **__):
         return func
