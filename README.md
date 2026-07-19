@@ -1,4 +1,8 @@
 # Overview
+[![numpy](https://github.com/OkayHughes/pySEs/actions/workflows/numpy.yml/badge.svg)](https://github.com/OkayHughes/pySEs/actions/workflows/numpy.yml)
+[![jax](https://github.com/OkayHughes/pySEs/actions/workflows/jax.yml/badge.svg)](https://github.com/OkayHughes/pySEs/actions/workflows/jax.yml)
+[![torch](https://github.com/OkayHughes/pySEs/actions/workflows/torch.yml/badge.svg)](https://github.com/OkayHughes/pySEs/actions/workflows/torch.yml)
+
 The purpose of this project is to create a highly readable, well documented, well tested atmospheric dynamical core with support for variable resolution meshes, automatic differentiation, and GPU support. It is designed to be highly backward-compatible with NCAR CAM-SE and HOMME numerics.
 This project prioritizes code readability and maintainability, in the sense that code that runs 10% slower but is much easier for a second-year graduate student to understand and modify is better than its inaccessible optimized counterpart.
 We want to minimize external dependencies and, insofar as it is possible, create a codebase that is entirely written in python.

@@ -1,0 +1,29 @@
+# JAX backend fast tests. One workflow per backend so each gets its own status
+# badge (GitHub's badge endpoint is per-workflow, not per-matrix-job).
+# Triggers control *running* only; this never gates commits to main (branch
+# protection is off).
+name: jax
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fast-tests:
+    name: fast tests (jax)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up uv + Python
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync
+      - name: Run fast tests (jax)
+        run: uv run python run_test_matrix.py jax --exclude-slow
