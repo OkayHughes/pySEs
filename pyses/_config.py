@@ -130,6 +130,33 @@ class Backend(Protocol):
     def scan(self, f: Callable, init, xs, reverse: bool = False, axis: int = 0):
         ...
 
+    def grad(self, func: Callable, argnums=0) -> Callable:
+        """Gradient of a scalar-valued ``func`` w.r.t. ``argnums`` (jax.grad
+        semantics). Raises NotImplementedError on backends without AD."""
+        ...
+
+    def jvp(self, func: Callable, primals: tuple, tangents: tuple) -> tuple:
+        """Forward-mode: ``(func(*primals), J @ tangents)`` (jax.jvp
+        semantics; primals/tangents are matching pytree tuples)."""
+        ...
+
+    def vjp(self, func: Callable, *primals) -> tuple:
+        """Reverse-mode: ``(func(*primals), vjp_fn)`` where
+        ``vjp_fn(cotangent)`` returns one cotangent per primal (jax.vjp
+        semantics)."""
+        ...
+
+    def stop_gradient(self, x):
+        """``x`` treated as a constant by differentiation (identity on
+        backends without AD)."""
+        ...
+
+    def checkpoint(self, func: Callable) -> Callable:
+        """Rematerialize ``func``'s forward pass during the backward sweep
+        instead of storing residuals; best-effort per backend, always
+        value- and gradient-preserving."""
+        ...
+
     def shard_map(self, func: Callable, *args, **kwargs) -> Callable:
         ...
 
@@ -268,6 +295,31 @@ class NumpyBackend:
         else:
             stacked = np.stack(ys, axis=axis)
         return carry, stacked
+
+    # --- differentiation ---
+    # The numpy backend has no AD; the gradient test suite uses it only as
+    # the finite-difference oracle. ``stop_gradient``/``checkpoint`` keep
+    # identity semantics so backend-agnostic model code can call them
+    # unconditionally.
+
+    _NO_AD_MSG = ("The numpy backend does not support automatic "
+                  "differentiation; run under PYSES_BACKEND=jax or "
+                  "PYSES_BACKEND=torch.")
+
+    def grad(self, func, argnums=0):
+        raise NotImplementedError(self._NO_AD_MSG)
+
+    def jvp(self, func, primals, tangents):
+        raise NotImplementedError(self._NO_AD_MSG)
+
+    def vjp(self, func, *primals):
+        raise NotImplementedError(self._NO_AD_MSG)
+
+    def stop_gradient(self, x):
+        return x
+
+    def checkpoint(self, func):
+        return func
 
     def shard_map(self, func, *_, **__):
         return func
@@ -509,6 +561,23 @@ class JaxBackend:
         if axis != 0:
             ys = jax.tree_util.tree_map(lambda a: self.np.moveaxis(a, 0, axis), ys)
         return carry, ys
+
+    # --- differentiation ---
+
+    def grad(self, func, argnums=0):
+        return self._jax.grad(func, argnums=argnums)
+
+    def jvp(self, func, primals, tangents):
+        return self._jax.jvp(func, tuple(primals), tuple(tangents))
+
+    def vjp(self, func, *primals):
+        return self._jax.vjp(func, *primals)
+
+    def stop_gradient(self, x):
+        return self._jax.lax.stop_gradient(x)
+
+    def checkpoint(self, func):
+        return self._jax.checkpoint(func)
 
     def shard_map(self, func, *args, **kwargs):
         return self._jax.shard_map(func, *args, **kwargs)
@@ -1152,6 +1221,53 @@ class TorchBackend:
         else:
             stacked = self.np.stack(ys, axis=axis)
         return carry, stacked
+
+    # --- differentiation (torch.func functional transforms) ---
+
+    def _coerce_tree(self, x):
+        # torch.func only differentiates tensors, so numpy leaves must be
+        # coerced at the boundary (jax converts them implicitly).
+        from torch.utils._pytree import tree_map
+        return tree_map(self.np._coerce, x)
+
+    def grad(self, func, argnums=0):
+        g = self._torch.func.grad(func, argnums=argnums)
+
+        @functools.wraps(func)
+        def wrapped(*args, **kwargs):
+            return g(*self._coerce_tree(args), **self._coerce_tree(kwargs))
+        return wrapped
+
+    def jvp(self, func, primals, tangents):
+        return self._torch.func.jvp(func, self._coerce_tree(tuple(primals)),
+                                    self._coerce_tree(tuple(tangents)))
+
+    def vjp(self, func, *primals):
+        return self._torch.func.vjp(func, *self._coerce_tree(primals))
+
+    def stop_gradient(self, x):
+        # detach is the stop_gradient that composes with torch.func
+        # transforms; mapped over pytrees for jax.lax.stop_gradient parity.
+        from torch.utils._pytree import tree_map
+        torch = self._torch
+        return tree_map(lambda t: t.detach() if torch.is_tensor(t) else t, x)
+
+    def checkpoint(self, func):
+        # Non-reentrant torch.utils.checkpoint rematerializes under the
+        # classic autograd tape, but torch.func transforms reject its
+        # saved-tensor hooks ("don't yet support saved tensor hooks",
+        # torch 2.12). Inside a torch.func transform we therefore run the
+        # function unmaterialized — gradients stay correct, only the memory
+        # saving is deferred until torch supports the composition.
+        from torch.utils.checkpoint import checkpoint as _torch_checkpoint
+        torch = self._torch
+
+        @functools.wraps(func)
+        def wrapped(*args, **kwargs):
+            if torch._C._are_functorch_transforms_active():
+                return func(*args, **kwargs)
+            return _torch_checkpoint(func, *args, use_reentrant=False, **kwargs)
+        return wrapped
 
     def shard_map(self, func, *_, **__):
         return func

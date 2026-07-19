@@ -222,10 +222,10 @@ initialization are ever needed — the host-side bisection height inversion in
 
 ## 5. Stress-test harness (built before any numerics change)
 
-New suite `tests/gradient_tests/`, selected like every other suite by
-`PYSES_BACKEND` with a capability skip-guard (numpy runs only the
-finite-difference oracles), added to `run_test_matrix.py` and the jax/torch
-CI workflows.
+New suite `tests/fast_tests/ad_tests/` (auto-collected by the existing
+`run_test_matrix.py` configs and CI workflows), selected like every other
+suite by `PYSES_BACKEND` with a capability skip-guard (numpy runs only the
+finite-difference oracles and the not-implemented contract).
 
 Backend prerequisite: minimal AD shims on the protocol — `grad`, `jvp`,
 `vjp`, `stop_gradient`, and `checkpoint`/remat (JAX: the obvious bindings;
