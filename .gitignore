@@ -7,6 +7,8 @@ tests/_output
 pysces_config.json
 pyses.egg-info
 dist/
+profiling/
+docs/build/
 
 # Auto-generated Sphinx API stubs (regenerated on each build; see .readthedocs.yaml)
 docs/source/api/

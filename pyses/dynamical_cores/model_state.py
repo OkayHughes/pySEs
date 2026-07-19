@@ -846,19 +846,43 @@ def project_dynamics(dynamics_in,
   dynamics_proj : dict[str, Array]
       Dynamics state with all fields replaced by their DSS projections.
   """
-  u_cont = project_scalar_3d(dynamics_in["horizontal_wind"][:, :, :, :, 0], h_grid, dims)
-  v_cont = project_scalar_3d(dynamics_in["horizontal_wind"][:, :, :, :, 1], h_grid, dims)
-  thermo_var_cont = project_scalar_3d(dynamics_in[thermodynamic_variable_names[model]][:, :, :, :], h_grid, dims)
-  d_mass_cont = project_scalar_3d(dynamics_in["d_mass"][:, :, :, :], h_grid, dims)
+  fields = [dynamics_in["horizontal_wind"][:, :, :, :, 0],
+            dynamics_in["horizontal_wind"][:, :, :, :, 1],
+            dynamics_in[thermodynamic_variable_names[model]],
+            dynamics_in["d_mass"]]
   if model not in hydrostatic_models:
-    w_i_cont = project_scalar_3d(dynamics_in["w_i"], h_grid, dims)
-    phi_i_cont = project_scalar_3d(dynamics_in["phi_i"], h_grid, dims)
+    fields += [dynamics_in["w_i"], dynamics_in["phi_i"]]
+
+  if _be.do_sharding or do_mpi_communication:
+    # Multi-device: concatenate every field's levels into one lane axis and
+    # run a single DSS so the whole state exchanges in ONE collective per
+    # projection instead of one per field.  Collective launch latency does
+    # not amortize with problem size the way local kernel overhead does, so
+    # at scale the call count is what matters (measured: per-field dynamics
+    # projections were 94 of the 186 all-gathers in a 2-device step).
+    widths = [f.shape[-1] for f in fields]
+    stacked_cont = project_scalar_3d(jnp.concatenate(fields, axis=-1),
+                                     h_grid, dims)
+    offsets = [0]
+    for w in widths:
+      offsets.append(offsets[-1] + w)
+    conts = [stacked_cont[..., offsets[i]:offsets[i + 1]]
+             for i in range(len(fields))]
+  else:
+    # Single device: keep per-field projections — XLA fuses and overlaps the
+    # independent per-field chains better than one monolithic projection
+    # (measured on A100; see the packed-state experiments), and with no
+    # collectives there is nothing to batch.
+    conts = [project_scalar_3d(f, h_grid, dims) for f in fields]
+
+  if model not in hydrostatic_models:
+    w_i_cont, phi_i_cont = conts[4], conts[5]
   else:
     phi_i_cont = None
     w_i_cont = None
-  return wrap_dynamics(jnp.stack((u_cont, v_cont), axis=-1),
-                       thermo_var_cont,
-                       d_mass_cont,
+  return wrap_dynamics(jnp.stack((conts[0], conts[1]), axis=-1),
+                       conts[2],
+                       conts[3],
                        model,
                        phi_i=phi_i_cont,
                        w_i=w_i_cont)
