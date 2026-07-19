@@ -70,7 +70,16 @@ def eval_pressure_exner_nonhydrostatic(theta_v_d_mass,
       Exner function ``pi = (p / p0)^(Rgas/cp)``.
   """
   p0 = config["p0"]
-  nh_pressure_over_exner = -config["Rgas"] * theta_v_d_mass / d_phi
+  # Guard the operand, not the result: a collapsed or inverted layer
+  # (d_phi >= 0) would divide by zero here, and the resulting inf/NaN
+  # poisons the primal and, through the cotangent, reverse-mode AD of
+  # everything upstream.  Substituting a -1 thickness keeps degenerate
+  # columns finite; physical states (d_phi strictly negative) are bitwise
+  # unchanged.  The DIRK solver clamps dphi before reaching here
+  # (implicit_terms.calc_implicit_update) but the explicit tendency path
+  # does not.
+  safe_d_phi = jnp.where(d_phi < 0.0, d_phi, -1.0)
+  nh_pressure_over_exner = -config["Rgas"] * theta_v_d_mass / safe_d_phi
   nh_pressure_over_exner /= r_hat_sq_avg
   exponent = (1.0 / (1.0 - config["Rgas"] / config["cp"]))
   nh_pressure = p0 * (nh_pressure_over_exner / p0)**exponent

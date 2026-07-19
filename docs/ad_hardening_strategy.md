@@ -266,9 +266,15 @@ that makes them pass (or as strict xfails documenting a known hazard).
    tests on toy functions per backend.
 3. **Harness layer 1** (kernel probes seeded from the audit) — expected to
    *fail/xfail* on Tier-1 divides and discrete ops; this pins the baseline.
-4. **Category-A fixes**: guard `vertical_remap.py:78,85,121`, thermodynamics
-   boundary guards, `phi_to_z` sqrt guard — turning layer-1 xfails into
-   passes. Bitwise-identical forward model (asserted by existing suites).
+4. **Category-A fixes**, scoped by the increment-3 measurements: the one
+   proven bite is the `d_phi` divide in `homme/thermodynamics.py`
+   (`eval_pressure_exner_nonhydrostatic`), guarded with the safe-divide
+   idiom — its xfail flips to a pass. The suspected remap divides
+   (`vertical_remap.py:78,85,121`) measured safe (finite gradients even at
+   1e-12 layer thickness) and the `phi_to_z` sqrt discriminant only
+   vanishes at z ≈ a/3, far outside the atmosphere — both stay untouched,
+   with the layer-1 probes standing as sentinels. Bitwise-identical
+   forward model for physical states (asserted by existing suites).
 5. **Implicit-diff primitive**: `root_solve`/`fixed_point_solve` +
    `pyses/implicit_diff.py`, validated on toys (ridge regression as in the
    paper; a batched tridiagonal root problem mirroring the DIRK structure)

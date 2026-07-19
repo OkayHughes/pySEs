@@ -216,15 +216,13 @@ def test_nh_pressure_fd():
                        what="eval_pressure_exner_nonhydrostatic")
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="category A: unguarded divide by d_phi, homme/thermodynamics.py:73 "
-           "— collapsed layer yields inf pressure / NaN exner in the primal "
-           "and both AD modes; guard lands with increment 4")
 def test_nh_pressure_zero_thickness_finite():
-  # Category A (thermodynamics.py:73): a collapsed geopotential layer hits
-  # the unguarded divide by d_phi. The DIRK path clamps dphi upstream
-  # (implicit_terms.py:296-304) but the tendency path does not.
+  # Regression for the category-A guard (increment 4): a collapsed
+  # geopotential layer used to hit an unguarded divide by d_phi in
+  # eval_pressure_exner_nonhydrostatic, giving inf pressure / NaN exner in
+  # the primal and both AD modes.  The safe-divide guard keeps degenerate
+  # columns finite; the healthy-state probes above pin that physical
+  # states are unchanged.
   theta_v_d_mass, d_phi = (np.array(to_host(a)) for a in _thermo_inputs())
   d_phi[..., 2] = 0.0
   probe_forward_reverse(
