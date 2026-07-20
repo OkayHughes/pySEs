@@ -94,14 +94,20 @@ def _controls(case, keys):
 # Layer 2 — single coupling step
 # ---------------------------------------------------------------------------
 
-# Measured layer-2 baseline (jax eager, 2026-07-19): the production step's
-# scanned dynamics subcycle limits forward/reverse mutual consistency to
-# ~2e-5 relative, while the unrolled instrumented step satisfies the
-# identity to 8e-14 on the same case and both production AD modes deviate
-# from that unrolled reference by 1e-6..3e-5 (primals agree to 1e-14, and
-# each mode is deterministic). The tolerance below pins that measured
-# consistency level with margin; tightening it is the acceptance test for
-# any future fix of scan-linearization sensitivity.
+# Measured layer-2 baseline (jax eager, 2026-07-19; root-caused
+# 2026-07-20): the step's Jacobian is intrinsically eps-unstable — J.v
+# moves by up to 4e-6 relative (broadly) under a 1-ulp input
+# perturbation, identically on the scanned production step and the
+# unrolled instrumented step, while the primal moves only ~5e-14. The
+# model's structurally degenerate switches (limiter clips exactly onto
+# bounds; fields compared against their own element extrema) flip on eps
+# noise and their O(1) local Jacobian jumps mix globally within a step.
+# The scanned path's ~2e-5 forward/reverse identity residual is one
+# sampling of that floor (jvp- and vjp-of-scan compile two different
+# primal programs); the unrolled eager identity of 8e-14 is the
+# accidental exception (one bitwise primal shared by both modes). The
+# tolerance pins the model-intrinsic consistency level with margin —
+# tightening it requires smoothing the limiter switches, not AD changes.
 STEP_IDENTITY_RTOL = 1e-4
 
 

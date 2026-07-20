@@ -307,19 +307,34 @@ that makes them pass (or as strict xfails documenting a known hazard).
    and torch workflows), closing the loop. As landed
    (`tests/fast_tests/ad_tests/test_step_gradients.py`), with four
    measured findings:
-   - *Scanned-subcycle derivative sensitivity (jax).* The production
-     step's `lax.scan` dynamics subcycle limits forward/reverse mutual
-     consistency to ~2e-5 relative, where the unrolled instrumented step
-     satisfies the identity to 8e-14 (primals agree to 1e-14; both
-     production AD modes deviate 1e-6..3e-5 from the unrolled
-     reference). The inconsistency compounds multiplicatively along
-     trajectories (6.2e-4 at 2 steps), and `jax.checkpoint`'s
-     re-linearization alone shifts 2-step trajectory gradients by up to
-     2.6% per entry (norm-wise far smaller). Implication: trajectory
-     gradients carry an intrinsic ~0.1–1%-scale implementation
-     sensitivity — usable for DA, but not reproducible across derivative
-     orderings. Root-causing/taming this is follow-up work; the probes
-     pin today's numbers.
+   - *Intrinsic Jacobian eps-instability* (root-caused 2026-07-20;
+     originally suspected as "scan-linearization sensitivity"). The
+     step's Jacobian moves by up to 4e-6 relative in J·v — broadly, 80%+
+     of entries above 1e-9 — under a **1-ulp input perturbation**, with
+     statistically identical signatures on the scanned production step
+     and the unrolled instrumented step, while the primal moves only
+     5e-14. So J evaluated at machine-indistinguishable states is only
+     defined to ~4e-6: any eps-level difference in how the primal is
+     evaluated (different compilations, a mode's internal primal pass,
+     input rounding) re-samples it. The scan path's 2e-5 forward/reverse
+     identity residual and its 1e-6..3e-5 deviation from the unrolled
+     reference are just samplings of this floor — jvp-of-scan and
+     vjp-of-scan compile *two different primal programs*, hence linearize
+     at eps-different points; the unrolled eager path's 8e-14 identity is
+     the accidental exception (per-op dispatch gives both modes one
+     bitwise primal). The mechanism is the model's structurally
+     degenerate switches: the limiter clips values *exactly onto* bounds
+     and compares fields against their own element extrema, so
+     value-continuous / derivative-discontinuous decisions sit at exact
+     equality and flip on eps noise, with the O(1) local Jacobian jumps
+     mixed globally by redistribution, DSS, and subcycling. Consequences:
+     the identity tolerances pin a *model* property (no jax bug, nothing
+     to fix in scan); trajectory-gradient noise (~1e-5–1e-4 per step,
+     compounding to the measured 6.2e-4 at 2 steps and 2.6%/entry under
+     remat) is a reproducibility floor, harmless for optimization-grade
+     DA but impossible to remove without category-B/D smoothing of the
+     limiter switches — which increment 8 should take up only if an
+     outer optimization demonstrably suffers at this noise level.
    - *Full-step elementwise FD is branch-noise-dominated* on the at-rest
      HEVI case (the line-search switch quantities sit exactly at their
      thresholds), so FD assertions live only at layer 1.
