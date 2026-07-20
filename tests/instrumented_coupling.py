@@ -32,6 +32,12 @@ consistency fluxes:
 * The hyperviscosity and sponge sub-steps act on the freshly-advanced state but
   are gated independently, so they remain togglable whether or not the
   adiabatic advance ran.
+* With ``enable_hyperviscosity=False`` on a config that carries neither
+  ``d_mass_tracer`` nor ``disable_diffusion``, the tracer solver is handed a
+  config copy marked ``disable_diffusion`` so its fallback branch (which the
+  missing hypervis-consistency struct forces) takes the neutral ones-scale
+  path instead of KeyError-ing — making the hyperviscosity toggle a standalone
+  ablation even with tracer transport enabled.
 """
 
 from functools import partial
@@ -236,13 +242,28 @@ advance_coupling_step` exactly. Arguments otherwise mirror that function.
     tracer_consist_init["d_mass_end"] = 1.0 * dynamics_state["d_mass"]
     # (7) tracer transport.
     if enable_tracer_transport:
+      tracer_diffusion_config = diffusion_config
+      if (not enable_hyperviscosity
+          and "d_mass_tracer" not in diffusion_config
+          and "disable_diffusion" not in diffusion_config):
+        # Production's invariant: the tracer solver receives a None
+        # hypervis-consistency struct only alongside a config carrying
+        # ``d_mass_tracer`` or ``disable_diffusion`` (its fallback branch
+        # reads one of them). Ablating hyperviscosity breaks that
+        # invariant, so hand the tracer solver a copy marked
+        # ``disable_diffusion``: it then takes the neutral ones-scale
+        # path, and tracer hyperviscosity is already skipped by the
+        # struct-is-None guard — exactly "hyperviscosity is the
+        # identity" semantics.
+        tracer_diffusion_config = dict(diffusion_config)
+        tracer_diffusion_config["disable_diffusion"] = True
       tracer_state = advance_tracers(tracer_state,
                                      tracer_consist_dyn_total,
                                      tracer_consist_init,
                                      h_grid,
                                      dims,
                                      physics_config,
-                                     diffusion_config,
+                                     tracer_diffusion_config,
                                      timestep_config,
                                      model,
                                      tracer_consist_hypervis=tracer_consist_visc_total)

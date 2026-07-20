@@ -118,13 +118,9 @@ def test_disabling_substeps_changes_result():
   """Each toggle is wired: turning one off perturbs the output state."""
   case = _build_case()
 
-  # Dynamics-side ablations must change the winds. We probe these with tracer
-  # transport disabled: for the default tensor-hyperviscosity config the tracer
-  # solver's mass-consistency correction is coupled to the hyperviscosity term
-  # (it reads ``d_mass_tracer``), so disabling hyperviscosity alone is not a
-  # standalone ablation. The winds are independent of tracer transport, so
-  # holding it off in both the reference and the probe still isolates each
-  # dynamics flag.
+  # Dynamics-side ablations must change the winds. The winds are independent
+  # of tracer transport, so holding it off in both the reference and the probe
+  # isolates each dynamics flag.
   dyn_ref = advance_coupling_step_instrumented(**case, enable_tracer_transport=False)
   dyn_ref_wind = np.asarray(_be.unwrap(dyn_ref["dynamics"]["horizontal_wind"]))
   for flag in ("enable_physics_dynamics_forcing", "enable_adiabatic_dynamics",
@@ -135,10 +131,15 @@ def test_disabling_substeps_changes_result():
     assert not np.array_equal(wind, dyn_ref_wind), f"{flag}=False left the winds unchanged"
 
   # ...and a moisture/tracer-side ablation must change the water vapour.
+  # ``enable_hyperviscosity`` is included with tracer transport ON: the
+  # instrumented step hands the tracer solver a ``disable_diffusion``-marked
+  # config copy in that combination (its hypervis-consistency struct is
+  # missing), so hyperviscosity is a standalone ablation rather than a
+  # KeyError.
   reference = advance_coupling_step_instrumented(**case)
   ref_vapor = np.asarray(_be.unwrap(reference["tracers"]["moisture_species"]["water_vapor"]))
   for flag in ("enable_physics_moisture_forcing", "enable_tracer_transport",
-               "enable_remap_tracers"):
+               "enable_remap_tracers", "enable_hyperviscosity"):
     out = advance_coupling_step_instrumented(**case, **{flag: False})
     vapor = np.asarray(_be.unwrap(out["tracers"]["moisture_species"]["water_vapor"]))
     assert not np.array_equal(vapor, ref_vapor), f"{flag}=False left the vapour unchanged"
