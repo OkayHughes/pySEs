@@ -105,18 +105,11 @@ def _controls(case, keys):
 STEP_IDENTITY_RTOL = 1e-4
 
 
-# Forward mode through the full step is a jax-only capability today:
-# torch has no forward-AD rule for index_reduce_ (the scatter-max behind
-# the minmax DSS bound extraction), so torch.func.jvp of the step raises
-# NotImplementedError. The strict conditional xfails below pin that
-# upstream gap — they flip when torch implements the rule or the backend
-# grows a custom one — while the reverse-only probes keep torch covered.
-torch_no_forward_ad = pytest.mark.xfail(
-    _be.wrapper_type == "torch", strict=True, raises=NotImplementedError,
-    reason="torch lacks forward-mode AD for index_reduce_ (scatter-max)")
-
-
-@torch_no_forward_ad
+# Both AD modes work on both backends: torch's scatter-max is a custom
+# autograd.Function (_make_scatter_amax in pyses/_config.py) supplying
+# the forward-mode rule PyTorch lacks for index_reduce_ and a backward
+# that saves inputs rather than the mutation-prone output — the two
+# increment-9 torch findings this suite originally pinned as xfails.
 def test_cam_se_step_forward_reverse(cam_case):
   fn = _make_step_fn(cam_case, ("T", "horizontal_wind"),
                      ("T", "horizontal_wind", "d_mass"))
@@ -125,7 +118,6 @@ def test_cam_se_step_forward_reverse(cam_case):
                         rtol=STEP_IDENTITY_RTOL)
 
 
-@torch_no_forward_ad
 def test_homme_nh_step_forward_reverse(homme_case):
   fn = _make_step_fn(homme_case, ("w_i", "theta_v_d_mass"),
                      ("w_i", "phi_i", "theta_v_d_mass"))
@@ -133,42 +125,6 @@ def test_homme_nh_step_forward_reverse(homme_case):
                         _controls(homme_case, ("w_i", "theta_v_d_mass")),
                         what="homme NH coupling step",
                         rtol=STEP_IDENTITY_RTOL)
-
-
-def _probe_reverse_only(fn, primals, what):
-  from .probe_utils import assert_all_finite, random_cotangent_like
-  out, vjp_fn = _be.vjp(fn, *primals)
-  assert_all_finite(out, f"{what} primal output")
-  cotangents = vjp_fn(random_cotangent_like(out, 1))
-  assert_all_finite(cotangents, f"{what} VJP cotangent")
-
-
-# Reverse mode through the cam_se tracer chain is broken on torch: an
-# in-place augmented assignment somewhere downstream of the minmax DSS
-# mutates a tensor sharing storage with index_reduce_'s saved output
-# (torch tensors mutate under *=/+=, where jax arrays silently rebind),
-# so backward raises the saved-variable version error. Pinned strictly;
-# the fix is a functional-rebind sweep of the torch tracer path
-# (follow-up increment). The HOMME reverse path is unaffected.
-torch_inplace_scatter_defect = pytest.mark.xfail(
-    _be.wrapper_type == "torch", strict=True, raises=RuntimeError,
-    reason="torch reverse mode: in-place mutation of index_reduce_'s "
-           "saved output in the cam_se tracer chain")
-
-
-@torch_inplace_scatter_defect
-def test_cam_se_step_reverse(cam_case):
-  fn = _make_step_fn(cam_case, ("T", "horizontal_wind"),
-                     ("T", "horizontal_wind", "d_mass"))
-  _probe_reverse_only(fn, _controls(cam_case, ("T", "horizontal_wind")),
-                      what="cam_se coupling step")
-
-
-def test_homme_nh_step_reverse(homme_case):
-  fn = _make_step_fn(homme_case, ("w_i", "theta_v_d_mass"),
-                     ("w_i", "phi_i", "theta_v_d_mass"))
-  _probe_reverse_only(fn, _controls(homme_case, ("w_i", "theta_v_d_mass")),
-                      what="homme NH coupling step")
 
 
 # Note on finite differences at this layer: full-step directional FD was
@@ -212,7 +168,6 @@ def _rollout_loss_fn(case, use_checkpoint):
   return loss
 
 
-@torch_inplace_scatter_defect
 def test_cam_se_trajectory_reverse(cam_case):
   primals = _controls(cam_case, ("T", "horizontal_wind"))
   loss = _rollout_loss_fn(cam_case, use_checkpoint=False)
@@ -227,17 +182,14 @@ def test_cam_se_trajectory_reverse(cam_case):
   # per-step ~2e-5 scan-consistency level compounds multiplicatively
   # (about 30x through the second step's linearized propagator), not
   # additively; expect roughly an order of magnitude per additional
-  # step when budgeting trajectory-gradient quality. jax-only: torch
-  # forward mode is blocked by the index_reduce_ gap pinned above.
-  if _be.wrapper_type == "jax":
-    tangents = scaled_tangents_like(primals, seed=11)
-    _, tangent_out = _be.jvp(loss, primals, tangents)
-    lhs = float(to_host(tangent_out))
-    rhs = tree_dot(grads, tangents)
-    np.testing.assert_allclose(lhs, rhs, rtol=2e-3)
+  # step when budgeting trajectory-gradient quality.
+  tangents = scaled_tangents_like(primals, seed=11)
+  _, tangent_out = _be.jvp(loss, primals, tangents)
+  lhs = float(to_host(tangent_out))
+  rhs = tree_dot(grads, tangents)
+  np.testing.assert_allclose(lhs, rhs, rtol=2e-3)
 
 
-@torch_inplace_scatter_defect
 def test_cam_se_trajectory_checkpoint_equivalent(cam_case):
   # Rematerialization must be value-preserving exactly, and
   # gradient-preserving up to the model's re-linearization sensitivity:

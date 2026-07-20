@@ -323,15 +323,20 @@ that makes them pass (or as strict xfails documenting a known hazard).
    - *Full-step elementwise FD is branch-noise-dominated* on the at-rest
      HEVI case (the line-search switch quantities sit exactly at their
      thresholds), so FD assertions live only at layer 1.
-   - *torch forward-mode gap:* PyTorch has no forward-AD rule for
-     `index_reduce_` (the scatter-max behind minmax DSS) — step-level
-     `torch.func.jvp` raises; pinned as strict xfails until upstream or
-     a custom backend rule closes it.
-   - *torch reverse-mode defect (cam_se tracer chain):* an in-place
-     augmented assignment mutates a tensor sharing storage with
-     `index_reduce_`'s saved output, breaking backward. Pinned strictly;
-     needs a functional-rebind sweep of the torch tracer path
-     (follow-up). The HOMME NH reverse path is clean on torch.
+   - *torch forward-mode gap and reverse-mode defect — both fixed* by
+     `_make_scatter_amax` in `pyses/_config.py`: the backend's
+     scatter-max is now a custom `torch.autograd.Function` supplying the
+     forward-AD rule PyTorch lacks for `index_reduce_`, a backward that
+     saves inputs and recomputes the reduction (so no mutation-prone
+     saved output — the cam_se in-place version error disappears without
+     touching model code), and a hand-written vmap rule (batch folded
+     into the scatter axis with per-batch index offsets; the
+     auto-generated rule batches dim 0, which is the scatter dim).
+     Primal path unchanged; derivatives split evenly at exact ties.
+     Pinned by `tests/fast_tests/ad_tests/test_scatter_ad.py` (both
+     modes, FD, hand-computed winner gradients, ties, multi-dim indices,
+     vmap composition) on both AD backends; the step suite now runs both
+     AD modes on torch with no xfails.
 
 Ordering rationale: 2–3 give measurements before opinions; 4 is pure bug-fix;
 5–6 remove the largest *structural* AD cost and de-risk the torch autograd

@@ -798,6 +798,109 @@ class JaxBackend:
 # PyTorch backend
 # ---------------------------------------------------------------------------
 
+def _make_scatter_amax(torch):
+    """Custom autograd.Function for the scatter-max in TorchBackend._scatter.
+
+    torch's native ``index_reduce_`` has no forward-mode AD rule (so
+    ``torch.func.jvp`` through the minmax DSS raises), and its backward
+    saves its own *output* to identify the reduction winners — the backend
+    returns that tensor (through a reshape view), so any later in-place
+    update in model code bumps the saved version and kills reverse mode.
+    This Function supplies both derivative rules itself and saves only
+    *inputs*, recomputing the reduction inside the derivative passes: the
+    primal computation is unchanged, and the output is free for downstream
+    reuse. Derivatives split evenly among exact-tie winners (a valid
+    subgradient; jax may pick a different valid convention at exact ties).
+    Winner identification by exact equality is sound because the output
+    holds one of the candidate values verbatim (no arithmetic).
+    """
+
+    def _winners(arr_flat, index, src):
+        out = arr_flat.clone()
+        out.index_reduce_(0, index, src, reduce="amax", include_self=True)
+        arr_win = arr_flat == out
+        src_win = src == out.index_select(0, index)
+        # count >= 1 for every slot (the output equals some candidate);
+        # clamp only guards NaN inputs from turning into divide-by-zero.
+        count = arr_win.to(arr_flat.dtype).index_add(
+            0, index, src_win.to(arr_flat.dtype)).clamp_min(1.0)
+        return arr_win, src_win, count
+
+    class _ScatterAmax(torch.autograd.Function):
+
+        @staticmethod
+        def forward(arr_flat, index, src):
+            result = arr_flat.clone()
+            result.index_reduce_(0, index, src, reduce="amax",
+                                 include_self=True)
+            return result
+
+        @staticmethod
+        def vmap(info, in_dims, arr_flat, index, src):
+            # The scatter runs over dim 0, so the auto-generated rule
+            # (which batches dim 0) cannot be used. Fold the batch into
+            # the scatter axis instead: offset each batch member's
+            # indices by b * n and scatter once over (B * n). Calling
+            # apply() on the folded tensors keeps the custom derivative
+            # rules in force under the enclosing transform.
+            batch = info.batch_size
+            arr_bdim, idx_bdim, src_bdim = in_dims
+            if arr_bdim is None:
+                arr_b = arr_flat.unsqueeze(0).expand(
+                    batch, *arr_flat.shape)
+            else:
+                arr_b = arr_flat.movedim(arr_bdim, 0)
+            if src_bdim is None:
+                src_b = src.unsqueeze(0).expand(batch, *src.shape)
+            else:
+                src_b = src.movedim(src_bdim, 0)
+            if idx_bdim is None:
+                idx_b = index.unsqueeze(0).expand(batch, *index.shape)
+            else:
+                idx_b = index.movedim(idx_bdim, 0)
+            n = arr_b.shape[1]
+            offsets = torch.arange(
+                batch, device=index.device).view(batch, 1) * n
+            flat_idx = (idx_b + offsets).reshape(-1)
+            arr2 = arr_b.reshape(batch * n, *arr_b.shape[2:])
+            src2 = src_b.reshape(batch * src_b.shape[1], *src_b.shape[2:])
+            out = _ScatterAmax.apply(arr2, flat_idx, src2)
+            return out.reshape(batch, n, *arr_b.shape[2:]), 0
+
+        @staticmethod
+        def setup_context(ctx, inputs, output):
+            ctx.save_for_backward(*inputs)
+            ctx.save_for_forward(*inputs)
+
+        @staticmethod
+        def backward(ctx, grad_out):
+            arr_flat, index, src = ctx.saved_tensors
+            arr_win, src_win, count = _winners(arr_flat, index, src)
+            scaled = grad_out / count
+            grad_arr = torch.where(arr_win, scaled,
+                                   torch.zeros_like(scaled))
+            grad_src = torch.where(src_win, scaled.index_select(0, index),
+                                   torch.zeros_like(src))
+            return grad_arr, None, grad_src
+
+        @staticmethod
+        def jvp(ctx, d_arr, d_index, d_src):
+            del d_index  # integer indices carry no tangent
+            arr_flat, index, src = ctx.saved_for_forward
+            arr_win, src_win, count = _winners(arr_flat, index, src)
+            if d_arr is None:
+                d_arr = torch.zeros_like(arr_flat)
+            if d_src is None:
+                d_src = torch.zeros_like(src)
+            num = torch.where(arr_win, d_arr, torch.zeros_like(d_arr))
+            num = num.index_add(
+                0, index, torch.where(src_win, d_src,
+                                      torch.zeros_like(d_src)))
+            return num / count
+
+    return _ScatterAmax
+
+
 def _install_torch_numpy_compat(torch, device):
     """
     Make torch tensors interoperate with numpy the way jax arrays do.
@@ -1109,6 +1212,7 @@ class TorchBackend:
         _install_torch_numpy_compat(torch, device)
 
         self.np = _TorchNamespace(torch, device)
+        self._scatter_amax = _make_scatter_amax(torch)
 
         # --- distributed bootstrap (multi-process only) ---
         if do_mpi_communication:
@@ -1464,11 +1568,14 @@ class TorchBackend:
         flat = flat.reshape(-1).to(torch.long)
         arr_flat = arr.reshape((flat_lead,) + trailing)
         src = vals.reshape((-1,) + trailing)
-        result = arr_flat.clone()
         if reduce == "sum":
+            result = arr_flat.clone()
             result.index_add_(0, flat, src)
         else:
-            result.index_reduce_(0, flat, src, reduce=reduce, include_self=True)
+            # amax goes through the custom Function (see _make_scatter_amax)
+            # so it is forward- and reverse-differentiable and its backward
+            # does not save the (caller-visible, mutation-prone) output.
+            result = self._scatter_amax.apply(arr_flat, flat, src)
         return result.reshape(arr.shape)
 
     def index_get(self, arr, idx):
