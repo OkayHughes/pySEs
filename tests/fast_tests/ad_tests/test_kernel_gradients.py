@@ -6,9 +6,11 @@ healthy interiors plus adversarial states at the documented hazard sites —
 and checks JVP/VJP finiteness, the forward/reverse dot-product identity,
 and agreement with central finite differences.
 
-xfail(strict=True) entries are the executable form of the hazard
-inventory: they pin today's failure and flip loudly when a later
-increment fixes (or accidentally changes) the behavior.
+Hazards found by these probes start as strict xfails (the executable form
+of the inventory) and flip into positive regression tests as increments
+remediate them: the thermodynamics divide is guarded (increment 4), and
+the frozen remap search is now a documented policy with an opt-in
+straight-through remedy (increment 7).
 
 Covered here: Zerroukat remap (Tier 1), tracer limiter (Tier 2),
 min-reduction bound extraction (Tier 2), NH thermodynamics (Tier 3), DIRK
@@ -36,7 +38,8 @@ from pyses.operations_2d.local_assembly import project_scalar
 from pyses.operations_2d.operators import horizontal_gradient
 
 from ...context import to_host
-from .probe_utils import probe_fd_directional, probe_forward_reverse
+from .probe_utils import (probe_fd_directional, probe_forward_reverse,
+                          scaled_tangents_like)
 
 _be = _get_backend()
 jnp = _be.np
@@ -98,47 +101,93 @@ def test_zerroukat_remap_thin_layer_finite():
   probe_forward_reverse(_remap_fn, primals, what="zerroukat_remap thin-layer")
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="category C (strategy §3): frozen integer cell search, "
-           "vertical_remap.py:70-76 — AD differentiates the frozen branch "
-           "(measured +700) while FD across the switch sees -5252; "
-           "remediation lands with increment 7")
-def test_zerroukat_remap_interface_crossing():
-  # Category C (strategy §3): the containing-cell search is an integer op
-  # (vertical_remap.py:70-76). Place a reference interface 1e-9 Pa from a
-  # model interface and take an FD step that crosses it: AD differentiates
-  # the frozen branch while central FD straddles the switch.
+def _crossing_setup():
+  # A reference interface 1e-9 Pa from a model interface, with a strongly
+  # non-monotone column so the filtered reconstruction differs sharply
+  # between the two candidate cells. The perturbation direction moves the
+  # first reference thickness, which shifts every interface below it
+  # across (or onto) a model interface.
   delta = 1e-9
   d_model = np.full((1, 1, 1, 4), 100.0)
-  d_ref = np.array([100.0 + delta, 100.0 - delta, 100.0, 100.0])[None, None, None, :]
-  # Strongly non-monotone column so the filtered reconstruction differs
-  # sharply between the two candidate cells.
+  d_ref = np.array([100.0 + delta, 100.0 - delta,
+                    100.0, 100.0])[None, None, None, :]
   q = np.array([1.0, 8.0, 1.0, 8.0])[None, None, None, :, None]
   primals = (device_wrapper(q * d_model[..., None]),
              device_wrapper(d_model), device_wrapper(d_ref))
-
-  # Direction that moves only the first reference interface.
   direction = np.zeros_like(d_ref)
   direction[..., 0] = 1.0
   tangents = (device_wrapper(np.zeros(primals[0].shape)),
               device_wrapper(np.zeros(primals[1].shape)),
               device_wrapper(direction))
-
-  def scalar_fn(*p):
-    out = zerroukat_remap(*p, num_lev=4, filter=True)
-    return jnp.sum(out * out)
-
-  _, ad_dir = _be.jvp(scalar_fn, primals, tangents)
-  h = 1e-6  # crosses the interface at distance delta = 1e-9
   hosts = [np.asarray(to_host(p)) for p in primals]
   tans = [np.asarray(to_host(t)) for t in tangents]
+  return primals, tangents, hosts, tans
+
+
+def _crossing_scalar_fn(tau):
+  def scalar_fn(*p):
+    out = zerroukat_remap(*p, num_lev=4, filter=True, smooth_search_tau=tau)
+    return jnp.sum(out * out)
+  return scalar_fn
+
+
+def _crossing_fd(scalar_fn, hosts, tans, h=1e-6):
   f_plus = float(to_host(scalar_fn(*[device_wrapper(p + h * t)
                                      for p, t in zip(hosts, tans)])))
   f_minus = float(to_host(scalar_fn(*[device_wrapper(p - h * t)
                                       for p, t in zip(hosts, tans)])))
-  fd_dir = (f_plus - f_minus) / (2.0 * h)
-  np.testing.assert_allclose(float(to_host(ad_dir)), fd_dir, rtol=1e-3)
+  return (f_plus - f_minus) / (2.0 * h)
+
+
+def test_zerroukat_remap_crossing_frozen_by_default():
+  # Category-C default policy (strategy §3): the integer cell search
+  # (vertical_remap.py:70-76) is deliberately frozen, so the exact
+  # derivative is the branch derivative — measurably different (wrong
+  # sign here: ~ +700 vs -5252) from finite differences across an
+  # interface crossing. This pins the documented trade; the smoothed
+  # variant below is the opt-in remedy.
+  primals, tangents, hosts, tans = _crossing_setup()
+  fn = _crossing_scalar_fn(None)
+  _, ad_dir = _be.jvp(fn, primals, tangents)
+  fd_dir = _crossing_fd(fn, hosts, tans)
+  assert abs(float(to_host(ad_dir)) - fd_dir) > 0.5 * abs(fd_dir), (
+      "frozen-search derivative unexpectedly matches crossing FD — "
+      "did the search become differentiable?")
+
+
+def test_zerroukat_remap_crossing_smoothed():
+  # smooth_search_tau: exact primal, crossing-aware derivative. Within
+  # tau of a model interface the derivative blends the two candidate
+  # cells' reconstructions; because the cumulative integral is continuous
+  # at the crossing, the blend reproduces the kink-averaged slope that
+  # central FD measures across the switch — measured agreement 7e-9
+  # relative (frozen AD: +700; smoothed AD and FD: -5252.450).
+  primals, tangents, hosts, tans = _crossing_setup()
+  _, ad_dir = _be.jvp(_crossing_scalar_fn(1e-6), primals, tangents)
+  fd_dir = _crossing_fd(_crossing_scalar_fn(None), hosts, tans)
+  np.testing.assert_allclose(float(to_host(ad_dir)), fd_dir, rtol=1e-6)
+
+
+def test_zerroukat_remap_smoothed_matches_exact_away_from_crossings():
+  # Generic states sit far (in units of tau) from every model interface,
+  # so the surrogate correction vanishes: primal and tangent must match
+  # the exact path tightly.
+  primals = _remap_inputs()
+  tangents = scaled_tangents_like(primals, seed=3)
+
+  def fn_exact(*p):
+    return _remap_fn(*p)
+
+  def fn_smooth(*p):
+    return zerroukat_remap(*p, num_lev=NLEV, filter=True,
+                           smooth_search_tau=1e-6)
+
+  out_exact, tan_exact = _be.jvp(fn_exact, primals, tangents)
+  out_smooth, tan_smooth = _be.jvp(fn_smooth, primals, tangents)
+  np.testing.assert_allclose(to_host(out_smooth), to_host(out_exact),
+                             rtol=1e-13, atol=1e-10)
+  np.testing.assert_allclose(to_host(tan_smooth), to_host(tan_exact),
+                             rtol=1e-9, atol=1e-9)
 
 
 # ---------------------------------------------------------------------------

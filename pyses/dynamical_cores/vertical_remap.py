@@ -7,14 +7,16 @@ jit = _be.jit
 device_wrapper = _be.array
 
 
-@partial(jit, static_argnames=["num_lev", "filter", "tiny", "qmax"])
+@partial(jit, static_argnames=["num_lev", "filter", "tiny", "qmax",
+                               "smooth_search_tau"])
 def zerroukat_remap(tracer_mass,
                     d_mass_model,
                     d_mass_reference,
                     num_lev,
                     filter=False,
                     tiny=1e-12,
-                    qmax=1e24):
+                    qmax=1e24,
+                    smooth_search_tau=None):
   """
   Conservative PPM vertical remap (Zerroukat & Allen 2012).
 
@@ -39,6 +41,17 @@ def zerroukat_remap(tracer_mass,
       Small number used as a zero threshold in the filter (default: 1e-12).
   qmax : float, optional
       Maximum allowed tracer value used in the filter (default: 1e24).
+  smooth_search_tau : float or None, optional
+      Opt-in straight-through derivative for the containing-cell search
+      (docs/ad_hardening_strategy.md §3, category C).  The integer search
+      makes the exact derivative differentiate the frozen cell assignment,
+      which is blind — with locally wrong sign — to reference interfaces
+      crossing model interfaces.  With a temperature (Pa), the *value* is
+      unchanged (up to one rounding of the surrogate correction) but the
+      derivative blends the neighboring cells' reconstructions within
+      ``tau`` of a model interface, so tangents track crossings.  Default
+      ``None`` keeps the exact frozen-choice derivative and the bitwise
+      forward path.
 
   Returns
   -------
@@ -282,6 +295,48 @@ def zerroukat_remap(tracer_mass,
   zv2 = zv_mapped + (za0_mapped * zgam_mid +
                      za1_mapped / 2.0 * zgam_mid**2 +
                      za2_mapped / 3.0 * zgam_mid**3) * zhdp_mapped
+
+  if smooth_search_tau is not None:
+    # Straight-through crossing-aware derivative (category C, strategy §3).
+    # The cumulative integral Z(p) is continuous in the interface position
+    # but its derivative switches branch when p crosses a model interface
+    # (the frozen integer search picks one side).  Within ``tau`` of an
+    # interface, blend the neighboring cells' reconstructions evaluated at
+    # the same p into a smooth surrogate; the correction vanishes away
+    # from crossings, so there the surrogate tangent equals the exact one.
+    from ..smoothing import stable_sigmoid, straight_through
+    idx_sel = idxs[:, :, :, 1:]
+    p_sel = pi_int_reference[:, :, :, 1:]
+
+    def _cumulative_at(cells):
+      zh = jnp.take_along_axis(zhdp, cells, -1)[:, :, :, :, np.newaxis]
+      zv = jnp.take_along_axis(values_model[:, :, :, :-1, :],
+                               cells[:, :, :, :, np.newaxis], -2)
+      a0 = jnp.take_along_axis(za0, cells[:, :, :, :, np.newaxis], -2)
+      a1 = jnp.take_along_axis(za1, cells[:, :, :, :, np.newaxis], -2)
+      a2 = jnp.take_along_axis(za2, cells[:, :, :, :, np.newaxis], -2)
+      above = jnp.take_along_axis(pi_int_model, cells, -1)
+      below = jnp.take_along_axis(pi_int_model, cells + 1, -1)
+      zg = ((p_sel - above) / (below - above))[:, :, :, :, np.newaxis]
+      return zv + (a0 * zg + a1 / 2.0 * zg**2 + a2 / 3.0 * zg**3) * zh
+
+    z_here = _cumulative_at(idx_sel)
+    z_next = _cumulative_at(jnp.clip(idx_sel + 1, 0, num_lev - 1))
+    z_prev = _cumulative_at(jnp.clip(idx_sel - 1, 0, num_lev - 1))
+    above_b = jnp.take_along_axis(pi_int_model, idx_sel, -1)
+    below_b = jnp.take_along_axis(pi_int_model, idx_sel + 1, -1)
+    # The bottom reference interface is pinned to the column total (its
+    # zgam is the constant 1 above); keep it out of the blend.
+    interior = jnp.concatenate((jnp.ones_like(p_sel[:, :, :, :-1]),
+                                jnp.zeros_like(p_sel[:, :, :, -1:])),
+                               axis=-1)
+    w_next = (stable_sigmoid((p_sel - below_b) / smooth_search_tau) *
+              interior)[:, :, :, :, np.newaxis]
+    w_prev = (stable_sigmoid((above_b - p_sel) / smooth_search_tau) *
+              interior)[:, :, :, :, np.newaxis]
+    correction = w_next * (z_next - z_here) + w_prev * (z_prev - z_here)
+    zv2 = straight_through(zv2, zv2 + correction)
+
   zv2_shifted = jnp.concatenate([jnp.zeros_like(zv2[:, :, :, :1, :]),
                                  zv2[:, :, :, :-1, :]], axis=-2)
   return zv2 - zv2_shifted

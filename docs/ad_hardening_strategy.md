@@ -287,9 +287,19 @@ that makes them pass (or as strict xfails documenting a known hazard).
    on jax and torch, forward and reverse.
 6. **DIRK adoption** behind `use_implicit_diff`, with
    unrolled-vs-implicit gradient equivalence tests and a tape-memory check.
-7. **Discrete-choice remediation** (category C): frozen-index rule for the
-   remap search/gather + minmax bounds; straight-through surrogate variants
-   where layer-2 evidence demands them.
+7. **Discrete-choice remediation** (category C), as landed: the frozen
+   integer search is the *documented default policy* (positively tested,
+   no longer an xfail), and `zerroukat_remap` gains an opt-in
+   `smooth_search_tau` — a straight-through surrogate
+   (`pyses/smoothing.py`) that keeps the exact primal but blends the
+   neighboring cells' reconstructions within `tau` of a model interface.
+   Because the cumulative integral is continuous at crossings, the
+   surrogate reproduces the crossing derivative essentially exactly:
+   measured −5252.450 vs FD −5252.450 (7e-9 relative), where the frozen
+   derivative reads +700 (wrong sign). Away from crossings the correction
+   vanishes and surrogate tangents equal exact ones. The min/max bound
+   extraction stays on the frozen/subgradient policy (ties measured
+   consistent with FD on both backends).
 8. **Smoothing library** (category D, opt-in `ad_smoothing` config):
    `soft_*` primitives + conservation/deviation tests; applied only where
    categories A–C left documented gradient-quality gaps.
