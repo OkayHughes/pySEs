@@ -304,7 +304,34 @@ that makes them pass (or as strict xfails documenting a known hazard).
    `soft_*` primitives + conservation/deviation tests; applied only where
    categories A–C left documented gradient-quality gaps.
 9. **Harness layers 2–3 in CI** (single-step + short-trajectory in the jax
-   and torch workflows), closing the loop.
+   and torch workflows), closing the loop. As landed
+   (`tests/fast_tests/ad_tests/test_step_gradients.py`), with four
+   measured findings:
+   - *Scanned-subcycle derivative sensitivity (jax).* The production
+     step's `lax.scan` dynamics subcycle limits forward/reverse mutual
+     consistency to ~2e-5 relative, where the unrolled instrumented step
+     satisfies the identity to 8e-14 (primals agree to 1e-14; both
+     production AD modes deviate 1e-6..3e-5 from the unrolled
+     reference). The inconsistency compounds multiplicatively along
+     trajectories (6.2e-4 at 2 steps), and `jax.checkpoint`'s
+     re-linearization alone shifts 2-step trajectory gradients by up to
+     2.6% per entry (norm-wise far smaller). Implication: trajectory
+     gradients carry an intrinsic ~0.1–1%-scale implementation
+     sensitivity — usable for DA, but not reproducible across derivative
+     orderings. Root-causing/taming this is follow-up work; the probes
+     pin today's numbers.
+   - *Full-step elementwise FD is branch-noise-dominated* on the at-rest
+     HEVI case (the line-search switch quantities sit exactly at their
+     thresholds), so FD assertions live only at layer 1.
+   - *torch forward-mode gap:* PyTorch has no forward-AD rule for
+     `index_reduce_` (the scatter-max behind minmax DSS) — step-level
+     `torch.func.jvp` raises; pinned as strict xfails until upstream or
+     a custom backend rule closes it.
+   - *torch reverse-mode defect (cam_se tracer chain):* an in-place
+     augmented assignment mutates a tensor sharing storage with
+     `index_reduce_`'s saved output, breaking backward. Pinned strictly;
+     needs a functional-rebind sweep of the torch tracer path
+     (follow-up). The HOMME NH reverse path is clean on torch.
 
 Ordering rationale: 2–3 give measurements before opinions; 4 is pure bug-fix;
 5–6 remove the largest *structural* AD cost and de-risk the torch autograd
