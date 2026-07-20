@@ -30,7 +30,11 @@ Contract (increment 5 scope):
     (``transpose=True``); ``matvec`` applies the requested operator, and
     ``x_star``/``theta`` are provided so structured implementations (e.g.
     a tridiagonal Thomas solve on an analytic Jacobian) can rebuild their
-    band data and ignore ``matvec`` entirely.
+    band data and ignore ``matvec`` entirely. On JAX the forward call is
+    transposed automatically for reverse mode (the ``transpose=True``
+    branch is exercised by torch), so the solver's graph must be
+    structurally linear in ``rhs`` and built from transposable ops: pure
+    arithmetic and Python-unrolled loops, no ``lax.scan``/``while_loop``.
 
 ``fixed_point_solve(T, solver_fn, x0, theta)`` is sugar for the residual
 ``F(x, theta) = T(x, theta) - x``.

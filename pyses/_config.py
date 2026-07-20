@@ -639,19 +639,30 @@ class JaxBackend:
             _, b = jax.jvp(lambda th: residual_fn(x_star, th),
                            (theta_,), (dtheta,))
             if linear_solve is None:
+                # CG's coefficients depend on the rhs, so its graph is not
+                # structurally linear in b; custom_linear_solve registers
+                # the transpose solve so reverse mode works anyway. (The CG
+                # iteration is a Python-unrolled loop — callables staged
+                # through custom_linear_solve must be free of lax.scan/
+                # while_loop, which do not survive this composition.)
                 def _solve(_mv, rhs):
                     return cg_normal_equations(mv, rmv, rhs, maxiter)
 
                 def _transpose_solve(_vm, rhs):
                     return cg_normal_equations(rmv, mv, rhs, maxiter)
+                dx = jax.lax.custom_linear_solve(
+                    mv, -b, solve=_solve, transpose_solve=_transpose_solve)
             else:
-                def _solve(_mv, rhs):
-                    return linear_solve(mv, rhs, x_star, theta_, False)
-
-                def _transpose_solve(_vm, rhs):
-                    return linear_solve(rmv, rhs, x_star, theta_, True)
-            dx = jax.lax.custom_linear_solve(
-                mv, -b, solve=_solve, transpose_solve=_transpose_solve)
+                # A structured solver is direct: its graph is structurally
+                # linear in rhs (band/factor data comes only from primal
+                # values), so JAX's plain linearize-then-transpose handles
+                # reverse mode and no custom_linear_solve wrapper is
+                # needed. The transpose flag is therefore never exercised
+                # on this backend (the torch backend calls it). Contract:
+                # the solver must be built from transposable ops — pure
+                # arithmetic and unrolled loops, no lax.scan/while_loop,
+                # whose transpose is unsupported in this position.
+                dx = linear_solve(mv, -b, x_star, theta_, False)
             return x_star, dx
 
         return _root(x0, theta)

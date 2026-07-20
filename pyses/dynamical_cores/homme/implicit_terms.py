@@ -243,14 +243,141 @@ def take_limited_step(dt_implicit,
   return dphi_out, w_out
 
 
-@partial(jit, static_argnames=["model"])
+# ---------------------------------------------------------------------------
+# Implicit-differentiation wiring (docs/ad_hardening_strategy.md §4.2).
+#
+# The Newton carry ``(w, dphi, nh_pressure, residual)`` is fully derived
+# from the interface velocity ``w``: dphi follows from the phi-update
+# relation and everything else is recomputed from dphi.  ``w`` is therefore
+# the root variable handed to ``_be.root_solve``; the surface entry, which
+# the solver never moves (``init_search_dir`` pins its search direction to
+# zero), is closed by an identity residual row against ``theta["w_surf"]``.
+#
+# Contract note: every array derived from differentiable inputs must reach
+# these functions through ``theta`` (or ``w``), never through closures —
+# closure-captured tracers inside the backend's custom-derivative rules
+# either leak (JAX) or bypass ``save_for_backward`` (torch).  Closures may
+# only carry static configuration: ``dt_implicit`` (python float),
+# ``v_grid`` geometry, ``physics_config`` scalars, and ``model``.
+# ---------------------------------------------------------------------------
+
+def _dirk_phi_from_w(dt_implicit, w, theta, physics_config, model):
+  """Reconstruct ``(g_n0, dphi, phi_i)`` from the velocity iterate ``w``.
+
+  Mirrors the in-loop update exactly: ``dphi = dphi_n0 + dt * delta(g_n0 w)``
+  with the surface tendency pinned to zero, and ``phi`` rebuilt from the
+  surface upward.
+  """
+  phi_n0 = theta["phi_n0"]
+  g_n0 = jnp.broadcast_to(phi_to_g(phi_n0, physics_config, model),
+                          phi_n0.shape)
+  phi_tend = jnp.concatenate(
+      (g_n0[:, :, :, :-1] * w[:, :, :, :-1],
+       jnp.zeros_like(w[:, :, :, -1:])), axis=-1)
+  dphi = theta["dphi_n0"] + dt_implicit * interface_to_delta(phi_tend)
+  phi = cumulative_sum(-dphi, theta["phi_surf"])
+  return g_n0, dphi, phi
+
+
+def _dirk_residual(dt_implicit, w, theta, v_grid, physics_config, model):
+  """DIRK stage residual ``F(w, theta)`` on the ``nlev + 1`` interfaces.
+
+  Interior rows are the ``w``/``phi`` compatibility residual
+  ``w - (w_n0 + dt g_n0 (mu(phi(w)) - 1))``; the surface row pins ``w`` to
+  ``theta["w_surf"]`` so the system is square and invertible.
+  """
+  g_n0, _, phi = _dirk_phi_from_w(dt_implicit, w, theta, physics_config,
+                                  model)
+  state = {"theta_v_d_mass": theta["theta_v_d_mass"],
+           "d_mass": theta["d_mass"]}
+  _, _, _, mu = eval_mu(state, phi, v_grid, physics_config, model)
+  fn = w - (theta["w_n0"] + dt_implicit * g_n0 * (mu - 1.0))
+  return jnp.concatenate(
+      (fn[:, :, :, :-1], w[:, :, :, -1:] - theta["w_surf"]), axis=-1)
+
+
+def _dirk_newton_sweeps(dt_implicit, w0, dphi0, nh_pressure0, resid0,
+                        w_n0, phi_n0, dphi_n0, g_n0, phi_surf, state,
+                        v_grid, physics_config, model, max_itercount):
+  """The fixed-budget Newton sweep, shared verbatim by both solver paths."""
+  def _newton_step(carry, _):
+    w_guess, dphi_guess, nh_pressure, resid = carry
+    w_search_dir = init_search_dir(dt_implicit, w_guess, dphi_guess,
+                                   state["d_mass"], nh_pressure,
+                                   physics_config, resid)
+    dphi_guess, w_guess = take_limited_step(dt_implicit, phi_n0, dphi_n0,
+                                            w_guess, w_search_dir,
+                                            physics_config, model)
+    phi_guess = cumulative_sum(-dphi_guess, phi_surf)
+    nh_pressure, _, _, mu = eval_mu(state, phi_guess, v_grid,
+                                    physics_config, model)
+    fn = w_guess - (w_n0 + dt_implicit * g_n0 * (mu - 1.0))
+    resid = jnp.concatenate(
+        (fn[:, :, :, :-1], jnp.zeros_like(fn[:, :, :, -1:])), axis=-1)
+    return (w_guess, dphi_guess, nh_pressure, resid), None
+
+  carry, _ = _be.scan(_newton_step, (w0, dphi0, nh_pressure0, resid0),
+                      jnp.arange(max_itercount))
+  return carry
+
+
+def _unrolled_thomas(jacL, jacD, jacU, rhs):
+  """Thomas solve with the vertical recurrences unrolled at trace time.
+
+  Same algorithm as :func:`solve_strict_diag_dominant_tridiag`, but as pure
+  arithmetic instead of a backend ``scan``: inside the implicit-diff rule
+  the solve graph must be structurally linear in ``rhs`` so reverse mode
+  can transpose it, and ``lax.scan`` does not transpose in that position
+  (its transposition hands the scan a cotangent accumulator).  The unroll
+  is also the GPU-fusion-friendly form (cf. the Zerroukat remap's Thomas
+  solve); ``nlev`` is static under jit.
+  """
+  nlev = jacD.shape[-1]
+  diag = [jacD[..., 0]]
+  r = [rhs[..., 0]]
+  for k in range(1, nlev):
+    lower_rat = jacL[..., k - 1] / diag[-1]
+    diag.append(jacD[..., k] - lower_rat * jacU[..., k - 1])
+    r.append(rhs[..., k] - lower_rat * r[-1])
+  sol = [r[nlev - 1] / diag[nlev - 1]]
+  for k in range(nlev - 2, -1, -1):
+    sol.append((r[k] - jacU[..., k] * sol[-1]) / diag[k])
+  sol.reverse()
+  return jnp.stack(sol, axis=-1)
+
+
+def _dirk_ift_linear_solve(dt_implicit, rhs, x_star, theta, v_grid,
+                           physics_config, model, transpose):
+  """Structured solve for the implicit-function-theorem systems.
+
+  Rebuilds the analytic tridiagonal DIRK Jacobian at the solution and
+  Thomas-solves the interior block; the adjoint system is the same solve
+  with the off-diagonal bands swapped (the transpose of a tridiagonal
+  matrix).  The surface residual row is the identity, so that component
+  passes straight through.
+  """
+  _, dphi, phi = _dirk_phi_from_w(dt_implicit, x_star, theta,
+                                  physics_config, model)
+  state = {"theta_v_d_mass": theta["theta_v_d_mass"],
+           "d_mass": theta["d_mass"]}
+  nh_pressure, _, _, _ = eval_mu(state, phi, v_grid, physics_config, model)
+  jacL, jacD, jacU = calc_dirk_jacobian(dt_implicit, theta["d_mass"], dphi,
+                                        nh_pressure, physics_config)
+  if transpose:
+    jacL, jacU = jacU, jacL
+  interior = _unrolled_thomas(jacL, jacD, jacU, rhs[:, :, :, :-1])
+  return jnp.concatenate((interior, rhs[:, :, :, -1:]), axis=-1)
+
+
+@partial(jit, static_argnames=["model", "use_implicit_diff"])
 def calc_implicit_update(dt_implicit,
                          nh_vars_before_implicit,
                          dynamics_before_implicit,
                          static_forcing,
                          v_grid,
                          physics_config,
-                         model):
+                         model,
+                         use_implicit_diff=False):
   """Solve the DIRK stage equation for ``(phi_np1, w_np1)``.
 
   Direct port of ``compute_stage_value_dirk``.
@@ -259,9 +386,16 @@ def calc_implicit_update(dt_implicit,
   contributions); ``dynamics_before_implicit["phi_i"]`` provides the
   hydrostatic initial guess.
 
-  Newton iteration runs a fixed budget of 20 sweeps.  A JIT-
-  compatible early exit on ``deltaerr < deltatol`` would require
-  ``lax.while_loop`` and is left for a follow-up.
+  Newton iteration runs a fixed budget of ``max_itercount`` sweeps.  A
+  JIT-compatible early exit on ``deltaerr < deltatol`` would require
+  ``lax.while_loop`` and is left for a follow-up (legal under
+  ``use_implicit_diff=True``, where the solver is opaque to AD).
+
+  With ``use_implicit_diff=True`` the identical Newton sweep runs inside
+  ``_be.root_solve``: the primal output is unchanged, but derivatives come
+  from the implicit function theorem — one adjoint (or tangent)
+  tridiagonal solve with the analytic DIRK Jacobian at the solution —
+  instead of differentiating through the taped sweeps and line searches.
   """
   gravity = physics_config["gravity"]
   max_itercount = 5
@@ -317,31 +451,86 @@ def calc_implicit_update(dt_implicit,
   w_phi_compatibility_residual = jnp.concatenate(
       (fn[:, :, :, :-1], jnp.zeros_like(fn[:, :, :, -1:])), axis=-1)
 
-  # Fixed-budget Newton sweep expressed as a scan so the body compiles once
-  # instead of unrolling ``max_itercount`` copies into the jaxpr.  The carry is
-  # exactly the loop-variant state; everything else (dt, phi_n0, g_n0, the
-  # static forcing / config / grid) is a step-invariant closure.
-  def _newton_step(carry, _):
-    w_guess, dphi_guess, nh_pressure, w_phi_compatibility_residual = carry
-    w_search_dir = init_search_dir(dt_implicit, w_guess, dphi_guess,
-                                   dynamics_before_implicit["d_mass"],
-                                   nh_pressure, physics_config,
-                                   w_phi_compatibility_residual)
-    dphi_guess, w_guess = take_limited_step(dt_implicit, phi_n0, dphi_n0,
-                                            w_guess, w_search_dir,
-                                            physics_config, model)
-    phi_guess = cumulative_sum(-dphi_guess, static_forcing["phi_surf"])
-    nh_pressure, _, _, mu = eval_mu(dynamics_before_implicit, phi_guess,
-                                    v_grid, physics_config, model)
-    fn = w_guess - (w_n0 + dt_implicit * g_n0 * (mu - 1.0))
-    w_phi_compatibility_residual = jnp.concatenate(
-        (fn[:, :, :, :-1], jnp.zeros_like(fn[:, :, :, -1:])), axis=-1)
-    return (w_guess, dphi_guess, nh_pressure, w_phi_compatibility_residual), None
+  # Fixed-budget Newton sweep (shared helper so both solver paths run the
+  # byte-identical loop body).  The loop-invariant state dict is the minimal
+  # slice eval_mu / init_search_dir actually read.
+  state_min = {"theta_v_d_mass": dynamics_before_implicit["theta_v_d_mass"],
+               "d_mass": dynamics_before_implicit["d_mass"]}
+  if use_implicit_diff:
+    # dt_implicit and the v_grid leaves eval_mu reads are traced arguments
+    # of this jitted function, so they must flow through theta like every
+    # other traced value: the backend's custom-derivative rule is re-run
+    # in later traces (e.g. pjit's jvp_jaxpr), where closure-captured
+    # tracers from the original trace leak. The height-coordinate branch
+    # of eval_mu only checks key presence, so it stays a static closure.
+    is_height = "height" in v_grid
+    if is_height:
+      v_grid_theta = {}
+    else:
+      v_grid_theta = {
+          "hybrid_a_i": jnp.asarray(v_grid["hybrid_a_i"]),
+          "reference_surface_mass": jnp.asarray(
+              v_grid["reference_surface_mass"])}
 
-  (w_guess, dphi_guess, nh_pressure, w_phi_compatibility_residual), _ = _be.scan(
-      _newton_step,
-      (w_guess, dphi_guess, nh_pressure, w_phi_compatibility_residual),
-      jnp.arange(max_itercount))
+    def _theta_v_grid(th):
+      return {"height": True} if is_height else th["v_grid"]
+
+    # physics_config from init_physics_config carries array-valued leaves
+    # (nested moisture-species dicts included), which are traced arguments
+    # of this jitted function — so it must ride through theta as well.
+    # Coerce every leaf to an array so the torch path flattens to tensors.
+    def _as_array_tree(tree):
+      if isinstance(tree, dict):
+        return {key: _as_array_tree(val) for key, val in tree.items()}
+      return jnp.asarray(tree)
+
+    theta = {"w_n0": w_n0, "phi_n0": phi_n0, "dphi_n0": dphi_n0,
+             "phi_surf": static_forcing["phi_surf"],
+             "w_surf": w_guess[:, :, :, -1:],
+             "theta_v_d_mass": state_min["theta_v_d_mass"],
+             "d_mass": state_min["d_mass"],
+             "dt": jnp.asarray(dt_implicit),
+             "v_grid": v_grid_theta,
+             "physics_config": _as_array_tree(physics_config),
+             # Solver-only initialization data: consumed by _solver below,
+             # ignored by the residual, so it carries no gradient path (the
+             # exact root is independent of the starting carry).
+             "init_dphi": dphi_guess,
+             "init_nh_pressure": nh_pressure,
+             "init_resid": w_phi_compatibility_residual}
+
+    def _residual(wx, th):
+      return _dirk_residual(th["dt"], wx, th, _theta_v_grid(th),
+                            th["physics_config"], model)
+
+    def _solver(x0_, th):
+      g_n0_ = jnp.broadcast_to(
+          phi_to_g(th["phi_n0"], th["physics_config"], model),
+          th["phi_n0"].shape)
+      state = {"theta_v_d_mass": th["theta_v_d_mass"],
+               "d_mass": th["d_mass"]}
+      w_out, _, _, _ = _dirk_newton_sweeps(
+          th["dt"], x0_, th["init_dphi"], th["init_nh_pressure"],
+          th["init_resid"], th["w_n0"], th["phi_n0"], th["dphi_n0"], g_n0_,
+          th["phi_surf"], state, _theta_v_grid(th), th["physics_config"],
+          model, max_itercount)
+      return w_out
+
+    def _linear(matvec, rhs, x_star, th, transpose):
+      del matvec  # the analytic Jacobian replaces the matrix-free operator
+      return _dirk_ift_linear_solve(th["dt"], rhs, x_star, th,
+                                    _theta_v_grid(th), th["physics_config"],
+                                    model, transpose)
+
+    w_guess = _be.root_solve(_residual, _solver, w_guess, theta,
+                             linear_solve=_linear)
+  else:
+    (w_guess, dphi_guess, nh_pressure,
+     w_phi_compatibility_residual) = _dirk_newton_sweeps(
+        dt_implicit, w_guess, dphi_guess, nh_pressure,
+        w_phi_compatibility_residual, w_n0, phi_n0, dphi_n0, g_n0,
+        static_forcing["phi_surf"], state_min, v_grid, physics_config,
+        model, max_itercount)
 
   # Final phi update: phi_np1 = phi_n0 + dt * g(phi_n0) * w_np1.
   phi_next = phi_n0 + dt_implicit * g_n0 * w_guess
