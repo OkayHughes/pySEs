@@ -201,7 +201,7 @@ def calc_hypervis_tend_tracer(tracer_mass, d_mass_scale, grid, dims, dt, physics
   # vmap the biharmonic over the leading tracer axis (d_mass_scale, grid and
   # coefficients are shared) instead of a Python loop over tracers.
   def per_tracer(tracer_mass_single):
-    harmonic = scalar_harmonic_3d(d_mass_scale * tracer_mass_single, grid, physics_config)
+    harmonic = scalar_harmonic_3d(tracer_mass_single, grid, physics_config)
     harmonic = project_tracer_3d(harmonic, grid, dims)
     biharmonic = scalar_harmonic_3d(harmonic,
                                     grid,
