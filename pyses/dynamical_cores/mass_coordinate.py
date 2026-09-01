@@ -4,7 +4,7 @@ from .model_info import moist_mixing_ratio_models
 _be = _get_backend()
 jit = _be.jit
 jnp = _be.np
-
+DEBUG=_be.debug
 
 def init_vertical_grid(hybrid_a_i,
                        hybrid_b_i,
@@ -43,6 +43,20 @@ def init_vertical_grid(hybrid_a_i,
     v_grid["moist"] = 1.0
   else:
     v_grid["dry"] = 1.0
+  # eta coordinates used for remap can
+  # have negative reference mass over the Himalayas (~350hPa surface pressure)
+  # so we check for dangerous vertical coordinates here.
+  d_a = (hybrid_a_i[1:] - hybrid_a_i[:-1])
+  d_b = (hybrid_b_i[1:] - hybrid_b_i[:-1])
+  assert(not jnp.any(jnp.logical_and(d_a < 0, d_b <= 0)))
+  crossing_ps = jnp.where(d_a < 0, -d_a * reference_surface_mass/d_b, jnp.nan)
+  v_grid["minimum_valid_surface_mass"] = jnp.nanmax(crossing_ps)
+  # minimum_valid_surface_mass should be 0 ideally,
+  # so a lower threshold means people closer to
+  # having Himalaya problems will be warned before it becomes catastrophic.
+  if v_grid["minimum_valid_surface_mass"] > 3.00e5 and DEBUG:
+    print("Warning! Chosen vertical grid may not be suitable for extreme Earth-like topography\n"
+          f"Minimum allowable surface pressure: {v_grid["minimum_valid_surface_mass"]}")
   return v_grid
 
 

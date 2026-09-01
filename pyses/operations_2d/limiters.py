@@ -68,13 +68,11 @@ def clip_and_sum_limiter(tracer_mass_tend, mass_matrix, tracer_min, tracer_max, 
                                 tracer_adjustment,
                                 jnp.zeros_like(tracer))
   denominator = jnp.sum(tracer_adjustment * scaled_mass, axis=(1, 2))
-  do_mass_adjustment = jnp.logical_and(modified, denominator > 0.0)
-  # Sanitize the denominator before dividing (not just guard the result with
-  # `where`): a fully-saturated element-level has denominator == 0, and the
-  # bare add_mass_per_lev / denominator in the untaken branch produces inf/NaN
-  # that both warns at runtime and poisons reverse-mode AD (the forward value
-  # is masked, but the cotangent is not).
-  safe_denominator = jnp.where(denominator > 0.0, denominator, 1.0)
+  thresh = 1e-12 * sum_scaled_mass
+  do_mass_adjustment = jnp.logical_and(modified, denominator > thresh)
+  # The careful treatment of threshold here does not affect normal operation,
+  # but prevents NaN poisoning in the adjoint.
+  safe_denominator = jnp.where(denominator > thresh, denominator, 1.0)
   tracer = jnp.where(do_mass_adjustment[:, jnp.newaxis, jnp.newaxis, :],
                      tracer + (add_mass_per_lev / safe_denominator)[:, jnp.newaxis, jnp.newaxis, :] * tracer_adjustment,
                      tracer)
