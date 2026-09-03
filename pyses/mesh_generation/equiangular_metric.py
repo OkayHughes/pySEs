@@ -348,7 +348,10 @@ def init_grid_from_topo(face_connectivity,
   SpectralElementGrid
     Global spectral element grid.
   """
-  gll_position, gll_jacobian = mesh_to_cart_bilinear(face_position_2d, npt)
+  # warp corners so they are uniform in the equiangular coordinate
+  # (matching HOMME element boundaries) before the gnomonic map
+  warped_position_2d = np.tan(np.pi / 4.0 * face_position_2d)
+  gll_position, gll_jacobian = mesh_to_cart_bilinear(warped_position_2d, npt)
   cube_redundancy = init_spectral_grid_redundancy(vert_redundancy, npt)
   gll_latlon, cube_to_sphere_jacobian = eval_metric_terms_equiangular(face_mask, gll_position, npt)
   return metric_terms_to_grid(gll_latlon,
