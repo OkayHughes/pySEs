@@ -54,7 +54,7 @@ def init_vertical_grid(hybrid_a_i,
   # minimum_valid_surface_mass should be 0 ideally,
   # so a lower threshold means people closer to
   # having Himalaya problems will be warned before it becomes catastrophic.
-  if v_grid["minimum_valid_surface_mass"] > 3.00e5 and DEBUG:
+  if v_grid["minimum_valid_surface_mass"] > 3.00e4 and DEBUG:
     print("Warning! Chosen vertical grid may not be suitable for extreme Earth-like topography\n"
           f"Minimum allowable surface pressure: {v_grid["minimum_valid_surface_mass"]}")
   return v_grid
