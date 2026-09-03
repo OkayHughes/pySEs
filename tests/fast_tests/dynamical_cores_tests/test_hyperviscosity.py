@@ -135,7 +135,9 @@ def test_basic_operators():
   laplace_Ymn_discont = horizontal_weak_laplacian(Ymn, h_grid, a=radius_earth)
   laplace_Ymn = project_scalar(laplace_Ymn_discont, h_grid, dims)
   # check that we can resolve our spherical harmonic.
-  eps = 1e-2
+  # (measured 1.3e-2 at nx=7: the equiangular corner placement's edge
+  # elements are larger than the former equidistant placement's)
+  eps = 2e-2
   diff = laplace_Ymn - eigval * Ymn
   assert jnp.max(jnp.abs(diff)) < eps
   test_scalar = Ymn[:, :, :, jnp.newaxis]

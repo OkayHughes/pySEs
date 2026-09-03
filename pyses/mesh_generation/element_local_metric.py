@@ -198,7 +198,10 @@ def init_grid_from_topo_elem_local(face_connectivity,
   dims : frozendict[str, int]
       Grid dimension metadata ``{"N", "shape", "npt", "num_elem"}``.
   """
-  gll_position_equi, gll_jacobian = mesh_to_cart_bilinear(face_position_2d, npt)
+  # warp corners so they are uniform in the equiangular coordinate
+  # (matching HOMME element boundaries) before the gnomonic map
+  warped_position_2d = np.tan(np.pi / 4.0 * face_position_2d)
+  gll_position_equi, gll_jacobian = mesh_to_cart_bilinear(warped_position_2d, npt)
   cube_redundancy = init_spectral_grid_redundancy(vert_redundancy, npt)
   gll_latlon_equi, _ = eval_metric_terms_equiangular(face_mask, gll_position_equi, npt)
   latlon_corners = np.zeros((gll_latlon_equi.shape[0], 4, 2))
@@ -312,7 +315,9 @@ def init_stretched_grid_elem_local(nx,
      offset = np.zeros((3,))
   face_connectivity, face_mask, face_position, face_position_2d = init_cube_topo(nx)
   vert_redundancy = init_element_corner_vert_redundancy(face_connectivity)
-  gll_position_equi, gll_jacobian = mesh_to_cart_bilinear(face_position_2d, npt)
+  # warp corners so the undistorted base grid is equiangular
+  warped_position_2d = np.tan(np.pi / 4.0 * face_position_2d)
+  gll_position_equi, gll_jacobian = mesh_to_cart_bilinear(warped_position_2d, npt)
   cube_redundancy = init_spectral_grid_redundancy(vert_redundancy, npt)
   # generate base equiangular grid and extract corners
   gll_latlon_equi, _ = eval_metric_terms_equiangular(face_mask, gll_position_equi, npt)
