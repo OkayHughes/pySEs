@@ -54,7 +54,8 @@ from pyses.dynamical_cores.model_state import (remap_dynamics,
 from pyses.dynamical_cores.time_step import time_step_options
 from pyses.dynamical_cores.physics_dynamics_coupling import coupling_types
 from pyses.dynamical_cores.tracer_advection.eulerian_spectral import advance_tracers
-from pyses.dynamical_cores.model_info import cam_se_models, cam_se_stable_models
+from pyses.dynamical_cores.model_info import cam_se_models, cam_se_stable_models, hydrostatic_models
+from pyses.dynamical_cores.utils_3d import physical_dot_product, phi_to_g
 
 _be = _get_backend()
 jit = _be.jit
@@ -99,6 +100,14 @@ advance_coupling_step` exactly. Arguments otherwise mirror that function.
   """
   physics_dynamics_coupling = timestep_config["physics_dynamics_coupling"]
   do_remap = v_grid["hybrid_a_m"].shape[0] > 1
+  if model not in hydrostatic_models:
+    # kinematic constraint at the surface: w_surf = (u . grad_phi_surf) / g
+    static_forcing = state_in["static_forcing"]
+    w_i_surf = (physical_dot_product(state_in["dynamics"]["horizontal_wind"][:, :, :, -1:, :],
+                                     static_forcing["grad_phi_surf"][:, :, :, None, :]) /
+                phi_to_g(static_forcing["phi_surf"][:, :, :, None], physics_config, model))
+    state_in["dynamics"]["w_i"] = bnp.concatenate(
+        [state_in["dynamics"]["w_i"][:, :, :, :-1], w_i_surf], axis=-1)
 
   dynamics_state = state_in["dynamics"]
   tracer_state = state_in["tracers"]

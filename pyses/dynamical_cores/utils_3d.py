@@ -210,7 +210,7 @@ def z_to_g(z,
     g = config["gravity"] * (radius_earth /
                              (z + radius_earth))**2
   else:
-    g = config["gravity"]
+    g = config["gravity"] * jnp.ones_like(z)
   return g
 
 

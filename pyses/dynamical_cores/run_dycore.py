@@ -18,7 +18,8 @@ from .homme.thermodynamics import eval_balanced_geopotential
 from .mass_coordinate import d_mass_to_surface_mass, surface_mass_to_midlevel_mass
 from .physics_dynamics_coupling import coupling_types
 from .tracer_advection.eulerian_spectral import advance_tracers
-from .model_info import cam_se_models, cam_se_stable_models
+from .model_info import cam_se_models, cam_se_stable_models, hydrostatic_models
+from .utils_3d import physical_dot_product, phi_to_g
 from functools import partial
 _be = _get_backend()
 jit = _be.jit
@@ -77,6 +78,15 @@ def _advance_coupling_step(state_in,
   """
   physics_dynamics_coupling = timestep_config["physics_dynamics_coupling"]
   do_remap = v_grid["hybrid_a_m"].shape[0] > 1
+  if model not in hydrostatic_models:
+    # kinematic constraint at the surface: w_surf = (u . grad_phi_surf) / g
+    # This prevents spurious growth of surface velocity during remap.
+    static_forcing = state_in["static_forcing"]
+    w_i_surf = (physical_dot_product(state_in["dynamics"]["horizontal_wind"][:, :, :, -1:, :],
+                                     static_forcing["grad_phi_surf"][:, :, :, None, :]) /
+                phi_to_g(static_forcing["phi_surf"][:, :, :, None], physics_config, model))
+    state_in["dynamics"]["w_i"] = jnp.concatenate(
+        [state_in["dynamics"]["w_i"][:, :, :, :-1], w_i_surf], axis=-1)
 
   dynamics_state = state_in["dynamics"]
   tracer_state = state_in["tracers"]
@@ -127,7 +137,7 @@ def _advance_coupling_step(state_in,
     # bound value always reaches advance_tracers.  The old dynamics_next/state
     # swap is subsumed by the scan carry.
     dyn_scale = 1.0 / timestep_config["dynamics_subcycle"]
-
+    
     def _one_dyn_subcycle(dynamics_state):
       if model in cam_se_models:
         moisture_species = tracer_state["moisture_species"]

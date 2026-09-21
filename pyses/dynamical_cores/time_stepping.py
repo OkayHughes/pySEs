@@ -67,6 +67,7 @@ def dynamics_tendency(dynamics,
   """
   # cam_se_stable_models are a subset of cam_se_models, so test them first;
   # they use the skew-symmetric theta_d tendency in explicit_terms_theta.py.
+
   if model in cam_se_stable_models:
     dynamics_tend, tracer_consist = eval_explicit_tendency_se_theta(dynamics,
                                                                     static_forcing,
