@@ -15,9 +15,12 @@ from pyses.dynamical_cores.mass_coordinate import init_vertical_grid
 from pyses.dynamical_cores.model_info import (models, cam_se_models, homme_models,
                                               vertically_buoyant_models)
 from pyses.dynamical_cores.physics_config import init_physics_config
+from pyses.dynamical_cores.cam_se import thermodynamics as cam_se_thermo
+from pyses.dynamical_cores.homme import thermodynamics as homme_thermo
 from pyses.dynamical_cores.model_config import init_default_config, hypervis_opts
 from pyses.mesh_generation.mesh_io import exodus_to_pyses_grid_corners
 from pyses.mesh_generation.element_local_metric import init_unstructured_grid
+from pyses.dynamical_cores import diagnostics
 import numpy as np
 from os.path import join
 from ..context import get_data_dir
@@ -31,7 +34,7 @@ get_global_array = _be.get_global_array
 MOUNTAIN_WAVE_X = 500.0
 
 
-def _plot_equatorial_meridional_cross_section(state, h_grid, physics_config, dims,
+def _plot_equatorial_meridional_cross_section(state, h_grid, v_grid, physics_config, dims, model,
                                               savedir, lat_eps=np.deg2rad(1.0)):
   """Longitude-height cross-section of meridional velocity near the equator.
 
@@ -39,9 +42,7 @@ def _plot_equatorial_meridional_cross_section(state, h_grid, physics_config, dim
   slice.  Instead we pick every column whose latitude lies within ``+/- lat_eps``
   of the equator, derive height from the geopotential (``z = phi / g`` for the
   shallow-atmosphere cores used here), co-located with the mid-level winds, and
-  ``tricontourf`` the resulting scattered ``(lon, z, v)`` points.  Requires the
-  interface geopotential ``phi_i`` (a prognostic field only for the
-  non-hydrostatic cores).
+  ``tricontourf`` the resulting scattered ``(lon, z, v)`` points. 
   """
   import matplotlib
   matplotlib.use("Agg")
@@ -61,10 +62,9 @@ def _plot_equatorial_meridional_cross_section(state, h_grid, physics_config, dim
 
   # Height from the interface geopotential, averaged onto the mid-levels the
   # wind lives on.
-  phi_i = get_global_array(dynamics["phi_i"], dims)                # (nelem, npt, npt, nlev+1)
-  phi_mid = 0.5 * (phi_i[..., 1:] + phi_i[..., :-1])
-  z = (phi_mid / gravity).reshape(-1, nlev)                        # (ncol, nlev)
 
+  phi_mid = diagnostics.diagnose_midlevel_geopotential(state, h_grid, v_grid, physics_config, model)
+  z = (phi_mid / gravity).reshape(-1, nlev)                        # (ncol, nlev)
   band = np.abs(lat) < lat_eps
   assert band.any(), f"no columns within {np.rad2deg(lat_eps):.2f} deg of the equator"
   # Broadcast each selected column's longitude over its levels, then flatten to
@@ -85,7 +85,7 @@ def _plot_equatorial_meridional_cross_section(state, h_grid, physics_config, dim
   plt.close()
 
 
-def _run_mountain_wave(model, shear, nx=15, nsteps=30, subdir="mountain_wave"):
+def _run_mountain_wave(model, shear, nx=16, nsteps=10, subdir="mountain_wave"):
   """Initialise and integrate the DCMIP non-hydrostatic Schar mountain-wave test.
 
   Runs the balanced background jet over a Schar-type ridge on a non-rotating,
@@ -157,11 +157,8 @@ def _run_mountain_wave(model, shear, nx=15, nsteps=30, subdir="mountain_wave"):
     plt.savefig(f"{savedir}/thermo_mtn_wave.pdf")
     plt.close()
 
-  # End-of-simulation longitude-height cross-section of meridional velocity at
-  # the equator (non-hydrostatic cores only, since it derives height from the
-  # prognostic geopotential ``phi_i``).
-  if savedir is not None and "phi_i" in state["dynamics"]:
-    _plot_equatorial_meridional_cross_section(state, h_grid, physics_config, dims, savedir)
+  if savedir is not None:
+    _plot_equatorial_meridional_cross_section(state, h_grid, v_grid, physics_config, dims, model, savedir)
 
 
 @pytest.mark.parametrize("model", [models.homme_hydrostatic,
