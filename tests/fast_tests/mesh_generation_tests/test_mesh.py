@@ -63,7 +63,7 @@ def test_equiangular_element_local_grid_equivalence():
   differences live in the element interiors and shrink with resolution:
 
     * node positions differ at O(h^2)        (~7e-5 at nx=61)
-    * the metric determinant differs at O(h)  (~2.3% at nx=61, concentrated at
+    * the metric determinant differs at O(h)  (~3.4% at nx=61, concentrated at
       element-edge / cube-face-boundary nodes, where the equiangular Jacobian
       is intentionally only C0)
 
@@ -103,6 +103,8 @@ def test_equiangular_element_local_grid_equivalence():
   max_position_error = np.max(np.linalg.norm(xyz_equi - xyz_elem, axis=-1))
   assert max_position_error < 5e-4
 
-  # Metric determinant agrees to O(h) (measured max ~2.3% at nx=61).
+  # Metric determinant agrees to O(h) (measured max ~3.4% at nx=61 on the
+  # equiangular corner placement, whose edge elements are larger than the
+  # former equidistant placement's).
   metdet_rel_error = np.abs(metdet_elem - metdet_equi) / np.abs(metdet_equi)
-  assert np.max(metdet_rel_error) < 3e-2
+  assert np.max(metdet_rel_error) < 5e-2

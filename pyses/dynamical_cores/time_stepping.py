@@ -751,22 +751,33 @@ def advance_dynamics_ullrich_5stage(dynamics_in,
                                                       dry_air_species=dry_air_species,
                                                       apply_buoyant=apply_buoyant)
 
+  # Final stage of the Kinnmark--Gray / Ullrich RK(5,3):
+  #
+  #   u^{n+1} = u^n + (dt/4) F(u^n) + (3 dt/4) F(u^{(4)})
+  #
+  # in the low-storage two-register form (using dt F(u^n) = 5 (u1 - u^n)):
+  #
+  #   u^{n+1} = (5 u1 - u^n)/4 + (3 dt/4) F(u^{(4)})
+  #           = (5/4) [u1 + (3 dt/5) F(u^{(4)})] - (1/4) u^n
+  #
+  # The weights on u^n and u1 sum to 1 (-1/4 + 5/4), so a steady state
+  # (F == 0, hence u1 == u^n) is preserved exactly.
   dynamics_last = sum_dynamics_series([dynamics_keep,
                                        dynamics_tend],
                                        [1.0,
-                                        dt / 3.0],
+                                        3.0 * dt / 5.0],
                                         model)
 
   dynamics_last = enforce_conservation(dynamics_last,
                                        static_forcing,
-                                       dt / 3.0,
+                                       3.0 * dt / 5.0,
                                        physics_config,
                                        model)
 
   final_state = sum_dynamics_series([dynamics_in,
                                      dynamics_last],
-                                    [1.0 / 4.0,
-                                     3.0 / 4.0],
+                                    [-1.0 / 4.0,
+                                     5.0 / 4.0],
                                      model)
   if horiz_exp_vert_imp:
     final_state = advance_implicit(8.0 * dt / 18.0,

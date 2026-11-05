@@ -19,6 +19,8 @@ def test_vcoord(model):
                               cam30["hybrid_b_i"],
                               cam30["p0"],
                               model)
+  # reference surface mass value for the threshold at which cam30 becomes ill-posed
+  assert jnp.abs(v_grid["minimum_valid_surface_mass"] - 18461.218386061013) < 1e-4
   assert jnp.allclose(eval_top_interface_mass(v_grid),
                       v_grid["reference_surface_mass"] * v_grid["hybrid_a_i"][0])
   n_test = 12
