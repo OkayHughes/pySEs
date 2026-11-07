@@ -72,7 +72,7 @@ def init_common_variables(dynamics,
       - ``"d_mass"`` — dry-air layer mass (Pa)
       - ``"d_pressure"`` — moist layer pressure thickness (Pa)
       - ``"virtual_temperature"`` — virtual temperature (K)
-      - ``"cp"`` — effective moist heat capacity (J kg^-1 K^-1)
+      - ``"cp"`` — moist heat capacity per unit total (moist) mass (J kg^-1 K^-1)
       - ``"cp_dry"`` — dry-air heat capacity (J kg^-1 K^-1)
       - ``"R_dry"`` — effective dry-air gas constant (J kg^-1 K^-1)
       - ``"grad_pressure"`` — horizontal gradient of mid-level pressure
@@ -90,8 +90,14 @@ def init_common_variables(dynamics,
 
   R_dry = eval_Rgas_dry(dry_air_species, physics_config)
   cp_dry = eval_cp_dry(dry_air_species, physics_config)
-  cp = eval_cp_moist(moisture_species, cp_dry, physics_config)
   total_mixing_ratio = eval_sum_species(moisture_species)
+  # eval_cp_moist returns cp_d + sum_l cp_l q_l, a heat capacity per unit
+  # *dry* mass (q_l are dry mixing ratios). The temperature equation divides
+  # alpha * omega, which is per unit total moist mass, by cp, so cp must be
+  # per unit total mass too: divide by 1 + sum_l q_l (as CAM's get_cp does).
+  # Without it the compression heating is too weak by 1/(1 + q) and moist
+  # total energy is not conserved.
+  cp = eval_cp_moist(moisture_species, cp_dry, physics_config) / total_mixing_ratio
   virtual_temperature = eval_virtual_temperature(temperature,
                                                  moisture_species,
                                                  total_mixing_ratio,
