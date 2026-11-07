@@ -16,6 +16,12 @@ of the eight physically-distinct sub-steps in an independent ``enable_*`` flag:
 7. ``enable_tracer_transport`` — advect the tracers.
 8. ``enable_remap_tracers`` — vertically remap the tracers.
 
+Two further options are not sub-steps: ``enable_remap_filter`` (default
+``True``) controls the monotonicity filter inside the dynamics remap, and
+``remap_search_tau`` (default ``None``, Pa) turns on the straight-through
+crossing-aware derivative of the dynamics remap's cell search.  Both exist for
+gradient studies; the defaults reproduce production.
+
 All flags default to ``True``; with every flag enabled the routine is a
 faithful reproduction of :func:`advance_coupling_step` and returns identical
 results for the same model configuration (this is the property exercised by
@@ -75,10 +81,13 @@ _ENABLE_FLAGS = (
     "enable_remap_dynamics",
     "enable_tracer_transport",
     "enable_remap_tracers",
+    "enable_remap_filter",
 )
+_REMAP_OPTIONS = ("remap_search_tau",)
 
 
-@partial(jit, static_argnames=["model", "dims", "timestep_config", *_ENABLE_FLAGS])
+@partial(jit, static_argnames=["model", "dims", "timestep_config", *_ENABLE_FLAGS,
+                               *_REMAP_OPTIONS])
 def advance_coupling_step_instrumented(state_in,
                                        h_grid,
                                        v_grid,
@@ -96,7 +105,9 @@ def advance_coupling_step_instrumented(state_in,
                                        enable_hyperviscosity=True,
                                        enable_remap_dynamics=True,
                                        enable_tracer_transport=True,
-                                       enable_remap_tracers=True):
+                                       enable_remap_tracers=True,
+                                       enable_remap_filter=True,
+                                       remap_search_tau=None):
   """Advance one physics timestep with independently togglable sub-steps.
 
   See the module docstring for the meaning of each ``enable_*`` flag. With all
@@ -138,7 +149,9 @@ advance_coupling_step` exactly. Arguments otherwise mirror that function.
                                       v_grid,
                                       physics_config,
                                       len(v_grid["hybrid_b_m"]),
-                                      model)
+                                      model,
+                                      remap_filter=enable_remap_filter,
+                                      smooth_search_tau=remap_search_tau)
     tracer_consist_init = {"d_mass_init": 1.0 * dynamics_state["d_mass"]}
     # (1) physics forcing of dynamics variables (dribble).
     if dribble_dynamics and physics_forcing is not None and enable_physics_dynamics_forcing:

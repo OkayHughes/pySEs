@@ -951,13 +951,15 @@ def dynamics_to_surface_mass(state_in,
   return jnp.sum(state_in["d_mass"], axis=-1) + v_grid["hybrid_a_i"][0] * v_grid["reference_surface_mass"]
 
 
-@partial(jit, static_argnames=["num_lev", "model"])
+@partial(jit, static_argnames=["num_lev", "model", "remap_filter", "smooth_search_tau"])
 def remap_dynamics(dynamics_in,
                    static_forcing,
                    v_grid,
                    physics_config,
                    num_lev,
-                   model):
+                   model,
+                   remap_filter=True,
+                   smooth_search_tau=None):
   """
   Vertically remap all dynamics fields to the reference hybrid-coordinate levels.
 
@@ -1034,7 +1036,16 @@ def remap_dynamics(dynamics_in,
                      d_phi, dw], axis=-1)
   else:
     Qdp = jnp.stack([u_model, v_model, thermo_model], axis=-1)
-  Qdp_out = zerroukat_remap(Qdp, dynamics_in["d_mass"], d_mass_ref, num_lev, filter=True)
+  # Both options are opt-in for gradient studies; the defaults keep the
+  # production remap bitwise unchanged.  remap_filter=False drops the
+  # Zerroukat--Allen monotonicity filter and its switches.  smooth_search_tau
+  # (Pa) gives the cell search a straight-through crossing-aware derivative;
+  # it is needed whenever model interfaces sit on reference interfaces (e.g.
+  # an atmosphere at rest), where the frozen search's derivative flips with
+  # round-off.  Choose it well above the interface offsets and well below the
+  # thinnest layer.
+  Qdp_out = zerroukat_remap(Qdp, dynamics_in["d_mass"], d_mass_ref, num_lev,
+                            filter=remap_filter, smooth_search_tau=smooth_search_tau)
   u_remap = jnp.stack((Qdp_out[:, :, :, :, 0] / d_mass_ref,
                        Qdp_out[:, :, :, :, 1] / d_mass_ref), axis=-1)
   # thermo stays mass-weighted on the reference grid (theta * d_mass_ref)
