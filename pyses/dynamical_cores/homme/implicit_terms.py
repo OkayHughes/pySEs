@@ -369,7 +369,7 @@ def _dirk_ift_linear_solve(dt_implicit, rhs, x_star, theta, v_grid,
   return jnp.concatenate((interior, rhs[:, :, :, -1:]), axis=-1)
 
 
-@partial(jit, static_argnames=["model", "use_implicit_diff"])
+@partial(jit, static_argnames=["model", "use_implicit_diff", "max_itercount"])
 def calc_implicit_update(dt_implicit,
                          nh_vars_before_implicit,
                          dynamics_before_implicit,
@@ -377,7 +377,8 @@ def calc_implicit_update(dt_implicit,
                          v_grid,
                          physics_config,
                          model,
-                         use_implicit_diff=False):
+                         use_implicit_diff=False,
+                         max_itercount=5):
   """Solve the DIRK stage equation for ``(phi_np1, w_np1)``.
 
   Direct port of ``compute_stage_value_dirk``.
@@ -398,7 +399,8 @@ def calc_implicit_update(dt_implicit,
   instead of differentiating through the taped sweeps and line searches.
   """
   gravity = physics_config["gravity"]
-  max_itercount = 5
+  # max_itercount: fixed Newton budget (HOMME's default is 5). Exposed so
+  # convergence studies can sweep it; the step itself always uses 5.
 
   # phi_n0 / w_n0 : explicit RHS, then subtract the ``np1`` ``gw_phis``.
   phi_n0 = 1.0 * nh_vars_before_implicit["phi_i"]
