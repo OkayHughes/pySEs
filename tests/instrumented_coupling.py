@@ -19,7 +19,9 @@ of the eight physically-distinct sub-steps in an independent ``enable_*`` flag:
 Two further options are not sub-steps: ``enable_remap_filter`` (default
 ``True``) controls the monotonicity filter inside the dynamics remap, and
 ``remap_search_tau`` (default ``None``, Pa) turns on the straight-through
-crossing-aware derivative of the dynamics remap's cell search.  Both exist for
+crossing-aware derivative of the dynamics remap's cell search; when it is
+``None`` the step uses ``timestep_config["remap_search_tau"]`` if present,
+exactly as the production step does.  Both exist for
 gradient studies; the defaults reproduce production.
 
 All flags default to ``True``; with every flag enabled the routine is a
@@ -115,6 +117,8 @@ def advance_coupling_step_instrumented(state_in,
 advance_coupling_step` exactly. Arguments otherwise mirror that function.
   """
   physics_dynamics_coupling = timestep_config["physics_dynamics_coupling"]
+  search_tau = (remap_search_tau if remap_search_tau is not None
+                else timestep_config.get("remap_search_tau"))
   do_remap = v_grid["hybrid_a_m"].shape[0] > 1
 
   dynamics_state = state_in["dynamics"]
@@ -151,7 +155,7 @@ advance_coupling_step` exactly. Arguments otherwise mirror that function.
                                       len(v_grid["hybrid_b_m"]),
                                       model,
                                       remap_filter=enable_remap_filter,
-                                      smooth_search_tau=remap_search_tau)
+                                      smooth_search_tau=search_tau)
     tracer_consist_init = {"d_mass_init": 1.0 * dynamics_state["d_mass"]}
     # (1) physics forcing of dynamics variables (dribble).
     if dribble_dynamics and physics_forcing is not None and enable_physics_dynamics_forcing:

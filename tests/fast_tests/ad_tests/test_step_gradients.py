@@ -60,10 +60,18 @@ def homme_case():
       _build_acoustic_initial_state())
   _, diffusion_config, base_tc = init_default_config(3, h_grid, v_grid,
                                                      dims, model)
+  # The acoustic background is at rest, so after the dynamics advance the
+  # floating interfaces sit within ~1e-11 Pa of the reference interfaces and
+  # the remap's frozen cell search flips with round-off: the separately
+  # compiled jvp and vjp programs then differentiate different branches
+  # (measured forward/reverse residual 1e-2 to 1e-1). The crossing-aware
+  # search surrogate makes the derivative continuous there; 1 Pa sits well
+  # above the offsets and well below the thinnest layer (~280 Pa).
   timestep_config = init_timestep_config(
       base_tc["physics_dt"], h_grid, physics_config, diffusion_config, dims,
       model, dynamics_tstep_type=time_step_options.RK3_5STAGE_HEVI,
-      physics_dynamics_coupling=coupling_types.lump_all)
+      physics_dynamics_coupling=coupling_types.lump_all,
+      remap_search_tau=1.0)
   return dict(state_in=state, h_grid=h_grid, v_grid=v_grid,
               physics_config=physics_config,
               diffusion_config=diffusion_config,

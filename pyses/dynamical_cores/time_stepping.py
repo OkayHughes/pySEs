@@ -202,7 +202,8 @@ def init_timestep_config(dt_coupling,
                          hypervis_steps_per_dyn=-1,
                          sponge_steps_per_dyn=-1,
                          physics_dynamics_coupling=coupling_types.none,
-                         print_cfl=DEBUG):
+                         print_cfl=DEBUG,
+                         remap_search_tau=None):
   """
   Build the time-stepping configuration dict for the 3-D dynamical core.
 
@@ -244,6 +245,12 @@ def init_timestep_config(dt_coupling,
       Physics–dynamics coupling strategy (default: ``coupling_types.none``).
   print_cfl : bool, optional
       Currently unused; reserved for printing CFL diagnostics.
+  remap_search_tau : float or None, optional
+      Width (Pa) of the straight-through crossing-aware derivative for the
+      dynamics remap's cell search (see :func:`zerroukat_remap`).  Opt-in for
+      gradient studies; needed when model interfaces sit on reference
+      interfaces, e.g. an atmosphere at rest.  ``None`` (default) keeps the
+      production remap and omits the key from the returned config.
 
   Returns
   -------
@@ -302,8 +309,8 @@ def init_timestep_config(dt_coupling,
     print(f"Stability: nu_div hyperviscosity dt = {dt_hypervis}s < {max_dt_hypervis_div}s")
     print(f"scaled nu_top viscosity CFL: dt = {dt_sponge}s < {max_dt_sponge}s")
 
-  return frozendict(tracer_advection=frozendict(step_type=tracer_tstep_type,
-                                                dt=dt_tracer),
+  timestep_config = dict(tracer_advection=frozendict(step_type=tracer_tstep_type,
+                                                     dt=dt_tracer),
                     dynamics=frozendict(step_type=dynamics_tstep_type,
                                         dt=dt_dynamics,
                                         tracer_consistency_frac=1.0 / tracer_subcycle),
@@ -318,6 +325,9 @@ def init_timestep_config(dt_coupling,
                     hypervis_subcycle=hypervisc_subcycle,
                     sponge_subcycle=sponge_subcycle,
                     physics_dynamics_coupling=physics_dynamics_coupling)
+  if remap_search_tau is not None:
+    timestep_config["remap_search_tau"] = float(remap_search_tau)
+  return frozendict(timestep_config)
 
 
 @partial(jit, static_argnames=["dims", "model", "timestep_config"])

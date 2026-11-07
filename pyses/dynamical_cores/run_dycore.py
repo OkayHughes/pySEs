@@ -103,7 +103,8 @@ def _advance_coupling_step(state_in,
                                       v_grid,
                                       physics_config,
                                       len(v_grid["hybrid_b_m"]),
-                                      model)
+                                      model,
+                                      smooth_search_tau=timestep_config.get("remap_search_tau"))
     tracer_consist_init = {"d_mass_init": 1.0 * dynamics_state["d_mass"]}
     if dribble_dynamics and physics_forcing is not None:
       dynamics_state = sum_dynamics_series([dynamics_state, physics_forcing["dynamics"]],
