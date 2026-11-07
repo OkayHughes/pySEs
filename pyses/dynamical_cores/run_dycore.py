@@ -128,6 +128,10 @@ def _advance_coupling_step(state_in,
     # bound value always reaches advance_tracers.  The old dynamics_next/state
     # swap is subsumed by the scan carry.
     dyn_scale = 1.0 / timestep_config["dynamics_subcycle"]
+    # T-based CAM-SE advances in the theta_d ("_stable") variant unless the
+    # timestep config selects the temperature form.
+    advance_in_theta_d = (model in cam_se_models and model not in cam_se_stable_models
+                          and timestep_config.get("cam_se_dynamics_form", "theta_d") == "theta_d")
 
     def _one_dyn_subcycle(dynamics_state):
       if model in cam_se_models:
@@ -136,7 +140,7 @@ def _advance_coupling_step(state_in,
       else:
         moisture_species = None
         dry_air_species = None
-      if model in cam_se_models and model not in cam_se_stable_models:
+      if advance_in_theta_d:
         dynamics_step, step_model = se_T_to_theta_d_d_mass(
             dynamics_state, v_grid, physics_config, model)
       else:
@@ -166,7 +170,7 @@ def _advance_coupling_step(state_in,
                                                                             dry_air_species=dry_air_species)
       else:
         raise ValueError("Unknown dynamics timestep type")
-      if model in cam_se_models and model not in cam_se_stable_models:
+      if advance_in_theta_d:
         dynamics_next, _ = se_theta_d_d_mass_to_T(
             dynamics_next, v_grid, physics_config, step_model)
       tracer_consist_visc = None

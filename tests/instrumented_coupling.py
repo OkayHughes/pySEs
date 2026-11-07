@@ -117,6 +117,8 @@ def advance_coupling_step_instrumented(state_in,
 advance_coupling_step` exactly. Arguments otherwise mirror that function.
   """
   physics_dynamics_coupling = timestep_config["physics_dynamics_coupling"]
+  advance_in_theta_d = (model in cam_se_models and model not in cam_se_stable_models
+                        and timestep_config.get("cam_se_dynamics_form", "theta_d") == "theta_d")
   search_tau = (remap_search_tau if remap_search_tau is not None
                 else timestep_config.get("remap_search_tau"))
   do_remap = v_grid["hybrid_a_m"].shape[0] > 1
@@ -185,7 +187,7 @@ advance_coupling_step` exactly. Arguments otherwise mirror that function.
           dry_air_species = None
         # Advance in the _stable (theta_d) variant, then restore the T-based
         # interface — identical to the production step.
-        if model in cam_se_models and model not in cam_se_stable_models:
+        if advance_in_theta_d:
           dynamics_state, step_model = se_T_to_theta_d_d_mass(
               dynamics_state, v_grid, physics_config, model)
         else:
@@ -203,7 +205,7 @@ advance_coupling_step` exactly. Arguments otherwise mirror that function.
               moisture_species=moisture_species, dry_air_species=dry_air_species)
         else:
           raise ValueError("Unknown dynamics timestep type")
-        if model in cam_se_models and model not in cam_se_stable_models:
+        if advance_in_theta_d:
           dynamics_next, _ = se_theta_d_d_mass_to_T(
               dynamics_next, v_grid, physics_config, step_model)
           dynamics_state, _ = se_theta_d_d_mass_to_T(

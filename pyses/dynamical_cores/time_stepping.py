@@ -203,7 +203,8 @@ def init_timestep_config(dt_coupling,
                          sponge_steps_per_dyn=-1,
                          physics_dynamics_coupling=coupling_types.none,
                          print_cfl=DEBUG,
-                         remap_search_tau=None):
+                         remap_search_tau=None,
+                         cam_se_dynamics_form="theta_d"):
   """
   Build the time-stepping configuration dict for the 3-D dynamical core.
 
@@ -251,6 +252,10 @@ def init_timestep_config(dt_coupling,
       gradient studies; needed when model interfaces sit on reference
       interfaces, e.g. an atmosphere at rest.  ``None`` (default) keeps the
       production remap and omits the key from the returned config.
+  cam_se_dynamics_form : {"theta_d", "T"}, optional
+      Which formulation advances T-based CAM-SE dynamics: the theta_d
+      (``_stable``) variant (default, key omitted from the config) or the
+      temperature form of ``cam_se/explicit_terms.py``.
 
   Returns
   -------
@@ -327,6 +332,10 @@ def init_timestep_config(dt_coupling,
                     physics_dynamics_coupling=physics_dynamics_coupling)
   if remap_search_tau is not None:
     timestep_config["remap_search_tau"] = float(remap_search_tau)
+  if cam_se_dynamics_form not in ("theta_d", "T"):
+    raise ValueError(f"cam_se_dynamics_form must be 'theta_d' or 'T', not {cam_se_dynamics_form!r}")
+  if cam_se_dynamics_form != "theta_d":
+    timestep_config["cam_se_dynamics_form"] = cam_se_dynamics_form
   return frozendict(timestep_config)
 
 
