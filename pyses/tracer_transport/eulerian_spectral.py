@@ -349,7 +349,11 @@ def advance_tracers_rk2(tracer_mass_in,
 
   if d_mass_hypervis_tend is not None and "disable_diffusion" not in diffusion_config.keys():
     nu_tracer = diffusion_config["nu_tracer"]
-    d_mass_limiter += 3.0 * dt / 2.0 * nu_tracer * d_mass_hypervis_tend
+    # Hyperviscosity changes the layer mass by -nu * biharmonic(d_mass), the
+    # same sign as the tracer-mass tendency below, so the limiter's layer mass
+    # must be reduced by the same amount for a uniform mixing ratio to stay
+    # within its bounds.
+    d_mass_limiter -= 3.0 * dt / 2.0 * nu_tracer * d_mass_hypervis_tend
     hypervis_tend = calc_hypervis_tend_tracer(tracer_mass_out,
                                               hypervis_d_mass_scale,
                                               grid,

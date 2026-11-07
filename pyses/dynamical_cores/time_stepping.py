@@ -335,8 +335,9 @@ def advance_dynamics_euler(dynamics_in,
   Advance the dynamics state by one forward-Euler step.
 
   Evaluates the explicit adiabatic tendency via :func:`dynamics_tendency`,
-  applies a forward-Euler update, enforces conservation, and scales the
-  tracer-consistency struct by the dynamics subcycle fraction.
+  applies a forward-Euler update, and enforces conservation.  The returned
+  tracer-consistency struct is this step's own mass flux, unscaled: the
+  coupling step averages it over the dynamics subcycles.
 
   Parameters
   ----------
@@ -387,10 +388,6 @@ def advance_dynamics_euler(dynamics_in,
                                            dt,
                                            physics_config,
                                            model)
-  tracer_consist = sum_consistency_struct(tracer_consist,
-                                          tracer_consist,
-                                          0.0,
-                                          1.0 / timestep_config["dynamics_subcycle"])
   return dynamics_out_cont, tracer_consist
 
 
@@ -438,10 +435,11 @@ def advance_hypervis_euler(dynamics,
   state_out : dict[str, Array]
       Dynamics state after all hyperviscosity sub-steps.
   tracer_consist_total : dict[str, Array]
-      Accumulated tracer-consistency struct scaled by the joint
-      dynamics–hypervis subcycle fraction.
+      Tracer-consistency struct averaged over the hypervis subcycles.  It is
+      not scaled by the dynamics subcycle fraction; the coupling step averages
+      over dynamics subcycles.
   """
-  tracer_consist_frac = 1.0 / (timestep_config["dynamics_subcycle"] * timestep_config["hypervis_subcycle"])
+  tracer_consist_frac = 1.0 / timestep_config["hypervis_subcycle"]
   hypervis_dt = timestep_config["hyperviscosity"]["dt"]
 
   def _one_subcycle(state_in):
@@ -621,8 +619,9 @@ def advance_dynamics_ullrich_5stage(dynamics_in,
   final_state : dict[str, Array]
       Updated dynamics state after the 5-stage step.
   tracer_consist_total : dict[str, Array]
-      Tracer-consistency struct accumulated from stages 1 and 5, scaled by
-      the dynamics subcycle fraction.
+      Tracer-consistency struct for this step: the mass flux of stages 1 and
+      5 with the final-stage weights 1/4 and 3/4.  It is not scaled by the
+      dynamics subcycle fraction; the coupling step averages over subcycles.
   """
   horiz_exp_vert_imp = timestep_config["dynamics"]["step_type"] == time_step_options.RK3_5STAGE_HEVI
   # When the IMEX scheme is active the buoyancy ``(g w, g (mu - 1))``
@@ -633,7 +632,6 @@ def advance_dynamics_ullrich_5stage(dynamics_in,
   apply_buoyant = not horiz_exp_vert_imp
 
   dt = timestep_config["dynamics"]["dt"]
-  tracer_consist_frac = 1.0 / timestep_config["dynamics_subcycle"]
   dt_1 = dt / 5.0
   dynamics_tend, tracer_consist_0 = dynamics_tendency(dynamics_in,
                                                       static_forcing,
@@ -791,8 +789,11 @@ def advance_dynamics_ullrich_5stage(dynamics_in,
                                   dynamics_series=[dynamics_in,
                                                    dynamics_keep])
 
+  # The weights match the final stage, u^{n+1} = u^n + (dt/4) F(u^n) +
+  # (3 dt/4) F(u^{(4)}), so the flux reproduces this step's mass update.
+  # Averaging over dynamics subcycles happens once, in the coupling step.
   tracer_consist_total = sum_consistency_struct(tracer_consist_0,
                                                 tracer_consist_1,
-                                                1.0 / 4.0 * tracer_consist_frac,
-                                                3.0 / 4.0 * tracer_consist_frac)
+                                                1.0 / 4.0,
+                                                3.0 / 4.0)
   return final_state, tracer_consist_total
