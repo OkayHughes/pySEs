@@ -325,6 +325,21 @@ def wrap_dynamics(horizontal_wind,
   return state
 
 
+def _layer_midlevel_dry_pressure(d_mass, v_grid):
+  """Mid-level dry pressure of the layers as they are: p_top + cumsum(d_mass).
+
+  The T <-> theta_d conversions must use the actual layer pressures, the same
+  ones the theta_d dynamics uses for its Exner function
+  (``cam_se/explicit_terms_theta.py``). Between remaps the levels float, and
+  the hybrid-coordinate formula ``A_k p0 + B_k ps`` gives the pressures of
+  the reference levels instead. On reference levels the two agree to
+  round-off.
+  """
+  p_top = v_grid["hybrid_a_i"][0] * v_grid["reference_surface_mass"]
+  p_int = _cam_se_thermo.eval_interface_pressure(d_mass, p_top)
+  return _cam_se_thermo.eval_midlevel_pressure(p_int)
+
+
 @partial(jit, static_argnames=["model"])
 def se_T_to_theta_d_d_mass(dynamics, v_grid, physics_config, model):
   """Re-express a CAM-SE dynamics dict in the cam_se_stable variant.
@@ -373,8 +388,7 @@ def se_T_to_theta_d_d_mass(dynamics, v_grid, physics_config, model):
       downstream ``advance_dynamics_*`` call.
   """
   d_mass = dynamics["d_mass"]
-  surface_mass = d_mass_to_surface_mass(d_mass, v_grid)
-  p_mid = surface_mass_to_midlevel_mass(surface_mass, v_grid)
+  p_mid = _layer_midlevel_dry_pressure(d_mass, v_grid)
   exner = _cam_se_thermo.eval_exner_function(p_mid,
                                              physics_config["Rgas"],
                                              physics_config["cp"],
@@ -417,8 +431,7 @@ def se_theta_d_d_mass_to_T(dynamics, v_grid, physics_config, model):
       that model identifier.
   """
   d_mass = dynamics["d_mass"]
-  surface_mass = d_mass_to_surface_mass(d_mass, v_grid)
-  p_mid = surface_mass_to_midlevel_mass(surface_mass, v_grid)
+  p_mid = _layer_midlevel_dry_pressure(d_mass, v_grid)
   exner = _cam_se_thermo.eval_exner_function(p_mid,
                                              physics_config["Rgas"],
                                              physics_config["cp"],
