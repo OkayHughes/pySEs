@@ -96,9 +96,13 @@ def test_calc_perceived_phi_tend_shape_and_boundaries(synthetic_state):
   assert gw.shape == (s["NE"], s["NPT"], s["NPT"], s["NLEVP"])
   gw = np.asarray(unwrap(gw))
   assert np.all(np.isfinite(gw))
-  # The top + surface interfaces are explicitly zeroed by the helper.
+  # The model top is zero (B = 0 there); the surface carries the free-slip
+  # value u_lowest . grad(phi_s), as in HOMME's compute_gwphis.
   assert np.all(gw[..., 0] == 0.0)
-  assert np.all(gw[..., -1] == 0.0)
+  u = np.asarray(unwrap(s["horizontal_wind"]))[..., -1, :]
+  grad_phi_surf = np.asarray(unwrap(s["grad_phi_surf"]))
+  np.testing.assert_allclose(gw[..., -1], np.sum(u * grad_phi_surf, axis=-1),
+                             rtol=1e-12, atol=1e-12)
 
 
 def test_calc_perceived_phi_tend_vanishes_at_rest(synthetic_state):

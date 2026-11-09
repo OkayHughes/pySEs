@@ -322,5 +322,12 @@ def calc_perceived_phi_tend(v, d_mass, grad_phi_surf, phi_i,
        grad_z_surf[:, :, :, jnp.newaxis, 1])
       * v_grid["hybrid_b_i"][jnp.newaxis, jnp.newaxis, jnp.newaxis, 1:-1])
   zero = jnp.zeros_like(d_mass[:, :, :, 0:1])
-  gw_hat = jnp.concatenate((zero, w_i_exl_boundaries, zero), axis=-1)
+  # Surface entry: the free-slip value u_lowest . grad(z_s) (B = 1 there), as
+  # in HOMME's compute_gwphis. It cancels the surface geopotential advection
+  # in the explicit stage (so phi stays at phi_s) and, subtracted in the DIRK
+  # solve, gives the surface w its boundary value u . grad(phi_s) / g. A zero
+  # here pins the surface w to 0, forcing the flow into the orography.
+  w_i_surface = (v[:, :, :, -1, 0] * grad_z_surf[:, :, :, 0] +
+                 v[:, :, :, -1, 1] * grad_z_surf[:, :, :, 1])[:, :, :, jnp.newaxis]
+  gw_hat = jnp.concatenate((zero, w_i_exl_boundaries, w_i_surface), axis=-1)
   return gw_hat * phi_to_g(phi_i, physics_config, model)
