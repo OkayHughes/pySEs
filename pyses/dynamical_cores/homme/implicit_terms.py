@@ -177,6 +177,9 @@ def take_limited_step(dt_implicit,
                       model):
   """Backtracking-limited Newton update for ``(dphi, w)``.
 
+  ``w_guess``'s surface entry must already hold the boundary value
+  ``u . grad(phi_s) / g`` (see :func:`calc_implicit_update`).
+
   Computes the alpha-1 trial ``dphi_trial = dphi_n0 + dt * d/dt(dphi)``,
   detects unphysical (``dphi >= 0``) columns, and per such column
   halves the smallest non-negative ``alpha_k`` that would zero out
@@ -189,31 +192,26 @@ def take_limited_step(dt_implicit,
   # and deep atmospheres.
   g_n0 = jnp.broadcast_to(phi_to_g(phi_n0, physics_config, model),
                            phi_n0.shape)
-  # alpha = 1 candidate.  d_phi_tend[k] = g[k+1] u[k+1] - g[k] u[k] for
-  # k = 0..nlev-2, and d_phi_tend[nlev-1] = -g[nlev-1] u[nlev-1] where
-  # u = w + x.  The surface phi is fixed, so its tendency is zero.
-  phi_tend_interim = jnp.concatenate(
-      (g_n0[:, :, :, :-1] *
-       (w_guess[:, :, :, :-1] + w_search_dir[:, :, :, :-1]),
-       jnp.zeros_like(w_guess[:, :, :, -1:])),
-      axis=-1)
+  # alpha = 1 candidate.  d_phi_tend[k] = g[k+1] u[k+1] - g[k] u[k] with
+  # u = w + x on every interface, the surface included.  The surface entry
+  # of w is the free-slip value u . grad(phi_s) / g, which the search never
+  # moves (x = 0 there), and phi_n0's surface entry is phi_s - dt g w_surf
+  # (gw_phis was subtracted), so the surface phi stays at phi_s and the
+  # bottom layer gets the HOMME increment dt g (w_surf - w[nlev-1]).
+  # A zero surface tendency here would offset the bottom-layer thickness by
+  # dt g w_surf in every stage over orography, acting as a spurious form drag.
+  phi_tend_interim = g_n0 * (w_guess + w_search_dir)
   d_phi_tend = interface_to_delta(phi_tend_interim)
   dphi_trial = dphi_n0 + dt_implicit * d_phi_tend
   column_mask = jnp.sum(dphi_trial >= 0.0, axis=-1) > 0
 
-  # Per-mid-level dx and dw used in the alpha_k formula.  Fortran's
-  # ``k = nlev`` case is ``dx = -x(nlev)`` / ``dw = -w(nlev)``; in
-  # 0-indexed Python with the surface entry stored at ``-1`` (and pinned
-  # to zero by ``init_search_dir``), the active bottom interface is
-  # ``-2``.
-  d_search_dir = jnp.concatenate(
-      (w_search_dir[:, :, :, 1:-1] - w_search_dir[:, :, :, :-2],
-       -w_search_dir[:, :, :, -2:-1]),
-      axis=-1)
-  d_w_guess = jnp.concatenate(
-      (w_guess[:, :, :, 1:-1] - w_guess[:, :, :, :-2],
-       -w_guess[:, :, :, -2:-1]),
-      axis=-1)
+  # Per-mid-level dx and dw used in the alpha_k formula: the differences of
+  # the same interface values that build dphi above, so alpha_k is the
+  # exact step at which a layer thickness reaches zero.  The search
+  # direction's surface entry is zero, so the bottom dx is -x[nlev-1]; the
+  # bottom dw includes the surface w.
+  d_search_dir = w_search_dir[:, :, :, 1:] - w_search_dir[:, :, :, :-1]
+  d_w_guess = w_guess[:, :, :, 1:] - w_guess[:, :, :, :-1]
   # g_avg matches Fortran's ``g_from_phi((phi_n0(k)+phi_n0(k+1))/2)``;
   # under shallow + constant g this is just g, but the cancellation
   # below avoids needing the average explicitly.
@@ -229,11 +227,7 @@ def take_limited_step(dt_implicit,
 
   # Recompute dphi with the limited step length.
   step_b = safe_step_length[:, :, :, jnp.newaxis]
-  phi_tend_lim = jnp.concatenate(
-      (g_n0[:, :, :, :-1] *
-       (w_guess[:, :, :, :-1] + step_b * w_search_dir[:, :, :, :-1]),
-       jnp.zeros_like(w_guess[:, :, :, -1:])),
-      axis=-1)
+  phi_tend_lim = g_n0 * (w_guess + step_b * w_search_dir)
   dphi_lim = dphi_n0 + dt_implicit * interface_to_delta(phi_tend_lim)
   dphi_out = jnp.where(column_mask[:, :, :, jnp.newaxis],
                        dphi_lim, dphi_trial)
@@ -265,15 +259,16 @@ def _dirk_phi_from_w(dt_implicit, w, theta, physics_config, model):
   """Reconstruct ``(g_n0, dphi, phi_i)`` from the velocity iterate ``w``.
 
   Mirrors the in-loop update exactly: ``dphi = dphi_n0 + dt * delta(g_n0 w)``
-  with the surface tendency pinned to zero, and ``phi`` rebuilt from the
-  surface upward.
+  on every interface, and ``phi`` rebuilt from the surface upward. The
+  surface entry uses ``theta["w_surf"]`` (equal to ``w[-1]`` at the root)
+  rather than ``w[-1]``, so the interior rows do not depend on the surface
+  unknown and the identity surface row of :func:`_dirk_ift_linear_solve`
+  stays exact; the dependence on ``w_surf`` enters through ``theta``.
   """
   phi_n0 = theta["phi_n0"]
   g_n0 = jnp.broadcast_to(phi_to_g(phi_n0, physics_config, model),
                           phi_n0.shape)
-  phi_tend = jnp.concatenate(
-      (g_n0[:, :, :, :-1] * w[:, :, :, :-1],
-       jnp.zeros_like(w[:, :, :, -1:])), axis=-1)
+  phi_tend = g_n0 * jnp.concatenate((w[:, :, :, :-1], theta["w_surf"]), axis=-1)
   dphi = theta["dphi_n0"] + dt_implicit * interface_to_delta(phi_tend)
   phi = cumulative_sum(-dphi, theta["phi_surf"])
   return g_n0, dphi, phi
