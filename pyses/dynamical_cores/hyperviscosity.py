@@ -549,7 +549,16 @@ def eval_hypervis_terms(dynamics,
     w_i = None
 
   if model in homme_models:
-    thermo_tend = -hypervis_state[thermodynamic_variable_names[model]] * dynamics["d_mass"]
+    # HOMME diffuses theta_v and d_mass separately and then forms their
+    # product, so the tendency of theta_v * d_mass is
+    #   d_mass * tend(theta_v) + theta_v * tend(d_mass)
+    # (to first order in dt). Dropping the second term turns d_mass smoothing
+    # into anti-smoothing of theta_v: hyperviscosity then injects energy at the
+    # grid scale and destabilizes a balanced jet (measured: ne30 moist
+    # baroclinic wave without perturbation, max|u - u0| 0.37 -> 23 m/s by day 3).
+    theta_v = dynamics["theta_v_d_mass"] / dynamics["d_mass"]
+    thermo_tend = (-hypervis_state[thermodynamic_variable_names[model]] * dynamics["d_mass"]
+                   - theta_v * hypervis_state["d_mass"])
   else:
     thermo_tend = -hypervis_state[thermodynamic_variable_names[model]]
 
