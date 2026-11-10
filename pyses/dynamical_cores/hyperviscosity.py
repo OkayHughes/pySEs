@@ -386,7 +386,7 @@ def init_hypervis_config_tensor(h_grid,
                                 dims,
                                 config,
                                 nu_top=2.5e5,
-                                ad_hoc_scale=0.5,
+                                ad_hoc_scale=1.0,
                                 n_sponge=5,
                                 T_ref=288.0,
                                 T_ref_lapse=0.0065):
@@ -406,7 +406,9 @@ def init_hypervis_config_tensor(h_grid,
   nu_top : float, optional
       Sponge-layer viscosity at the model top (default: 2.5e5).
   ad_hoc_scale : float, optional
-      Empirical rescaling factor for the computed viscosity (default: 0.5).
+      Multiplier on the calibrated coefficient (default: 1.0, i.e. the
+      quasi-uniform CAM value at the coarsest element; see
+      :func:`~pyses.operations_2d.tensor_hyperviscosity.eval_variable_resolution_hypervisc_coeff`).
   n_sponge : int, optional
       Number of sponge-layer levels (default: 5).
   T_ref : float, optional
@@ -422,9 +424,10 @@ def init_hypervis_config_tensor(h_grid,
   nu_ramp = eval_nu_ramp(v_grid, n_sponge)
   radius_earth = config["radius_earth"]
   _, max_min_dx, _ = eval_global_grid_deformation_metrics(h_grid, dims)
-  nu_tens = eval_variable_resolution_hypervisc_coeff(radius_earth * max_min_dx,
+  nu_tens = eval_variable_resolution_hypervisc_coeff(max_min_dx,
                                                      h_grid["hypervis_scaling"],
-                                                     dims["npt"])
+                                                     dims["npt"],
+                                                     radius_earth=radius_earth)
   nu = device_wrapper(ad_hoc_scale * nu_tens)
   diffusion_config = {"tensor_hypervis": 1.0,
                       "nu": nu,

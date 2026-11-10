@@ -84,25 +84,42 @@ def eval_quasi_uniform_hypervisc_coeff(ne,
   return nu_base
 
 
-def eval_variable_resolution_hypervisc_coeff(smallest_gridpoint_dx,
+def eval_variable_resolution_hypervisc_coeff(coarsest_gll_dx,
                                              hypervis_scaling, npt,
                                              radius_earth=1.0):
   """
-  Estimate the tensor hyperviscosity coefficient for a variable-resolution grid.
+  Tensor hyperviscosity coefficient, calibrated to the quasi-uniform CAM value.
 
-  Computes the minimum-resolution hyperviscosity coefficient by scaling the
-  NE30 reference coefficient to the finest grid spacing, then applies the
-  resolution-dependent scaling exponent ``hypervis_scaling`` to derive the
-  tensor coefficient ``nu_tensor``.
+  The tensor of :func:`eval_hypervis_tensor` has eigenvalues
+  ``(Delta_e / 2)^hypervis_scaling`` on the unit sphere, with ``Delta_e`` the
+  element length along each principal direction, so the operator's effective
+  scalar coefficient at an element is ``nu_tensor * a^4 * (Delta_e / 2)^s``.
+  ``nu_tensor`` is chosen so that, at the coarsest element (GLL spacing
+  ``coarsest_gll_dx = Delta_e / (npt - 1)``), this equals the quasi-uniform
+  coefficient of :func:`eval_quasi_uniform_hypervisc_coeff` at the same spacing,
+
+      nu_ref = 1e15 m^4/s * (a / 6371 km) * (dx / dx_ne30)^(1 / log10 2),
+
+  with ``dx_ne30 = (pi / 2) / 90`` the ne30 np4 GLL spacing on the unit sphere.
+  Finer elements then get ``(Delta_e / Delta_coarsest)^s`` of that. On a
+  quasi-uniform ne30 grid this gives 1e15 m^4/s at the face centres (measured
+  sphere average on a zonal harmonic: ~0.8e15, since corner elements are
+  smaller).
+
+  (Before 2026-11-10 the caller passed ``a * dx`` in metres without passing
+  ``radius_earth``, so the radius entered as 1 in the small-planet factor, the
+  tensor normalisation and the final ``a^-4``: the coefficient was too small by
+  ``a^(s - 3)`` = 22.9 on Earth for s = 3.2, and the caller halved it again with
+  ``ad_hoc_scale = 0.5``; measured effective nu at ne30 was 1.9e13 m^4/s.)
 
   Parameters
   ----------
-  smallest_gridpoint_dx : float
-      Shortest GLL grid spacing in the mesh (m, on the unit sphere before
-      scaling by ``radius_earth``).
+  coarsest_gll_dx : float
+      Average GLL spacing along the short direction of the coarsest element,
+      on the unit sphere (``max_min_dx`` from
+      :func:`~pyses.operations_2d.horizontal_grid.eval_global_grid_deformation_metrics`).
   hypervis_scaling : float
-      Exponent controlling how strongly hyperviscosity is reduced on
-      fine-resolution regions (typically 3.2).
+      Exponent of the resolution dependence of the tensor (typically 3.2).
   npt : int
       Number of GLL points per element edge.
   radius_earth : float, optional
@@ -111,16 +128,14 @@ def eval_variable_resolution_hypervisc_coeff(smallest_gridpoint_dx,
   Returns
   -------
   nu_tensor : float
-      Tensor hyperviscosity coefficient scaled by ``radius_earth^{-4}``.
+      Tensor hyperviscosity coefficient (includes the ``radius_earth^{-4}``
+      of the unit-sphere operators).
   """
-  smallest_gridpoint_dx *= radius_earth
-  ne30_elem_length = 110000.0
-  small_planet_correction_factor = radius_earth / 6371e3
+  dx_ne30 = (np.pi / 2.0) / 90.0
   uniform_res_hypervis_scaling = 1.0 / np.log10(2.0)
-  ne_30_full_radius_coeff = 1e15 * small_planet_correction_factor
-  ne_30_full_radius_coeff *= (smallest_gridpoint_dx / ne30_elem_length)**uniform_res_hypervis_scaling
-  nu_min = ne_30_full_radius_coeff * (2.0 * radius_earth / ((npt - 1.0) * smallest_gridpoint_dx))**(hypervis_scaling)
-  nu_tensor = nu_min / (radius_earth**4)
+  nu_ref = (1e15 * (radius_earth / 6371e3)
+            * (coarsest_gll_dx / dx_ne30)**uniform_res_hypervis_scaling)
+  nu_tensor = nu_ref * (2.0 / ((npt - 1.0) * coarsest_gll_dx))**hypervis_scaling / radius_earth**4
   return nu_tensor
 
 
