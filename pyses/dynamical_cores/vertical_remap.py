@@ -167,12 +167,13 @@ def zerroukat_remap(tracer_mass,
       cond3 = lev(dy, k) * lev(dy, ip1) > 0
       cond4 = lev(dy, im2) * lev(dy, k) < 0
       t2 = jnp.where(cond1 * cond2 * cond3 * cond4 == 1, ones, zeros)
-      t3 = jnp.where(lev(rhs, k) - lev(zarg, im1) > jnp.abs(lev(rhs, k) - lev(zarg, k)), ones, zeros)
+      t3 = jnp.where(jnp.abs(lev(rhs, k) - lev(zarg, im1)) > jnp.abs(lev(rhs, k) - lev(zarg, k)),
+                     ones, zeros)
       filter_code.append(jnp.where(t1 + t2 > 0, zeros, ones))
       rhs_tmp.append((1.0 - filter_code[k]) * lev(rhs, k) +
                      filter_code[k] * (t3 * lev(zarg, k) + (1.0 - t3) * lev(zarg, im1)))
       filter_code[im1] = jnp.maximum(filter_code[im1], filter_code[k])
-    rhs = jnp.flip(jnp.stack(rhs_tmp, axis=-2), -2)
+    rhs = jnp.stack(rhs_tmp[1:] + [rhs[:, :, :, num_lev, :]], axis=-2)
     rhs = jnp.where(rhs > qmax, qmax, rhs)
     rhs = jnp.where(rhs < 0, 0.0, rhs)
     za0_base = rhs[:, :, :, :-1, :]
