@@ -3,7 +3,86 @@ _be = _get_backend()
 jnp = _be.np
 
 
-def clip_and_sum_limiter(tracer_mass_tend, mass_matrix, tracer_min, tracer_max, d_mass):
+def _default_tau_A(smooth_tau, mass_matrix, d_mass):
+  # A (the redistributed mass) has units of q times scaled mass, so its
+  # switch width is tau times a typical scaled mass.
+  return smooth_tau * jnp.mean(mass_matrix) * jnp.mean(d_mass)
+
+
+def clip_and_sum_limiter(tracer_mass_tend, mass_matrix, tracer_min, tracer_max, d_mass,
+                         smooth_tau=None, smooth_tau_A=None):
+  """
+  Apply a clip-and-redistribute limiter to tracer mass tendencies.
+
+  With ``smooth_tau=None`` (default) this is exactly
+  :func:`_clip_and_sum_exact`. With ``smooth_tau`` set (mixing-ratio units),
+  the value is still the exact limiter's (up to one rounding), but the
+  derivative is taken from :func:`_clip_and_sum_surrogate`, whose clip and
+  redistribution switches are logistic functions of width ``smooth_tau``
+  (``smooth_tau_A`` for the redistribution direction; default
+  ``smooth_tau`` times a typical scaled mass). This is a category-C
+  straight-through remedy (docs/ad_hardening_strategy.md §3): the exact
+  limiter's tangent switches at equalities the model manufactures, so it is
+  only defined to roundoff-selected one-sided derivatives. Both arguments
+  must be static under jit.
+
+  Parameters and returns are those of :func:`_clip_and_sum_exact`.
+  """
+  exact = _clip_and_sum_exact(tracer_mass_tend, mass_matrix, tracer_min, tracer_max, d_mass)
+  if smooth_tau is None:
+    return exact
+  from ..smoothing import straight_through
+  tau_A = (smooth_tau_A if smooth_tau_A is not None
+           else _default_tau_A(smooth_tau, mass_matrix, d_mass))
+  surrogate = _clip_and_sum_surrogate(tracer_mass_tend, mass_matrix, tracer_min, tracer_max,
+                                      d_mass, smooth_tau, tau_A)
+  return straight_through(exact, surrogate)
+
+
+def _clip_and_sum_surrogate(tracer_mass_tend, mass_matrix, tracer_min, tracer_max, d_mass,
+                            tau, tau_A):
+  """
+  Smooth-mask twin of :func:`_clip_and_sum_exact`, used only on the tangent
+  path of :func:`clip_and_sum_limiter` (never with the flag off).
+
+  The clip decisions become ``over = sigmoid((q - qmax) / tau)`` and
+  ``under = sigmoid((qmin - q) / tau)``; the redistribution direction
+  becomes ``s = sigmoid(A / tau_A)``, blending the two receiver patterns.
+  The removed mass ``A`` is defined as the sum of what the smoothed clip
+  removed and the clipped tracer is derived from it, and the same
+  adjustment pattern appears in the numerator and the denominator of the
+  redistribution, so element-level mass is conserved algebraically,
+  whatever the masks; hence so is the tangent. The bound relaxation (to the
+  element mean) is left exact, and the no-receiver guard stays hard.
+  """
+  from ..smoothing import stable_sigmoid as sig
+  c = mass_matrix[:, :, :, jnp.newaxis] * d_mass                  # scaled mass
+  q = tracer_mass_tend / d_mass
+  csum = jnp.sum(c, axis=(1, 2))
+  qsum = jnp.sum(q * c, axis=(1, 2))
+  # Bound relaxation exactly as in the exact limiter (generic kink, left exact).
+  qmin = jnp.where(qsum < tracer_min * csum, qsum / csum, tracer_min)[:, jnp.newaxis, jnp.newaxis, :]
+  qmax = jnp.where(qsum > tracer_max * csum, qsum / csum, tracer_max)[:, jnp.newaxis, jnp.newaxis, :]
+
+  # Smoothed clip: the signed mass removed per cell first, the clipped tracer from it.
+  over = sig((q - qmax) / tau)
+  under = sig((qmin - q) / tau)
+  add = (over * (q - qmax) + under * (q - qmin)) * c
+  q1 = q - add / c                     # == (1 - over - under) q + over qmax + under qmin
+  A = jnp.sum(add, axis=(1, 2))        # exactly the mass removed, per element-level
+
+  # Smoothed redistribution direction: receivers' room above (A > 0) or below (A < 0).
+  s = sig(A / tau_A)[:, jnp.newaxis, jnp.newaxis, :]
+  adj = s * (qmax - q1) + (1.0 - s) * (q1 - qmin)   # at A ~ 0: (qmax - qmin) / 2, uniform
+  D = jnp.sum(adj * c, axis=(1, 2))
+  thresh = 1e-12 * csum
+  ok = (D > thresh)[:, jnp.newaxis, jnp.newaxis, :]
+  safe_D = jnp.where(D > thresh, D, 1.0)[:, jnp.newaxis, jnp.newaxis, :]
+  q2 = jnp.where(ok, q1 + (A[:, jnp.newaxis, jnp.newaxis, :] / safe_D) * adj, q1)
+  return q2 * d_mass
+
+
+def _clip_and_sum_exact(tracer_mass_tend, mass_matrix, tracer_min, tracer_max, d_mass):
   """
   Apply a clip-and-redistribute limiter to tracer mass tendencies.
 
@@ -80,7 +159,71 @@ def clip_and_sum_limiter(tracer_mass_tend, mass_matrix, tracer_min, tracer_max, 
   return tracer_mass_tend_out
 
 
-def full_limiter(tracer_mass_tend, mass_matrix, tracer_min, tracer_max, d_mass, tol_limiter=1e-10):
+def full_limiter(tracer_mass_tend, mass_matrix, tracer_min, tracer_max, d_mass, tol_limiter=1e-10,
+                 smooth_tau=None, smooth_tau_A=None):
+  """
+  Apply an iterative mass-conservative limiter to tracer mass tendencies.
+
+  ``smooth_tau``/``smooth_tau_A`` as in :func:`clip_and_sum_limiter`: value of
+  :func:`_full_limiter_exact`, derivative of :func:`_full_limiter_surrogate`.
+  Other parameters and returns are those of :func:`_full_limiter_exact`.
+  """
+  exact = _full_limiter_exact(tracer_mass_tend, mass_matrix, tracer_min, tracer_max, d_mass,
+                              tol_limiter=tol_limiter)
+  if smooth_tau is None:
+    return exact
+  from ..smoothing import straight_through
+  tau_A = (smooth_tau_A if smooth_tau_A is not None
+           else _default_tau_A(smooth_tau, mass_matrix, d_mass))
+  surrogate = _full_limiter_surrogate(tracer_mass_tend, mass_matrix, tracer_min, tracer_max,
+                                      d_mass, smooth_tau, tau_A)
+  return straight_through(exact, surrogate)
+
+
+def _full_limiter_surrogate(tracer_mass_tend, mass_matrix, tracer_min, tracer_max, d_mass,
+                            tau, tau_A):
+  """
+  Smooth-mask twin of :func:`_full_limiter_exact` (tangent path only).
+
+  Each of the ``npt^2 - 1`` iterations applies the smoothed clip of
+  :func:`_clip_and_sum_surrogate`; the receivers of the redistributed mass
+  (cells strictly inside the bound, uniform increment in q) get the smooth
+  weights ``sigmoid((qmax - q) / tau)`` (mass added) and
+  ``sigmoid((q - qmin) / tau)`` (mass removed), blended by
+  ``sigmoid(A / tau_A)``. Each branch is normalized by its own weight sum,
+  so element-level mass is conserved whatever the masks. A cell left exactly
+  on a bound by an earlier iteration gets half weight here where the exact
+  limiter excludes it: that equality is one the iteration manufactures.
+  """
+  from ..smoothing import stable_sigmoid as sig
+  npt = tracer_mass_tend.shape[1]
+  c = mass_matrix[:, :, :, jnp.newaxis] * d_mass
+  q = tracer_mass_tend / d_mass
+  csum = jnp.sum(c, axis=(1, 2))
+  qsum = jnp.sum(q * c, axis=(1, 2))
+  qmin = jnp.where(qsum < tracer_min * csum, qsum / csum, tracer_min)[:, jnp.newaxis, jnp.newaxis, :]
+  qmax = jnp.where(qsum > tracer_max * csum, qsum / csum, tracer_max)[:, jnp.newaxis, jnp.newaxis, :]
+  for iter_idx in range(npt * npt - 1):
+    over = sig((q - qmax) / tau)
+    under = sig((qmin - q) / tau)
+    add = (over * (q - qmax) + under * (q - qmin)) * c
+    q1 = q - add / c
+    A = jnp.sum(add, axis=(1, 2))[:, jnp.newaxis, jnp.newaxis, :]
+    s = sig(A / tau_A)
+    r_up = sig((qmax - q1) / tau)
+    r_down = sig((q1 - qmin) / tau)
+    w_up = jnp.sum(r_up * c, axis=(1, 2))[:, jnp.newaxis, jnp.newaxis, :]
+    w_down = jnp.sum(r_down * c, axis=(1, 2))[:, jnp.newaxis, jnp.newaxis, :]
+    # Hard no-receiver guards, as in the exact limiter.
+    zero = jnp.zeros_like(q1)
+    up = jnp.where(w_up > 0.0, A * r_up / jnp.where(w_up > 0.0, w_up, 1.0), zero)
+    down = jnp.where(w_down > 0.0, A * r_down / jnp.where(w_down > 0.0, w_down, 1.0), zero)
+    q = q1 + s * up + (1.0 - s) * down
+  return q * d_mass
+
+
+def _full_limiter_exact(tracer_mass_tend, mass_matrix, tracer_min, tracer_max, d_mass,
+                        tol_limiter=1e-10):
   """
   Apply an iterative mass-conservative limiter to tracer mass tendencies.
 

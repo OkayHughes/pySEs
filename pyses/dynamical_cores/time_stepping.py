@@ -204,7 +204,9 @@ def init_timestep_config(dt_coupling,
                          physics_dynamics_coupling=coupling_types.none,
                          print_cfl=DEBUG,
                          remap_search_tau=None,
-                         cam_se_dynamics_form="theta_d"):
+                         cam_se_dynamics_form="theta_d",
+                         limiter_tau=None,
+                         limiter_tau_A=None):
   """
   Build the time-stepping configuration dict for the 3-D dynamical core.
 
@@ -252,6 +254,17 @@ def init_timestep_config(dt_coupling,
       gradient studies; needed when model interfaces sit on reference
       interfaces, e.g. an atmosphere at rest.  ``None`` (default) keeps the
       production remap and omits the key from the returned config.
+  limiter_tau : float or None, optional
+      Width (mixing-ratio units) of the straight-through surrogate derivative
+      for the tracer limiter's clip switches (see
+      :func:`~pyses.operations_2d.limiters.clip_and_sum_limiter`). Opt-in for
+      gradient studies: the value stays the exact limiter's. ``None``
+      (default) keeps the production limiter and omits the key.
+  limiter_tau_A : float or None, optional
+      Width of the surrogate's redistribution-direction switch, in units of
+      mixing ratio times scaled mass; ``None`` derives it from
+      ``limiter_tau`` and a typical scaled mass. Ignored unless
+      ``limiter_tau`` is set.
   cam_se_dynamics_form : {"theta_d", "T"}, optional
       Which formulation advances T-based CAM-SE dynamics: the theta_d
       (``_stable``) variant (default, key omitted from the config) or the
@@ -332,6 +345,12 @@ def init_timestep_config(dt_coupling,
                     physics_dynamics_coupling=physics_dynamics_coupling)
   if remap_search_tau is not None:
     timestep_config["remap_search_tau"] = float(remap_search_tau)
+  if limiter_tau is not None:
+    smoothing = {"limiter_tau": float(limiter_tau)}
+    if limiter_tau_A is not None:
+      smoothing["limiter_tau_A"] = float(limiter_tau_A)
+    timestep_config["tracer_advection"] = frozendict(timestep_config["tracer_advection"],
+                                                     ad_smoothing=frozendict(smoothing))
   if cam_se_dynamics_form not in ("theta_d", "T"):
     raise ValueError(f"cam_se_dynamics_form must be 'theta_d' or 'T', not {cam_se_dynamics_form!r}")
   if cam_se_dynamics_form != "theta_d":

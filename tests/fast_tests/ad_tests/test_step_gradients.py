@@ -54,6 +54,26 @@ def cam_case():
   return _build_case()
 
 
+# Straight-through limiter surrogate (increment 8): value of the exact limiter,
+# derivative of a smooth-mask surrogate for the clip/redistribution switches
+# and a softmax tie split for the element/DSS bounds. 1e-8 in mixing ratio is
+# far above roundoff and far below physical overshoots.
+LIMITER_TAU = 1e-8
+
+
+@pytest.fixture(scope="module")
+def cam_case_smooth(cam_case):
+  tc = cam_case["timestep_config"]
+  case = dict(cam_case)
+  case["timestep_config"] = init_timestep_config(
+      tc["physics_dt"], cam_case["h_grid"], cam_case["physics_config"],
+      cam_case["diffusion_config"], cam_case["dims"], cam_case["model"],
+      dynamics_tstep_type=tc["dynamics"]["step_type"],
+      physics_dynamics_coupling=tc["physics_dynamics_coupling"],
+      limiter_tau=LIMITER_TAU)
+  return case
+
+
 @pytest.fixture(scope="module")
 def homme_case():
   state, h_grid, v_grid, dims, physics_config, model = (
@@ -139,6 +159,50 @@ def test_homme_nh_step_forward_reverse(homme_case):
                         _controls(homme_case, ("w_i", "theta_v_d_mass")),
                         what="homme NH coupling step",
                         rtol=STEP_IDENTITY_RTOL)
+
+
+def _ulp_perturbed(primals, seed):
+  rng = np.random.default_rng(seed)
+  out = []
+  for p in primals:
+    h = np.asarray(to_host(p), dtype=float)
+    up = rng.random(h.shape) < 0.5
+    out.append(device_wrapper(np.where(up, np.nextafter(h, np.inf),
+                                       np.nextafter(h, -np.inf))))
+  return tuple(out)
+
+
+def _flat(tree):
+  return np.concatenate([np.asarray(to_host(leaf), dtype=float).ravel()
+                         for leaf in tree])
+
+
+def test_cam_se_step_jv_ulp_stable_with_limiter_surrogate(cam_case_smooth):
+  # The headline of increment 8. With the exact limiter, J.v moves by
+  # 4e-6..8e-6 relative (98-99% of entries) under a 1-ulp input change: the
+  # bounds tie exactly by construction and the clip compares values against
+  # them, so the tangent is a roundoff-selected one-sided derivative.
+  # Measured with the surrogate (jax, GPU): 4e-15.
+  keys = ("T", "horizontal_wind")
+  fn = _make_step_fn(cam_case_smooth, keys, ("T", "horizontal_wind", "d_mass"))
+  primals = _controls(cam_case_smooth, keys)
+  tangents = scaled_tangents_like(primals, seed=0)
+  _, jv = _be.jvp(fn, primals, tangents)
+  base = _flat(jv)
+  for seed in (1, 2):
+    _, jv_ulp = _be.jvp(fn, _ulp_perturbed(primals, seed), tangents)
+    rel = np.linalg.norm(_flat(jv_ulp) - base) / np.linalg.norm(base)
+    assert rel < 1e-11, f"J.v moved {rel:.2e} under a 1-ulp input change"
+
+
+def test_cam_se_step_forward_reverse_with_limiter_surrogate(cam_case_smooth):
+  # Separately compiled jvp and vjp programs no longer linearize at
+  # eps-different points of a degenerate switch: measured 1.6e-14 (flag off:
+  # 5e-6, the STEP_IDENTITY_RTOL regime).
+  fn = _make_step_fn(cam_case_smooth, ("T", "horizontal_wind"),
+                     ("T", "horizontal_wind", "d_mass"))
+  probe_forward_reverse(fn, _controls(cam_case_smooth, ("T", "horizontal_wind")),
+                        what="cam_se coupling step, limiter surrogate", rtol=1e-10)
 
 
 # Note on finite differences at this layer: full-step directional FD was
@@ -227,3 +291,20 @@ def test_cam_se_trajectory_checkpoint_equivalent(cam_case):
   assert rel_l2 < 0.05, (
       f"checkpointed trajectory gradient deviates {rel_l2:.3e} in "
       f"relative L2 from the plain gradient")
+
+
+def test_cam_se_trajectory_with_limiter_surrogate(cam_case_smooth):
+  # With the surrogate, the 2-step forward/reverse identity and the
+  # checkpointed gradient both reach roundoff (measured 1.3e-12 and 5.9e-12
+  # relative L2; flag off: 3.7e-4 and 6.4e-4, up to 140% per entry).
+  primals = _controls(cam_case_smooth, ("T", "horizontal_wind"))
+  loss_plain = _rollout_loss_fn(cam_case_smooth, use_checkpoint=False)
+  loss_ck = _rollout_loss_fn(cam_case_smooth, use_checkpoint=True)
+  grads = _be.grad(loss_plain, argnums=(0, 1))(*primals)
+  tangents = scaled_tangents_like(primals, seed=11)
+  _, tangent_out = _be.jvp(loss_plain, primals, tangents)
+  lhs = float(to_host(tangent_out))
+  np.testing.assert_allclose(lhs, tree_dot(grads, tangents), rtol=1e-9)
+  g_plain = np.asarray(to_host(grads[0]), dtype=float)
+  g_ck = np.asarray(to_host(_be.grad(loss_ck)(*primals)), dtype=float)
+  assert np.linalg.norm(g_ck - g_plain) / np.linalg.norm(g_plain) < 1e-9

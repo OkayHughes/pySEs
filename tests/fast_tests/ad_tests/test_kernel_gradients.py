@@ -139,18 +139,25 @@ def _crossing_fd(scalar_fn, hosts, tans, h=1e-6):
   return (f_plus - f_minus) / (2.0 * h)
 
 
+# Central-FD step for the slope across the crossing: well above the 1e-9 Pa
+# offset of the nearby crossing and well below the 100 Pa layers, i.e. the
+# slope an optimizer step sees. (At h below the offset, FD resolves the
+# branches instead: -7702 at 1e-10 Pa.)
+CROSSING_FD_H = 1e-4
+
+
 def test_zerroukat_remap_crossing_frozen_by_default():
   # Category-C default policy (strategy §3): the integer cell search
   # (vertical_remap.py:70-76) is deliberately frozen, so the exact
-  # derivative is the branch derivative — measurably different (wrong
-  # sign here: ~ +700 vs -5252) from finite differences across an
-  # interface crossing. This pins the documented trade; the smoothed
-  # variant below is the opt-in remedy.
+  # derivative is the branch derivative — measurably different from finite
+  # differences across an interface crossing (after c723470: frozen
+  # -1400.0, FD -2800.05, i.e. half the slope). This pins the documented
+  # trade; the smoothed variant below is the opt-in remedy.
   primals, tangents, hosts, tans = _crossing_setup()
   fn = _crossing_scalar_fn(None)
   _, ad_dir = _be.jvp(fn, primals, tangents)
-  fd_dir = _crossing_fd(fn, hosts, tans)
-  assert abs(float(to_host(ad_dir)) - fd_dir) > 0.5 * abs(fd_dir), (
+  fd_dir = _crossing_fd(fn, hosts, tans, h=CROSSING_FD_H)
+  assert abs(float(to_host(ad_dir)) - fd_dir) > 0.4 * abs(fd_dir), (
       "frozen-search derivative unexpectedly matches crossing FD — "
       "did the search become differentiable?")
 
@@ -160,12 +167,16 @@ def test_zerroukat_remap_crossing_smoothed():
   # tau of a model interface the derivative blends the two candidate
   # cells' reconstructions; because the cumulative integral is continuous
   # at the crossing, the blend reproduces the kink-averaged slope that
-  # central FD measures across the switch — measured agreement 7e-9
-  # relative (frozen AD: +700; smoothed AD and FD: -5252.450).
+  # central FD measures across the switch. The blend mollifies at its own
+  # width, so at any tau it tracks FD at step h ~ tau; comparing at h = tau
+  # is satisfied by construction. Compare instead at an optimizer-sized
+  # step, with tau between the crossing offset and the layer thickness:
+  # measured after c723470, smoothed -2800.0005 (tau = 1e-2 Pa) vs FD
+  # -2800.053 (h = 1e-4 Pa), 1.9e-5 relative; frozen -1400.0.
   primals, tangents, hosts, tans = _crossing_setup()
-  _, ad_dir = _be.jvp(_crossing_scalar_fn(1e-6), primals, tangents)
-  fd_dir = _crossing_fd(_crossing_scalar_fn(None), hosts, tans)
-  np.testing.assert_allclose(float(to_host(ad_dir)), fd_dir, rtol=1e-6)
+  _, ad_dir = _be.jvp(_crossing_scalar_fn(1e-2), primals, tangents)
+  fd_dir = _crossing_fd(_crossing_scalar_fn(None), hosts, tans, h=CROSSING_FD_H)
+  np.testing.assert_allclose(float(to_host(ad_dir)), fd_dir, rtol=1e-4)
 
 
 def test_zerroukat_remap_smoothed_matches_exact_away_from_crossings():

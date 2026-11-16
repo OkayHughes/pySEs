@@ -10,11 +10,12 @@ jnp = _be.np
 jit = _be.jit
 
 
-@partial(jit, static_argnames=["dims", "max"])
+@partial(jit, static_argnames=["dims", "max", "smooth_tau"])
 def minmax_scalar_3d(scalar,
                      h_grid,
                      dims,
-                     max=True):
+                     max=True,
+                     smooth_tau=None):
   """
   Compute the element-local min or max of a 3-D scalar field via DSS.
 
@@ -32,13 +33,15 @@ def minmax_scalar_3d(scalar,
   max : bool, optional
       If True compute the maximum; if False compute the minimum
       (default: True).
+  smooth_tau : float or None, optional
+      Straight-through tie split of :func:`minmax_scalar` (default: exact).
 
   Returns
   -------
   result : Array[tuple[elem_idx, gll_idx, gll_idx, lev_idx], Float]
       Field with each node replaced by the DSS-global min or max.
   """
-  sph_op = partial(minmax_scalar, grid=h_grid, max=max, dims=dims)
+  sph_op = partial(minmax_scalar, grid=h_grid, max=max, dims=dims, smooth_tau=smooth_tau)
   return _be.vmap(sph_op, in_axes=-1, out_axes=-1)(scalar)
 
 
@@ -69,8 +72,8 @@ def project_tracer_3d(scalar,
   return _be.vmap(sph_op, in_axes=-1, out_axes=-1)(scalar)
 
 
-@partial(jit, static_argnames=["dims"])
-def calc_minmax(tracers, grid, dims):
+@partial(jit, static_argnames=["dims", "smooth_tau"])
+def calc_minmax(tracers, grid, dims, smooth_tau=None):
   """
   Compute DSS-global element-wise min and max for a batch of 3-D tracers.
 
@@ -82,6 +85,16 @@ def calc_minmax(tracers, grid, dims):
       Horizontal spectral element grid.
   dims : frozendict[str, int]
       Grid dimension parameters.
+  smooth_tau : float or None, optional
+      Opt-in straight-through tie split (mixing-ratio units) for all three
+      reductions — element min/max, the DSS min/max over shared nodes, and
+      the final min/max over the element's nodes. Values are exact; the
+      derivative is a softmax-weighted mean over values within ~``smooth_tau``
+      of the extremum. The bounds tie exactly by construction (an extremum
+      on a shared node is the same value in both elements; interior nodes
+      hold the element's own extremum), and the exact derivative splits
+      over whichever set is tied, which a 1-ulp change reshuffles.
+      ``None`` (default): exact reductions.
 
   Returns
   -------
@@ -90,8 +103,19 @@ def calc_minmax(tracers, grid, dims):
   tracer_elem_lev_maxs : Array[tuple[n_tracers, elem_idx, lev_idx], Float]
       Element-level global maximum for each tracer.
   """
-  minvals = jnp.min(tracers, axis=(2, 3))
-  maxvals = jnp.max(tracers, axis=(2, 3))
+  if smooth_tau is None:
+    reduce_min = jnp.min
+    reduce_max = jnp.max
+  else:
+    from ..smoothing import soft_reduce_max, soft_reduce_min
+
+    def reduce_min(x, axis):
+      return soft_reduce_min(x, axis, smooth_tau)
+
+    def reduce_max(x, axis):
+      return soft_reduce_max(x, axis, smooth_tau)
+  minvals = reduce_min(tracers, axis=(2, 3))
+  maxvals = reduce_max(tracers, axis=(2, 3))
   # vmap over the leading tracer axis instead of a Python loop: one batched DSS
   # min/max exchange rather than n_tracers skinny ones (the DSS indices are
   # unbatched, only the payload is batched).  node_shape broadcasts the
@@ -101,18 +125,20 @@ def calc_minmax(tracers, grid, dims):
 
   def per_tracer_min(minv):
     field = jnp.broadcast_to(minv[:, np.newaxis, np.newaxis, :], node_shape)
-    return jnp.min(minmax_scalar_3d(field, grid, dims, max=False), axis=(1, 2))
+    return reduce_min(minmax_scalar_3d(field, grid, dims, max=False, smooth_tau=smooth_tau),
+                      axis=(1, 2))
 
   def per_tracer_max(maxv):
     field = jnp.broadcast_to(maxv[:, np.newaxis, np.newaxis, :], node_shape)
-    return jnp.max(minmax_scalar_3d(field, grid, dims, max=True), axis=(1, 2))
+    return reduce_max(minmax_scalar_3d(field, grid, dims, max=True, smooth_tau=smooth_tau),
+                      axis=(1, 2))
 
   tracer_elem_lev_mins = _be.vmap(per_tracer_min)(minvals)
   tracer_elem_lev_maxs = _be.vmap(per_tracer_max)(maxvals)
   return tracer_elem_lev_mins, tracer_elem_lev_maxs
 
 
-@partial(jit, static_argnames=["dims"])
+@partial(jit, static_argnames=["dims", "limiter_tau", "limiter_tau_A"])
 def tracer_euler_step(tracer_mass_stacked,
                       dt,
                       u_d_mass_avg,
@@ -121,7 +147,9 @@ def tracer_euler_step(tracer_mass_stacked,
                       hypervis_tracer_tend,
                       physics_config,
                       grid,
-                      dims):
+                      dims,
+                      limiter_tau=None,
+                      limiter_tau_A=None):
   """
   Advance a batch of tracer-mass fields by one Euler substep with flux-form advection and limiting.
 
@@ -145,6 +173,12 @@ def tracer_euler_step(tracer_mass_stacked,
       Horizontal spectral element grid.
   dims : frozendict[str, int]
       Grid dimension parameters.
+  limiter_tau, limiter_tau_A : float or None, optional
+      Straight-through surrogate widths for the limiter's derivative (static;
+      ``None``: the exact limiter's derivative): ``limiter_tau`` for the clip
+      switches (:func:`~pyses.operations_2d.limiters.clip_and_sum_limiter`)
+      and the bound ties (:func:`calc_minmax`), ``limiter_tau_A`` for the
+      redistribution direction.
 
   Returns
   -------
@@ -152,7 +186,8 @@ def tracer_euler_step(tracer_mass_stacked,
       Updated stacked tracer-mass fields after one Euler substep.
   """
   interim_velocity = u_d_mass_avg / interim_d_mass[:, :, :, :, np.newaxis]
-  tracer_mins, tracer_maxs = calc_minmax(tracer_mass_stacked / interim_d_mass, grid, dims)
+  tracer_mins, tracer_maxs = calc_minmax(tracer_mass_stacked / interim_d_mass, grid, dims,
+                                         smooth_tau=limiter_tau)
 
   # vmap the per-tracer advect/limit/project over the leading tracer axis
   # (tracer_mass, hypervis tendency, and the two limiter bounds are all batched
@@ -163,7 +198,8 @@ def tracer_euler_step(tracer_mass_stacked,
                                             physics_config)
     tracer_out = tracer_mass + dt * tracer_tend + hypervis_tend
     tracer_out = clip_and_sum_limiter(tracer_out, grid["mass_matrix"],
-                                      tracer_min, tracer_max, d_mass_for_limiter)
+                                      tracer_min, tracer_max, d_mass_for_limiter,
+                                      smooth_tau=limiter_tau, smooth_tau_A=limiter_tau_A)
     return project_tracer_3d(tracer_out, grid, dims)
 
   return _be.vmap(per_tracer)(tracer_mass_stacked, hypervis_tracer_tend, tracer_mins, tracer_maxs)
@@ -314,6 +350,10 @@ def advance_tracers_rk2(tracer_mass_in,
   """
   d_mass_tend_dyn_cont = project_tracer_3d(d_mass_tend_dyn, grid, dims)
   dt = timestep_config["tracer_advection"]["dt"]
+  # Opt-in straight-through limiter derivative (absent: the exact limiter).
+  smoothing = timestep_config["tracer_advection"].get("ad_smoothing", {})
+  limiter = dict(limiter_tau=smoothing.get("limiter_tau"),
+                 limiter_tau_A=smoothing.get("limiter_tau_A"))
   num_rk_stages = 3
   if d_mass_hypervis_avg is not None:
     hypervis_d_mass_scale = d_mass_hypervis_avg
@@ -331,7 +371,8 @@ def advance_tracers_rk2(tracer_mass_in,
                                       jnp.zeros_like(tracer_mass_in),
                                       physics_config,
                                       grid,
-                                      dims)
+                                      dims,
+                                      **limiter)
   intermediate_d_mass = intermediate_d_mass_dynamics(d_mass_init, d_mass_tend_dyn_cont, dt, 1)
   d_mass_limiter = limiter_d_mass(d_mass_init, d_mass_tend_dyn, d_mass_tend_dyn_cont, dt, 1)
 
@@ -343,7 +384,8 @@ def advance_tracers_rk2(tracer_mass_in,
                                       jnp.zeros_like(tracer_mass_in),
                                       physics_config,
                                       grid,
-                                      dims)
+                                      dims,
+                                      **limiter)
   intermediate_d_mass = intermediate_d_mass_dynamics(d_mass_init, d_mass_tend_dyn_cont, dt, 2)
   d_mass_limiter = limiter_d_mass(d_mass_init, d_mass_tend_dyn, d_mass_tend_dyn_cont, dt, 2)
 
@@ -371,6 +413,7 @@ def advance_tracers_rk2(tracer_mass_in,
                                       hypervis_tend,
                                       physics_config,
                                       grid,
-                                      dims)
+                                      dims,
+                                      **limiter)
   tracer_mass_out = (tracer_mass_in + (num_rk_stages - 1.0) * tracer_mass_out) / num_rk_stages
   return tracer_mass_out

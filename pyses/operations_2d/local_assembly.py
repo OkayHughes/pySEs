@@ -183,11 +183,12 @@ def do_max_manual_sharding(scaled_f, elem_idx, i_idx, j_idx, relevant_data):
   return scaled_f
 
 
-@partial(jit, static_argnames=["dims", "max"])
+@partial(jit, static_argnames=["dims", "max", "smooth_tau"])
 def minmax_scalar(f,
                   grid,
                   dims,
-                  max=True):
+                  max=True,
+                  smooth_tau=None):
   """
   Project a potentially discontinuous scalar onto the continuous subspace using assembly triples,
   assuming all data is processor-local.
@@ -202,6 +203,15 @@ def minmax_scalar(f,
     Scalar grid dimensions (``shape``, ``npt``).
   max : bool, default=True
     If true, compute maximum over redundant DOFs. Otherwise, compute min.
+  smooth_tau : float or None, default=None
+    Opt-in straight-through tie split (static): the value is the exact
+    min/max, the derivative a softmax-weighted mean of the redundant copies,
+    weights ``exp((x - max) / smooth_tau)``. Exact ties (e.g. an element
+    extremum on a shared edge, which is the same value in both elements) then
+    split the derivative with weights that a 1-ulp change does not reshuffle.
+    After the exact reduction every copy of a node holds the same extremum,
+    so the softmax is a ratio of two plain assembly sums over the same copy
+    structure. ``None``: the exact reduction's derivative.
 
   Notes
   -----
@@ -224,29 +234,46 @@ def minmax_scalar(f,
     scaled_f = scaled_f.reshape((num_jax_devices, -1, dims["npt"], dims["npt"]), out_sharding=projection_sharding)
     extraction_struct = grid["shard_extraction_map"]
 
-    relevant_data = (scaled_f).at[extraction_struct["extract_from"]["shard_idx"],
-                                  extraction_struct["extract_from"]["elem_idx"],
-                                  extraction_struct["extract_from"]["i_idx"],
-                                  extraction_struct["extract_from"]["j_idx"]].get(out_sharding=extraction_sharding)
-    # Padded extraction slots carry mask == 0 and default (zero) sum_into
-    # indices; a multiplicative mask would leave payload 0 which then scatters
-    # into DOF (0, 0, 0) of every shard via `.max`, corrupting the min/max
-    # there (e.g. collapsing a strictly-positive tracer lower bound to 0).
-    # -inf is the identity for the max reduction (used directly for `max` and
-    # on the negated field for `min`), so padded slots become inert.
-    relevant_data = jnp.where(extraction_struct["mask"] > 0, relevant_data, -jnp.inf)
-    scaled_f = do_max_manual_sharding(scaled_f,
-                                      extraction_struct["sum_into"]["elem_idx"],
-                                      extraction_struct["sum_into"]["i_idx"],
-                                      extraction_struct["sum_into"]["j_idx"],
-                                      relevant_data)
-    scaled_f = scaled_f.reshape(shape, out_sharding=usual_scalar_sharding)
+    def assemble(field, reduce_max):
+      relevant_data = (field).at[extraction_struct["extract_from"]["shard_idx"],
+                                 extraction_struct["extract_from"]["elem_idx"],
+                                 extraction_struct["extract_from"]["i_idx"],
+                                 extraction_struct["extract_from"]["j_idx"]].get(out_sharding=extraction_sharding)
+      targets = (extraction_struct["sum_into"]["elem_idx"],
+                 extraction_struct["sum_into"]["i_idx"],
+                 extraction_struct["sum_into"]["j_idx"])
+      if reduce_max:
+        # Padded extraction slots carry mask == 0 and default (zero) sum_into
+        # indices; a multiplicative mask would leave payload 0 which then scatters
+        # into DOF (0, 0, 0) of every shard via `.max`, corrupting the min/max
+        # there (e.g. collapsing a strictly-positive tracer lower bound to 0).
+        # -inf is the identity for the max reduction (used directly for `max` and
+        # on the negated field for `min`), so padded slots become inert.
+        relevant_data = jnp.where(extraction_struct["mask"] > 0, relevant_data, -jnp.inf)
+        return do_max_manual_sharding(field, *targets, relevant_data)
+      # For the sum, a zero payload is the identity (as in project_scalar_wrapper).
+      return do_sum_manual_sharding(field, *targets, relevant_data * extraction_struct["mask"])
   else:
-    relevant_data = _be.index_get(scaled_f, (cols[0], cols[1], cols[2]))
-    scaled_f = _be.index_max(scaled_f, (rows[0], rows[1], rows[2]), relevant_data)
+    def assemble(field, reduce_max):
+      relevant_data = _be.index_get(field, (cols[0], cols[1], cols[2]))
+      if reduce_max:
+        return _be.index_max(field, (rows[0], rows[1], rows[2]), relevant_data)
+      return _be.index_add(field, (rows[0], rows[1], rows[2]), relevant_data)
+  result = assemble(scaled_f, True)
+  if smooth_tau is not None:
+    from ..smoothing import straight_through
+    # Shifted form (see pyses.smoothing.soft_reduce_max): every copy of a node
+    # holds the same exact extremum, so x - extremum is exact and zero at ties.
+    result_const = _be.stop_gradient(result)
+    delta = scaled_f - result_const
+    weight = jnp.exp(delta / smooth_tau)
+    surrogate = result_const + assemble(weight * delta, False) / assemble(weight, False)
+    result = straight_through(result, surrogate)
+  if do_sharding:
+    result = result.reshape(shape, out_sharding=usual_scalar_sharding)
   if not max:
-    scaled_f = -1.0 * scaled_f
-  return scaled_f
+    result = -1.0 * result
+  return result
 
 
 project_scalar = project_scalar_wrapper
