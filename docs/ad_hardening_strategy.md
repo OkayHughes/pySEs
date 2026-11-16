@@ -294,15 +294,80 @@ that makes them pass (or as strict xfails documenting a known hazard).
    (`pyses/smoothing.py`) that keeps the exact primal but blends the
    neighboring cells' reconstructions within `tau` of a model interface.
    Because the cumulative integral is continuous at crossings, the
-   surrogate reproduces the crossing derivative essentially exactly:
-   measured −5252.450 vs FD −5252.450 (7e-9 relative), where the frozen
-   derivative reads +700 (wrong sign). Away from crossings the correction
-   vanishes and surrogate tangents equal exact ones. The min/max bound
+   surrogate recovers the slope across a crossing. Remeasured after
+   `c723470` on the crossing column of `test_kernel_gradients.py` (filtered
+   remap; the base point sits on two exact interface ties, with a third
+   crossing δ = 1e-9 Pa away): the slope an optimizer moving by more than δ
+   sees — central FD of the exact primal at h = 1e-4 Pa — is −2800.05; the
+   surrogate gives −2800.0000 for τ from 1e-4 to 1 Pa, within 2e-5 of it
+   (1.4e-6 at τ = 1e-4 Pa), while the frozen derivative reads −1400.0 (right
+   sign, half the magnitude). At any width τ the surrogate tracks the
+   central FD at step h ≈ τ (−7704 vs −7702 at 1e-10 Pa, −3289 vs −3290 at
+   1e-8, −2804.90002 vs −2804.90005 at 1e-6): it mollifies at its own width,
+   so agreement with FD at h = τ holds by construction and is not a check;
+   compare with FD at the intended optimizer step instead. (The earlier
+   record here, −5252.450 vs FD −5252.450 at 7e-9 relative with the frozen
+   derivative at +700, predates `c723470` and was a comparison of that
+   kind.) Too wide a τ biases the slope (−2796 at 10 Pa, −3509 at 100 Pa,
+   against 100 Pa layers). Away from crossings the correction vanishes and
+   surrogate tangents equal exact ones. The min/max bound
    extraction stays on the frozen/subgradient policy (ties measured
    consistent with FD on both backends).
-8. **Smoothing library** (category D, opt-in `ad_smoothing` config):
-   `soft_*` primitives + conservation/deviation tests; applied only where
-   categories A–C left documented gradient-quality gaps.
+8. **Limiter surrogate derivative** — landed as a straight-through
+   surrogate (category C), not primal smoothing (category D); default off.
+   Opt in with `init_timestep_config(..., limiter_tau=...)` (mixing-ratio
+   units; optional `limiter_tau_A`), stored as
+   `timestep_config["tracer_advection"]["ad_smoothing"]`; absent, every code
+   path and compiled program is the old one. The value stays the exact
+   limiter's (one rounding); the derivative is a surrogate's:
+   - *clip and redistribution switches* (`clip_and_sum_limiter`,
+     `full_limiter`, `smooth_tau`): over/undershoot masks
+     `sigmoid((q - qmax)/tau)` etc., redistribution direction
+     `sigmoid(A/tau_A)`; removed mass defined from the smoothed clip and the
+     same adjustment pattern in numerator and denominator, so mass (and its
+     tangent) is conserved whatever the masks;
+   - *bound ties* (`calc_minmax`, `minmax_scalar`, `smooth_tau`): the element
+     min/max, the DSS min/max over shared nodes, and the final min/max over
+     the element's nodes take a softmax-weighted mean on the tangent path
+     (`pyses.smoothing.soft_reduce_max/min`). After the exact DSS reduction
+     every copy of a node holds the same extremum, so the DSS softmax is a
+     ratio of two plain assembly sums — on both the unsharded and the
+     `shard_map` path. Written in shifted form, `m + sum(w (x - m)) / sum(w)`:
+     the unshifted `sum(w x) / sum(w)` carries tie roundoff amplified by
+     `1/tau` into the derivative (measured 3e-8 forward/reverse mismatch).
+
+   *Where the eps-instability lived* (moist step fixture, 1-ulp input
+   perturbation, relative change of J·v): exact 8e-2 (water vapour),
+   1e-5 (wind); limiter removed 1e-14; clip/redistribution surrogate alone
+   8e-2 (no change); exact clip with no derivative through the bounds 1e-13.
+   The bounds tie *by construction* — an element extremum on a shared node
+   is the same value in both elements, interior nodes hold the element's own
+   extremum — and the exact derivative splits over whichever set is tied,
+   which a 1-ulp change reshuffles. Plateaus (`qmax - qmin` ~ roundoff, e.g.
+   the dry-air species, q = 1) are the extreme case, not the only one.
+
+   *Measured with `limiter_tau=1e-8`* (moist fixture, jax on GPU; flag off in
+   brackets): 1-ulp change of J·v 4e-15 (4e-6..7e-6, 98-99% of entries);
+   separate-program step identity 1.6e-14 (5e-6); 2-step trajectory identity
+   1.3e-12 (3.7e-4); checkpointed vs plain trajectory gradient 5.9e-12
+   relative L2, 9.5e-9 max per entry (6.4e-4, 140%). Pinned in
+   `tests/fast_tests/ad_tests/test_limiter_surrogate.py` (kernel: primal
+   unchanged, tangent mass conservation, equality with the exact derivative
+   >= 100 tau from every switch — at 10 tau the logistic tails are still
+   5e-5 — identity, ulp-stable tie split) and `test_step_gradients.py`
+   (`*_with_limiter_surrogate`).
+
+   *Caveat — the surrogate is not the derivative of the primal.* Taylor
+   remainders of the exact primal against the surrogate gradient (ne3
+   spun-up moist wave, one step, energy norm, unit-energy direction):
+   tracer direction, one-sided remainder / (eps |Jv|) floors at 0.22 as
+   eps -> 0 (exact gradient: 0.03 at eps = 1e-10, rising to 0.3 by 1e-6);
+   central remainder best 0.11 near eps ~ 1e-5, i.e. where the perturbation
+   of q is ~ tau. Dynamics direction: floor 8e-4 (exact: 3e-6 at 1e-6). No
+   second-order regime exists for either gradient: the limiter's kinks lie
+   at every distance from the state (the hyperviscosity stage alone clips
+   ~20% of nodes and redistributes in ~95% of element-levels). Pair the
+   surrogate with an Armijo backtracking line search, not strict Wolfe.
 9. **Harness layers 2–3 in CI** (single-step + short-trajectory in the jax
    and torch workflows), closing the loop. As landed
    (`tests/fast_tests/ad_tests/test_step_gradients.py`), with four
@@ -335,6 +400,8 @@ that makes them pass (or as strict xfails documenting a known hazard).
      DA but impossible to remove without category-B/D smoothing of the
      limiter switches — which increment 8 should take up only if an
      outer optimization demonstrably suffers at this noise level.
+     (Resolved opt-in by increment 8: the switches were the limiter's bound
+     ties, and its surrogate brings all three numbers to roundoff.)
    - *Full-step elementwise FD is branch-noise-dominated* on the at-rest
      HEVI case (the line-search switch quantities sit exactly at their
      thresholds), so FD assertions live only at layer 1.
