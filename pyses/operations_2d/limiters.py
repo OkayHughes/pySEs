@@ -18,9 +18,10 @@ def clip_and_sum_limiter(tracer_mass_tend, mass_matrix, tracer_min, tracer_max, 
   :func:`_clip_and_sum_exact`. With ``smooth_tau`` set (mixing-ratio units),
   the value is still the exact limiter's (up to one rounding), but the
   derivative is taken from :func:`_clip_and_sum_surrogate`, whose clip and
-  redistribution switches are logistic functions of width ``smooth_tau``
+  redistribution switches are softplus-smoothed over ``smooth_tau``
   (``smooth_tau_A`` for the redistribution direction; default
-  ``smooth_tau`` times a typical scaled mass). This is a category-C
+  ``smooth_tau`` times a typical scaled mass), every piece monotone with
+  derivative in [0, 1] so the tangent stays non-expansive. This is a category-C
   straight-through remedy (docs/ad_hardening_strategy.md §3): the exact
   limiter's tangent switches at equalities the model manufactures, so it is
   only defined to roundoff-selected one-sided derivatives. Both arguments
@@ -39,47 +40,81 @@ def clip_and_sum_limiter(tracer_mass_tend, mass_matrix, tracer_min, tracer_max, 
   return straight_through(exact, surrogate)
 
 
+def _softplus(x, tau):
+  """tau * log(1 + exp(x / tau)), overflow-free: -> x for x >> tau, -> tau exp(x / tau)
+  for x << -tau. Monotone and convex, derivative sigmoid(x / tau) in (0, 1)."""
+  return tau * jnp.logaddexp(jnp.zeros_like(x), x / tau)
+
+
+def _relaxed_bounds(q, c, tracer_min, tracer_max):
+  """Scaled-mass sums and the bounds relaxed to the element mean, exactly as in
+  the exact limiter (a generic kink, left exact in the surrogate)."""
+  csum = jnp.sum(c, axis=(1, 2))
+  qsum = jnp.sum(q * c, axis=(1, 2))
+  qmin = jnp.where(qsum < tracer_min * csum, qsum / csum, tracer_min)[:, jnp.newaxis, jnp.newaxis, :]
+  qmax = jnp.where(qsum > tracer_max * csum, qsum / csum, tracer_max)[:, jnp.newaxis, jnp.newaxis, :]
+  return csum, qmin, qmax
+
+
+def _surrogate_pass(q, c, csum, qmin, qmax, tau, tau_A):
+  """One smoothed clip-and-redistribute pass (v2.1: softplus throughout).
+
+  Every smoothed piece is monotone with derivative in [0, 1], like the exact
+  clip, so the surrogate tangent is non-expansive and any number of limiter
+  applications composes to something bounded. (v1 wrote the clip as
+  ``sigmoid((q - qmax) / tau) * (q - qmax)``, a swish whose derivative
+  ranges over [-0.10, 1.10]: it expanded by up to 10% per application and
+  exploded over long windows. Mask times value is a swish; use softplus.)
+  See docs/limiter_surrogate.md for the derivation.
+
+  * clip: excess = softplus(q - qmax), deficit = softplus(qmin - q),
+    q1 = q - excess + deficit, so dq1/dq = 1 - s1 - s2 in [0, 1);
+  * redistribution direction: A = A_plus - A_minus exactly, with
+    A_plus = softplus(A, tau_A), A_minus = softplus(-A, tau_A), each sent
+    through its own channel;
+  * receiver weights: the room to each bound, floored smoothly,
+    room_up = softplus(qmax - q1), room_dn = softplus(q1 - qmin). The floor
+    keeps the channel denominators D >= ~ tau ln2 sum(c) on plateaus, where
+    the exact rooms (and v2's D) are roundoff and the leaked softplus mass in
+    A_plus, A_minus would otherwise be divided by ~0. No guard is needed, and
+    mass is conserved exactly: each channel's weights sum to one. The price:
+    a clipped cell sits exactly at room = 0 (the receive / do-not-receive
+    switch) and gets weight ~ tau ln2, so far from every other switch the
+    tangent differs from the exact one by O(tau / room) (~1e-8 at
+    tau = 1e-8).
+
+  A comes from ``add``, q1 from ``excess``/``deficit``, and both channels from
+  the ``room_*`` used in ``D_*``: conservation rests on these couplings.
+  """
+  excess = _softplus(q - qmax, tau)                    # >= 0, ~ relu(q - qmax)
+  deficit = _softplus(qmin - q, tau)                   # >= 0, ~ relu(qmin - q)
+  add = (excess - deficit) * c                         # signed mass removed per cell
+  q1 = q - excess + deficit
+  A = jnp.sum(add, axis=(1, 2))
+  A_plus = _softplus(A, tau_A)                         # softplus(x) - softplus(-x) == x
+  A_minus = _softplus(-A, tau_A)
+  room_up = _softplus(qmax - q1, tau)                  # receivers of positive excess
+  room_dn = _softplus(q1 - qmin, tau)                  # receivers of a deficit
+  D_plus = jnp.sum(room_up * c, axis=(1, 2))           # >= ~ tau ln2 csum > 0
+  D_minus = jnp.sum(room_dn * c, axis=(1, 2))
+  w_plus = (A_plus / D_plus)[:, jnp.newaxis, jnp.newaxis, :]
+  w_minus = (A_minus / D_minus)[:, jnp.newaxis, jnp.newaxis, :]
+  return q1 + w_plus * room_up - w_minus * room_dn
+
+
 def _clip_and_sum_surrogate(tracer_mass_tend, mass_matrix, tracer_min, tracer_max, d_mass,
                             tau, tau_A):
   """
-  Smooth-mask twin of :func:`_clip_and_sum_exact`, used only on the tangent
-  path of :func:`clip_and_sum_limiter` (never with the flag off).
-
-  The clip decisions become ``over = sigmoid((q - qmax) / tau)`` and
-  ``under = sigmoid((qmin - q) / tau)``; the redistribution direction
-  becomes ``s = sigmoid(A / tau_A)``, blending the two receiver patterns.
-  The removed mass ``A`` is defined as the sum of what the smoothed clip
-  removed and the clipped tracer is derived from it, and the same
-  adjustment pattern appears in the numerator and the denominator of the
-  redistribution, so element-level mass is conserved algebraically,
-  whatever the masks; hence so is the tangent. The bound relaxation (to the
-  element mean) is left exact, and the no-receiver guard stays hard.
+  Smooth twin of :func:`_clip_and_sum_exact`, used only on the tangent path
+  of :func:`clip_and_sum_limiter` (never with the flag off): one
+  :func:`_surrogate_pass`. Within ``tau`` of a bound (``tau_A`` of A = 0)
+  the clip and redistribution-direction switches are softplus-smoothed;
+  farther away the surrogate tangent equals the exact one.
   """
-  from ..smoothing import stable_sigmoid as sig
   c = mass_matrix[:, :, :, jnp.newaxis] * d_mass                  # scaled mass
   q = tracer_mass_tend / d_mass
-  csum = jnp.sum(c, axis=(1, 2))
-  qsum = jnp.sum(q * c, axis=(1, 2))
-  # Bound relaxation exactly as in the exact limiter (generic kink, left exact).
-  qmin = jnp.where(qsum < tracer_min * csum, qsum / csum, tracer_min)[:, jnp.newaxis, jnp.newaxis, :]
-  qmax = jnp.where(qsum > tracer_max * csum, qsum / csum, tracer_max)[:, jnp.newaxis, jnp.newaxis, :]
-
-  # Smoothed clip: the signed mass removed per cell first, the clipped tracer from it.
-  over = sig((q - qmax) / tau)
-  under = sig((qmin - q) / tau)
-  add = (over * (q - qmax) + under * (q - qmin)) * c
-  q1 = q - add / c                     # == (1 - over - under) q + over qmax + under qmin
-  A = jnp.sum(add, axis=(1, 2))        # exactly the mass removed, per element-level
-
-  # Smoothed redistribution direction: receivers' room above (A > 0) or below (A < 0).
-  s = sig(A / tau_A)[:, jnp.newaxis, jnp.newaxis, :]
-  adj = s * (qmax - q1) + (1.0 - s) * (q1 - qmin)   # at A ~ 0: (qmax - qmin) / 2, uniform
-  D = jnp.sum(adj * c, axis=(1, 2))
-  thresh = 1e-12 * csum
-  ok = (D > thresh)[:, jnp.newaxis, jnp.newaxis, :]
-  safe_D = jnp.where(D > thresh, D, 1.0)[:, jnp.newaxis, jnp.newaxis, :]
-  q2 = jnp.where(ok, q1 + (A[:, jnp.newaxis, jnp.newaxis, :] / safe_D) * adj, q1)
-  return q2 * d_mass
+  csum, qmin, qmax = _relaxed_bounds(q, c, tracer_min, tracer_max)
+  return _surrogate_pass(q, c, csum, qmin, qmax, tau, tau_A) * d_mass
 
 
 def _clip_and_sum_exact(tracer_mass_tend, mass_matrix, tracer_min, tracer_max, d_mass):
@@ -183,42 +218,18 @@ def full_limiter(tracer_mass_tend, mass_matrix, tracer_min, tracer_max, d_mass, 
 def _full_limiter_surrogate(tracer_mass_tend, mass_matrix, tracer_min, tracer_max, d_mass,
                             tau, tau_A):
   """
-  Smooth-mask twin of :func:`_full_limiter_exact` (tangent path only).
-
-  Each of the ``npt^2 - 1`` iterations applies the smoothed clip of
-  :func:`_clip_and_sum_surrogate`; the receivers of the redistributed mass
-  (cells strictly inside the bound, uniform increment in q) get the smooth
-  weights ``sigmoid((qmax - q) / tau)`` (mass added) and
-  ``sigmoid((q - qmin) / tau)`` (mass removed), blended by
-  ``sigmoid(A / tau_A)``. Each branch is normalized by its own weight sum,
-  so element-level mass is conserved whatever the masks. A cell left exactly
-  on a bound by an earlier iteration gets half weight here where the exact
-  limiter excludes it: that equality is one the iteration manufactures.
+  Smooth twin of :func:`_full_limiter_exact` (tangent path only): the
+  monotone :func:`_surrogate_pass` iterated ``npt^2 - 1`` times against the
+  same relaxed bounds. Each pass is non-expansive, so the composition is.
+  (Its redistribution follows the clip-and-sum pattern, room-weighted,
+  rather than the full limiter's uniform increment.)
   """
-  from ..smoothing import stable_sigmoid as sig
   npt = tracer_mass_tend.shape[1]
   c = mass_matrix[:, :, :, jnp.newaxis] * d_mass
   q = tracer_mass_tend / d_mass
-  csum = jnp.sum(c, axis=(1, 2))
-  qsum = jnp.sum(q * c, axis=(1, 2))
-  qmin = jnp.where(qsum < tracer_min * csum, qsum / csum, tracer_min)[:, jnp.newaxis, jnp.newaxis, :]
-  qmax = jnp.where(qsum > tracer_max * csum, qsum / csum, tracer_max)[:, jnp.newaxis, jnp.newaxis, :]
+  csum, qmin, qmax = _relaxed_bounds(q, c, tracer_min, tracer_max)
   for iter_idx in range(npt * npt - 1):
-    over = sig((q - qmax) / tau)
-    under = sig((qmin - q) / tau)
-    add = (over * (q - qmax) + under * (q - qmin)) * c
-    q1 = q - add / c
-    A = jnp.sum(add, axis=(1, 2))[:, jnp.newaxis, jnp.newaxis, :]
-    s = sig(A / tau_A)
-    r_up = sig((qmax - q1) / tau)
-    r_down = sig((q1 - qmin) / tau)
-    w_up = jnp.sum(r_up * c, axis=(1, 2))[:, jnp.newaxis, jnp.newaxis, :]
-    w_down = jnp.sum(r_down * c, axis=(1, 2))[:, jnp.newaxis, jnp.newaxis, :]
-    # Hard no-receiver guards, as in the exact limiter.
-    zero = jnp.zeros_like(q1)
-    up = jnp.where(w_up > 0.0, A * r_up / jnp.where(w_up > 0.0, w_up, 1.0), zero)
-    down = jnp.where(w_down > 0.0, A * r_down / jnp.where(w_down > 0.0, w_down, 1.0), zero)
-    q = q1 + s * up + (1.0 - s) * down
+    q = _surrogate_pass(q, c, csum, qmin, qmax, tau, tau_A)
   return q * d_mass
 
 

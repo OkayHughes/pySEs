@@ -321,11 +321,20 @@ that makes them pass (or as strict xfails documenting a known hazard).
    path and compiled program is the old one. The value stays the exact
    limiter's (one rounding); the derivative is a surrogate's:
    - *clip and redistribution switches* (`clip_and_sum_limiter`,
-     `full_limiter`, `smooth_tau`): over/undershoot masks
-     `sigmoid((q - qmax)/tau)` etc., redistribution direction
-     `sigmoid(A/tau_A)`; removed mass defined from the smoothed clip and the
-     same adjustment pattern in numerator and denominator, so mass (and its
-     tangent) is conserved whatever the masks;
+     `full_limiter`, `smooth_tau`), v2.1, built entirely from softplus
+     (`sp_tau(x) = tau log(1 + exp(x / tau))`, slope in (0, 1)): clip
+     `q1 = q - sp(q - qmax) + sp(qmin - q)`; redistribution direction split
+     exactly into channels `A = sp(A) - sp(-A)`; receiver rooms
+     `sp(qmax - q1)`, `sp(q1 - qmin)` (floored, so plateaus divide by
+     ~ tau ln2 sum(c), not by roundoff); no guard. Every piece is monotone
+     with slope in [0, 1], so the tangent is non-expansive and mass is
+     conserved exactly. Full derivation: `docs/limiter_surrogate.md`.
+     *Anti-pattern (v1):* the clip was written `sigmoid((q - qmax)/tau) *
+     (q - qmax)` — mask times value is a swish, slope in [-0.10, 1.10] —
+     and the tangent grew ~1.1x per application: 3e16 after 200 steps on a
+     plateau. *v2* fixed the swish but kept exact rooms with a soft guard
+     `A / (D + eps_D)`; on plateaus `D ~ eps_D` and the softplus leak in
+     `A+-` was divided by ~0 (14% tangent mass error, wrong-sign responses).
    - *bound ties* (`calc_minmax`, `minmax_scalar`, `smooth_tau`): the element
      min/max, the DSS min/max over shared nodes, and the final min/max over
      the element's nodes take a softmax-weighted mean on the tangent path
@@ -346,11 +355,15 @@ that makes them pass (or as strict xfails documenting a known hazard).
    which a 1-ulp change reshuffles. Plateaus (`qmax - qmin` ~ roundoff, e.g.
    the dry-air species, q = 1) are the extreme case, not the only one.
 
-   *Measured with `limiter_tau=1e-8`* (moist fixture, jax on GPU; flag off in
-   brackets): 1-ulp change of J·v 4e-15 (4e-6..7e-6, 98-99% of entries);
-   separate-program step identity 1.6e-14 (5e-6); 2-step trajectory identity
-   1.3e-12 (3.7e-4); checkpointed vs plain trajectory gradient 5.9e-12
-   relative L2, 9.5e-9 max per entry (6.4e-4, 140%). Pinned in
+   *Measured with `limiter_tau=1e-8`, v2.1 surrogate* (moist fixture, jax
+   on GPU; flag off in brackets): 1-ulp change of J·v 4e-15, no entry moving
+   more than 1e-9 relative (4e-6..7e-6, 98-99% of entries); separate-program
+   step identity 6.0e-15 (5e-6); 2-step trajectory identity 2.5e-11
+   (3.7e-4); checkpointed vs plain trajectory gradient 5.7e-12 relative L2,
+   4.7e-9 max per entry (6.4e-4, 140%). Plateau tangent growth (ne16
+   deformational tracer case, max|v| 5.2): max|Jv| 15.6, 8.2, 12.4, 9.3
+   after 1, 10, 50, 200 steps (exact derivative 32.8, 28.1, 18.8, 11.1;
+   v1 3e16 at 200). Pinned in
    `tests/fast_tests/ad_tests/test_limiter_surrogate.py` (kernel: primal
    unchanged, tangent mass conservation, equality with the exact derivative
    >= 100 tau from every switch — at 10 tau the logistic tails are still
@@ -358,7 +371,7 @@ that makes them pass (or as strict xfails documenting a known hazard).
    (`*_with_limiter_surrogate`).
 
    *Caveat — the surrogate is not the derivative of the primal.* Taylor
-   remainders of the exact primal against the surrogate gradient (ne3
+   remainders of the exact primal against the surrogate gradient (v1; ne3
    spun-up moist wave, one step, energy norm, unit-energy direction):
    tracer direction, one-sided remainder / (eps |Jv|) floors at 0.22 as
    eps -> 0 (exact gradient: 0.03 at eps = 1e-10, rising to 0.3 by 1e-6);

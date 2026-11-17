@@ -182,7 +182,7 @@ def test_cam_se_step_jv_ulp_stable_with_limiter_surrogate(cam_case_smooth):
   # 4e-6..8e-6 relative (98-99% of entries) under a 1-ulp input change: the
   # bounds tie exactly by construction and the clip compares values against
   # them, so the tangent is a roundoff-selected one-sided derivative.
-  # Measured with the surrogate (jax, GPU): 4e-15.
+  # Measured with the v2.1 surrogate (jax, GPU): 4e-15.
   keys = ("T", "horizontal_wind")
   fn = _make_step_fn(cam_case_smooth, keys, ("T", "horizontal_wind", "d_mass"))
   primals = _controls(cam_case_smooth, keys)
@@ -197,7 +197,7 @@ def test_cam_se_step_jv_ulp_stable_with_limiter_surrogate(cam_case_smooth):
 
 def test_cam_se_step_forward_reverse_with_limiter_surrogate(cam_case_smooth):
   # Separately compiled jvp and vjp programs no longer linearize at
-  # eps-different points of a degenerate switch: measured 1.6e-14 (flag off:
+  # eps-different points of a degenerate switch: measured 6.0e-15 (flag off:
   # 5e-6, the STEP_IDENTITY_RTOL regime).
   fn = _make_step_fn(cam_case_smooth, ("T", "horizontal_wind"),
                      ("T", "horizontal_wind", "d_mass"))
@@ -223,7 +223,7 @@ def test_cam_se_step_forward_reverse_with_limiter_surrogate(cam_case_smooth):
 N_STEPS = 2  # enough to compose steps in reverse mode while fitting CI budgets
 
 
-def _rollout_loss_fn(case, use_checkpoint):
+def _rollout_loss_fn(case, use_checkpoint, n_steps=N_STEPS):
   rest = {key: val for key, val in case.items() if key != "state_in"}
   base_state = case["state_in"]
 
@@ -239,7 +239,7 @@ def _rollout_loss_fn(case, use_checkpoint):
     dynamics["horizontal_wind"] = wind0
     state = dict(base_state)
     state["dynamics"] = dynamics
-    for _ in range(N_STEPS):
+    for _ in range(n_steps):
       state = step(state)
     return (jnp.sum(state["dynamics"]["T"]**2) +
             1e-4 * jnp.sum(state["dynamics"]["horizontal_wind"]**2))
@@ -295,7 +295,7 @@ def test_cam_se_trajectory_checkpoint_equivalent(cam_case):
 
 def test_cam_se_trajectory_with_limiter_surrogate(cam_case_smooth):
   # With the surrogate, the 2-step forward/reverse identity and the
-  # checkpointed gradient both reach roundoff (measured 1.3e-12 and 5.9e-12
+  # checkpointed gradient both reach roundoff (measured 2.5e-11 and 5.7e-12
   # relative L2; flag off: 3.7e-4 and 6.4e-4, up to 140% per entry).
   primals = _controls(cam_case_smooth, ("T", "horizontal_wind"))
   loss_plain = _rollout_loss_fn(cam_case_smooth, use_checkpoint=False)
@@ -308,3 +308,21 @@ def test_cam_se_trajectory_with_limiter_surrogate(cam_case_smooth):
   g_plain = np.asarray(to_host(grads[0]), dtype=float)
   g_ck = np.asarray(to_host(_be.grad(loss_ck)(*primals)), dtype=float)
   assert np.linalg.norm(g_ck - g_plain) / np.linalg.norm(g_plain) < 1e-9
+
+
+@pytest.mark.parametrize("n_steps", [2, 20])
+def test_cam_se_trajectory_gradient_growth_with_limiter_surrogate(cam_case, cam_case_smooth,
+                                                                   n_steps):
+  # Regression for the v1 surrogate (a swish clip, derivative up to 1.1),
+  # whose tangent grew ~1.1x per limiter application and exploded over
+  # long windows: the surrogate's trajectory gradient must stay finite and
+  # within a factor 2 of the exact one.
+  norms = {}
+  for name, case in (("exact", cam_case), ("surrogate", cam_case_smooth)):
+    loss = _rollout_loss_fn(case, use_checkpoint=True, n_steps=n_steps)
+    grads = _be.grad(loss, argnums=(0, 1))(*_controls(case, ("T", "horizontal_wind")))
+    flat = np.concatenate([np.asarray(to_host(g), dtype=float).ravel() for g in grads])
+    assert np.all(np.isfinite(flat)), f"{name} trajectory gradient non-finite at {n_steps} steps"
+    norms[name] = np.linalg.norm(flat)
+  ratio = norms["surrogate"] / norms["exact"]
+  assert 0.5 <= ratio <= 2.0, f"|grad| surrogate / exact = {ratio:.3e} at {n_steps} steps"
